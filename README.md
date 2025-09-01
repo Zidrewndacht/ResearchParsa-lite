@@ -3,9 +3,9 @@ LLM-based analysis of abstracts from a BibTeX file. Tailor-made for PCB inspecti
 
 This was made to help research on PCB inspection. It allows for searching, filtering, statistics and, mainly, automatic, traceable classification and verification through natural language processing using large language models.
 
-This is not yet fully-featured. For example, BibTeX import from the Web UI isn't implemented yet. See TODO.txt for more information. 
+This is not yet fully-featured. See TODO.txt for more information. 
 
-A read-only version for demonstration purposes can be accessed via GitHub Pages [here](https://zidrewndacht.github.io/bibtex-custom-parser). The static demo has full client-side browsing/sarching/filtering/stats functionality. It may not be updated as frequently as the actual code.
+A read-only version for demonstration purposes can be accessed via GitHub Pages [here](https://zidrewndacht.github.io/bibtex-custom-parser). The static demo has full client-side browsing/sarching/filtering/stats functionality. It may not be updated as frequently as the actual server-based implementation.
 
 ## Usage:
 
