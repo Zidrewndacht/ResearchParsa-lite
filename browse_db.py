@@ -638,16 +638,17 @@ def static_export():
         ghpages_js_content=Markup(ghpages_js_content)
     )
 
-    # --- Minify the final HTML ---
-    # htmlmin options can be adjusted. remove_empty_space=True is common.
-    full_html_content = htmlmin.minify(
-        full_html_content,
-        remove_empty_space=True,
-        reduce_boolean_attributes=True,
-        remove_optional_attribute_quotes=True,
-        # remove_comments=True, # Enable if you want to remove HTML comments
-        # keep_pre=True, # Important if you have <pre> tags that need formatting
-    )
+    # # --- Minify the final HTML ---
+    # # Doesn't really work since it minifies away all newlines from thinking traces even with <!-- htmlmin:ignore -->
+    # # htmlmin options can be adjusted. remove_empty_space=True is common.
+    # full_html_content = htmlmin.minify(
+    #     full_html_content,
+    #     remove_empty_space=False,
+    #     reduce_boolean_attributes=True,
+    #     remove_optional_attribute_quotes=True,
+    #     remove_comments=False, # Enable if you want to remove HTML comments
+    #     keep_pre=True, # Important if you have <pre> tags that need formatting
+    # )
 
     # --- Create a filename based on filters ---
     filename_parts = ["PCBPapers"]
