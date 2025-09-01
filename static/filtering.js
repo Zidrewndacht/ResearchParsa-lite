@@ -3,10 +3,14 @@
 // --- Filtering Logic ---
 const searchInput = document.getElementById('search-input');
 const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
+const hideXrayCheckbox = document.getElementById('hide-xray-checkbox');
+const onlySurveyCheckbox = document.getElementById('only-survey-checkbox');
 const minPageCountInput = document.getElementById('min-page-count');
 const yearFromInput = document.getElementById('year-from');
 const yearToInput = document.getElementById('year-to');
-
+const visiblePapersCountCell = document.getElementById('visible-papers-count');
+const loadedPapersCountCell = document.getElementById('loaded-papers-count');
+// const totalPapersCountCell = document.getElementById('total-papers-count');
 
 let filterTimeoutId = null;
 const FILTER_DEBOUNCE_DELAY = 200; 
@@ -30,8 +34,8 @@ function scheduleFilterUpdate() {
         // Use setTimeout(0) to defer the heavy work to the next event loop tick.
         // This allows the browser to process the 'progress' cursor change.
         setTimeout(() => {
-            applyFilters();
-        }, 0);
+            applyLocalFilters();
+        }, 20);
     }, FILTER_DEBOUNCE_DELAY);
 }
 
@@ -119,7 +123,9 @@ function updateCounts() {   //move to server-side as well? Required if adding pa
     // Select only VISIBLE main rows for counting '✔️' and calculating visible count - won't be really needed anymore with all filtering server-side:
     const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
     const visiblePaperCount = visibleRows.length;
-
+    //count on each update since server-side async can change this:
+    const allRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
+    const loadedPaperCount = allRows.length;
     // Count symbols in visible rows
     visibleRows.forEach(row => {
         COUNT_FIELDS.forEach(field => {
@@ -142,15 +148,10 @@ function updateCounts() {   //move to server-side as well? Required if adding pa
             }
         });
     });
-
-    const allRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
-    const totalPaperCount = allRows.length;
     latestCounts = counts; // Make counts available outside this function
-    const visibleCountCell = document.getElementById('visible-count-cell');
-    if (visibleCountCell) {
-        // Use textContent to prevent potential HTML injection issues if counts were user input (they aren't here, but good practice)
-        visibleCountCell.textContent = `Filtered: ${visiblePaperCount}, Loaded: ${totalPaperCount}`;
-    }
+
+    loadedPapersCountCell.textContent = loadedPaperCount;
+    visiblePapersCountCell.textContent = visiblePaperCount;
 
     COUNT_FIELDS.forEach(field => {
         const countCell = document.getElementById(`count-${field}`);
@@ -216,9 +217,9 @@ function applyJournalShading(rows) {
     // Define base shade color (light blue/greenish tint)
     // You can adjust the HSL values for different base colors or intensity
     const baseHue = 210; // Blueish
-    const baseSaturation = 70;
-    const minLightness = 97; // Lightest shade (almost white)
-    const maxLightness = 80; // Darkest shade when maxCount is high
+    const baseSaturation = 66;
+    const minLightness = 96; // Lightest shade (almost white)
+    const maxLightness = 84; // Darkest shade when maxCount is high
 
     rows.forEach(row => {
         // Reset shading first for all rows/cells
@@ -252,24 +253,21 @@ function applyJournalShading(rows) {
     });
 }
 
-// Refactored function to apply server-side filters via AJAX
+
 function applyServerSideFilters() {
     document.documentElement.classList.add('busyCursor');
     const urlParams = new URLSearchParams(window.location.search);
 
-    // Handle hide offtopic
     const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
     const isChecked = hideOfftopicCheckbox.checked;
     urlParams.set('hide_offtopic', isChecked ? '1' : '0');
 
-    // Handle year range
     const yearFromValue = document.getElementById('year-from').value.trim();
     if (yearFromValue !== '' && !isNaN(parseInt(yearFromValue))) {
         urlParams.set('year_from', yearFromValue);
     } else {
         urlParams.delete('year_from');
     }
-
     const yearToValue = document.getElementById('year-to').value.trim();
     if (yearToValue !== '' && !isNaN(parseInt(yearToValue))) {
         urlParams.set('year_to', yearToValue);
@@ -292,8 +290,6 @@ function applyServerSideFilters() {
     }
     // Construct the URL for the /load_table endpoint with current parameters
     const loadTableUrl = `/load_table?${urlParams.toString()}`;
-
-    // Fetch the new table body content
     fetch(loadTableUrl)
         .then(response => {
             if (!response.ok) {
@@ -307,18 +303,46 @@ function applyServerSideFilters() {
                 tbody.innerHTML = html;
                 const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
                 window.history.replaceState({ path: newUrl }, '', newUrl);
-                applyFilters();
+                applyLocalFilters();
             }
             document.documentElement.classList.remove('busyCursor');
         })
         .catch(error => {
-            console.error('Error fetching updated table:', error);
-            // Optional: Display an error message to the user
+            console.error('Error fetching updated table:', error); 
             document.documentElement.classList.remove('busyCursor');
         });
 }
 
-function applyFilters() { //deceiving name after functionality change.
+function applyLocalFilters() { //For local filters:    
+    const tbody = document.querySelector('#papersTable tbody');
+    if (!tbody) return;
+
+    const hideXrayChecked = hideXrayCheckbox.checked;
+    const onlySurveyChecked = onlySurveyCheckbox.checked;
+
+    const rows = tbody.querySelectorAll('tr[data-paper-id]');
+    rows.forEach(row => {        
+        let showRow = true;
+        let detailRow = null;
+        if (showRow && hideXrayChecked) {
+            const offtopicCell = row.querySelector('.editable-status[data-field="is_x_ray"]');
+            if (offtopicCell && offtopicCell.textContent.trim() === '✔️') { 
+                showRow = false;
+            }
+        }
+        if (showRow && onlySurveyChecked) {
+            const offtopicCell = row.querySelector('.editable-status[data-field="is_survey"]');
+            if (offtopicCell && offtopicCell.textContent.trim() === '❌') { 
+                showRow = false;
+            }
+        }
+        // Apply the visibility state
+        row.classList.toggle('filter-hidden', !showRow);
+        if (detailRow) { // Ensure detailRow exists before toggling
+            detailRow.classList.toggle('filter-hidden', !showRow);
+        }
+    });
+
     applyJournalShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
     updateCounts();
     applyAlternatingShading();
@@ -331,13 +355,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const headers = document.querySelectorAll('th[data-sort]');
     let currentClientSort = { column: null, direction: 'ASC' };
     
-    document.getElementById('hide-offtopic-checkbox').addEventListener('change', applyServerSideFilters);
+    hideOfftopicCheckbox.addEventListener('change', applyServerSideFilters);
+    hideXrayCheckbox.addEventListener('change', scheduleFilterUpdate);
+    onlySurveyCheckbox.addEventListener('change', scheduleFilterUpdate);
     document.getElementById('apply-serverside-filters').addEventListener('click', applyServerSideFilters); 
     
     const applyButton = document.getElementById('apply-serverside-filters');
-    document.getElementById('year-to').addEventListener('change',   function(){applyButton.style.display = 'inline-block'});
-    document.getElementById('year-from').addEventListener('change', function(){applyButton.style.display = 'inline-block'});
-    document.getElementById('min-page-count').addEventListener('change', function(){applyButton.style.display = 'inline-block'});
+    yearFromInput.addEventListener('change',   function(){applyButton.style.display = 'inline-block'});
+    yearToInput.addEventListener('change', function(){applyButton.style.display = 'inline-block'});
+    minPageCountInput.addEventListener('change', function(){applyButton.style.display = 'inline-block'});
 
     // document.getElementById('search-input').addEventListener('input', scheduleFilterUpdate);
     document.getElementById('search-input').addEventListener('input', function() {
@@ -346,88 +372,118 @@ document.addEventListener('DOMContentLoaded', function () {
             applyServerSideFilters();
         }, FILTER_DEBOUNCE_DELAY);
     });
-
-    // --- Single Event Listener for Headers (Handles Optimized Client-Side Sorting) ---
+ // --- Single Event Listener for Headers (Handles Optimized Client-Side Sorting) ---
     headers.forEach(header => {
         header.addEventListener('click', function () {
+            // 1. Add the busy cursor class immediately
             document.documentElement.classList.add('busyCursor');
+
+            // 2. Defer the heavy task
             setTimeout(() => {
-                const sortBy = this.getAttribute('data-sort');
-                if (!sortBy) return;
+                // Wrap the entire sorting logic in a try/finally block
+                try {
+                    const sortBy = this.getAttribute('data-sort');
+                    if (!sortBy) return;
 
-                // --- Determine Sort Direction ---
-                let newDirection = 'DESC';
-                if (currentClientSort.column === sortBy) {
-                    newDirection = currentClientSort.direction === 'DESC' ? 'ASC' : 'DESC';
-                }
+                    // --- Determine Sort Direction ---
+                    let newDirection = 'DESC';
+                    if (currentClientSort.column === sortBy) {
+                        newDirection = currentClientSort.direction === 'DESC' ? 'ASC' : 'DESC';
+                    }
+                    const tbody = document.querySelector('#papersTable tbody');
+                    if (!tbody) return;
 
-                const tbody = document.querySelector('#papersTable tbody');
-                if (!tbody) return;
+                    // --- PRE-PROCESS: Extract Sort Values and Row References ---
+                    const visibleMainRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
+                    const headerIndex = Array.prototype.indexOf.call(this.parentNode.children, this);
+                    const sortData = [];
+                    let mainRow, paperId, cellValue, detailRow, cell;
 
-                // --- PRE-PROCESS: Extract Sort Values and Row References ---
-                const visibleMainRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
-                const headerIndex = Array.prototype.indexOf.call(this.parentNode.children, this);
-                const sortData = [];
-                let mainRow, paperId, cellValue, detailRow, cell;
+                    for (let i = 0; i < visibleMainRows.length; i++) {
+                        mainRow = visibleMainRows[i];
+                        paperId = mainRow.getAttribute('data-paper-id');
 
-                for (let i = 0; i < visibleMainRows.length; i++) {
-                    mainRow = visibleMainRows[i];
-                    paperId = mainRow.getAttribute('data-paper-id');
-
-                    if (['title', 'year', 'journal', /*'authors',*/ 'page_count', 'estimated_score', 'relevance'].includes(sortBy)) { // <-- Added 'relevance'
-                        cell = mainRow.cells[headerIndex];
-                        cellValue = cell ? cell.textContent.trim() : ''; // <-- ADDED NULL CHECK
-                        if (sortBy === 'year' || sortBy === 'estimated_score' || sortBy === 'page_count' || sortBy === 'relevance') { // <-- Added 'relevance'
-                            cellValue = parseFloat(cellValue) || 0;
+                        // --- Extract cell value based on column type ---
+                        if (['title', 'year', 'journal', /*'authors',*/ 'page_count', 'estimated_score', 'relevance'].includes(sortBy)) {
+                            cell = mainRow.cells[headerIndex];
+                            cellValue = cell ? cell.textContent.trim() : '';
+                            if (sortBy === 'year' || sortBy === 'estimated_score' || sortBy === 'page_count' || sortBy === 'relevance') {
+                                cellValue = parseFloat(cellValue) || 0;
+                            }
+                        } else if (['type', 'changed', 'changed_by', 'verified', 'verified_by', 'research_area'].includes(sortBy)) {
+                            cell = mainRow.cells[headerIndex];
+                            cellValue = cell ? cell.textContent.trim() : '';
+                        } else { // Status/Feature/Technique columns
+                            cell = mainRow.querySelector(`.editable-status[data-field="${sortBy}"]`);
+                            // Use SYMBOL_SORT_WEIGHTS for sorting, defaulting to 0 if symbol not found
+                            cellValue = SYMBOL_SORT_WEIGHTS[cell?.textContent.trim()] ?? 0;
                         }
-                    } else if (['type', 'changed', 'changed_by', 'verified', 'verified_by', 'research_area'].includes(sortBy)) {
-                        cell = mainRow.cells[headerIndex];
-                        cellValue = cell ? cell.textContent.trim() : '';
-                    } else { // Status/Feature/Technique columns
-                        cell = mainRow.querySelector(`.editable-status[data-field="${sortBy}"]`);
-                        cellValue = SYMBOL_SORT_WEIGHTS[cell.textContent.trim()] ?? 0;
+
+                        detailRow = mainRow.nextElementSibling; // Get the associated detail row
+                        sortData.push({ value: cellValue, mainRow, detailRow, paperId });
                     }
 
-                    detailRow = mainRow.nextElementSibling;
-                    sortData.push({ value: cellValue, mainRow, detailRow, paperId });
-                }
 
-                // --- SORT the Array of Objects ---
-                sortData.sort((a, b) => {
-                    let comparison = 0;
-                    if (a.value > b.value) comparison = 1;
-                    else if (a.value < b.value) comparison = -1;
-                    else {
-                        if (a.paperId > b.paperId) comparison = 1;
-                        else if (a.paperId < b.paperId) comparison = -1;
+                    // --- SORT the Array of Objects ---
+                    sortData.sort((a, b) => {
+                        let comparison = 0;
+                        if (a.value > b.value) comparison = 1;
+                        else if (a.value < b.value) comparison = -1;
+                        else {
+                            // Secondary sort by paperId to ensure stable sort
+                            if (a.paperId > b.paperId) comparison = 1;
+                            else if (a.paperId < b.paperId) comparison = -1;
+                        }
+                        // Apply direction
+                        return newDirection === 'DESC' ? -comparison : comparison;
+                    });
+
+                    // --- BATCH UPDATE the DOM ---
+                    const fragment = document.createDocumentFragment();
+                    for (let i = 0; i < sortData.length; i++) {
+                        fragment.appendChild(sortData[i].mainRow);
+                        fragment.appendChild(sortData[i].detailRow);
                     }
-                    return newDirection === 'DESC' ? -comparison : comparison;
-                });
+                    tbody.appendChild(fragment); // Single DOM append operation
 
-                // --- BATCH UPDATE the DOM ---
-                const fragment = document.createDocumentFragment();
-                for (let i = 0; i < sortData.length; i++) {
-                    fragment.appendChild(sortData[i].mainRow);
-                    fragment.appendChild(sortData[i].detailRow);
+                    // --- Schedule UI Updates after DOM change ---
+                    // Use requestAnimationFrame to align with browser repaint
+                    requestAnimationFrame(() => { applyAlternatingShading(); });
+                    requestAnimationFrame(() => {
+                        const currentVisibleRowsForJournal = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
+                        applyJournalShading(currentVisibleRowsForJournal);
+                    });
+                    requestAnimationFrame(() => { updateCounts(); });
+
+                    // Update sort state
+                    currentClientSort = { column: sortBy, direction: newDirection };
+
+                    // Update sort indicators in the header
+                    document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
+                    const indicator = this.querySelector('.sort-indicator');
+                    if (indicator) {
+                         indicator.textContent = newDirection === 'ASC' ? '▲' : '▼';
+                    }
+
+
+                } catch (error) {
+                    console.error("Error during sorting:", error);
+                    // Even if there's an error, ensure cleanup happens
+                    // Remove busy cursor after a delay to allow transition
+                    setTimeout(() => {
+                       document.documentElement.classList.remove('busyCursor');
+                    }, 150); // Delay slightly longer than CSS transition
+
+                } finally {
+                    // 3. Schedule removal of the busy cursor class AFTER a guaranteed delay
+                    // This ensures the CSS transition has time to play.
+                    // The delay (150ms) should be >= CSS transition duration (0.3s) + delay (0.1s) if you want full transition,
+                    // but even a shorter delay (longer than CSS delay) often works to trigger it.
+                    setTimeout(() => {
+                        document.documentElement.classList.remove('busyCursor');
+                    }, 150); // Delay slightly longer than CSS transition delay
                 }
-                tbody.appendChild(fragment);
-
-                // --- Schedule UI Updates ---
-                requestAnimationFrame(() => { applyAlternatingShading(); });
-                requestAnimationFrame(() => {
-                    const currentVisibleRowsForJournal = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
-                    applyJournalShading(currentVisibleRowsForJournal);
-                });
-                requestAnimationFrame(() => { updateCounts(); });
-
-                currentClientSort = { column: sortBy, direction: newDirection };
-
-                document.documentElement.classList.remove('busyCursor');
-                // Update sort indicators
-                document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
-                this.querySelector('.sort-indicator').textContent = newDirection === 'ASC' ? '▲' : '▼'; // Assuming correct symbols
-
-            }, 0); // Defer execution
+            }, 20); // Initial defer for adding busy cursor (can keep this small or match rAF timing ~16ms)
         });
     });
 
@@ -755,7 +811,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(() => {
             displayStats();
             document.documentElement.classList.remove('busyCursor');
-        }, 10);
+        }, 20);
     });
     spanClose.addEventListener('click', closeModal);
 
@@ -767,5 +823,5 @@ document.addEventListener('DOMContentLoaded', function () {
     window.addEventListener('click', function(event) {
         if (event.target === modal) {    closeModal();      }
     });
-    applyFilters(); //apply initial filtering    
+    applyLocalFilters(); //apply initial filtering    
 });

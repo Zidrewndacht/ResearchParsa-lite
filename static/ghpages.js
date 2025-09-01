@@ -1,11 +1,10 @@
 const searchInput = document.getElementById('search-input');
 const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
+const hideXrayCheckbox = document.getElementById('hide-xray-checkbox');
+const onlySurveyCheckbox = document.getElementById('only-survey-checkbox');
 const minPageCountInput = document.getElementById('min-page-count');
-
 const yearFromInput = document.getElementById('year-from');
 const yearToInput = document.getElementById('year-to');
-
-const fullscreenBtn = document.getElementById('fullscreen-btn');
 
 const allRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
 const totalPaperCount = allRows.length;
@@ -159,6 +158,8 @@ function applyFilters() {
 
     // --- Get filter values ---
     const hideOfftopicChecked = hideOfftopicCheckbox.checked;
+    const hideXrayChecked = hideXrayCheckbox.checked;
+    const onlySurveyChecked = onlySurveyCheckbox.checked;
     const minPageCountValue = minPageCountInput ? parseInt(minPageCountInput.value, 10) || 0 : 0;
     // Get year range values
     const yearFromValue = yearFromInput ? parseInt(yearFromInput.value, 10) || 0 : 0;
@@ -180,12 +181,21 @@ function applyFilters() {
             }
         }
 
-        // --- Apply Filters ---
-
-        // 1. Hide Off-topic
         if (showRow && hideOfftopicChecked) {
             const offtopicCell = row.querySelector('.editable-status[data-field="is_offtopic"]');
             if (offtopicCell && offtopicCell.textContent.trim() === '✔️') { 
+                showRow = false;
+            }
+        }
+        if (showRow && hideXrayChecked) {
+            const offtopicCell = row.querySelector('.editable-status[data-field="is_x_ray"]');
+            if (offtopicCell && offtopicCell.textContent.trim() === '✔️') { 
+                showRow = false;
+            }
+        }
+        if (showRow && onlySurveyChecked) {
+            const offtopicCell = row.querySelector('.editable-status[data-field="is_survey"]');
+            if (offtopicCell && offtopicCell.textContent.trim() === '❌') { 
                 showRow = false;
             }
         }
@@ -267,88 +277,121 @@ document.addEventListener('DOMContentLoaded', function () {
     yearFromInput.addEventListener('change', scheduleFilterUpdate); 
     yearToInput.addEventListener('input', scheduleFilterUpdate);
     yearToInput.addEventListener('change', scheduleFilterUpdate); 
-
-    // --- Single Event Listener for Headers (Handles Optimized Client-Side Sorting) ---
+    
+    document.getElementById('hide-xray-checkbox').addEventListener('change', applyFilters);
+    document.getElementById('only-survey-checkbox').addEventListener('change', applyFilters);
+ // --- Single Event Listener for Headers (Handles Optimized Client-Side Sorting) ---
     headers.forEach(header => {
         header.addEventListener('click', function () {
+            // 1. Add the busy cursor class immediately
             document.documentElement.classList.add('busyCursor');
+
+            // 2. Defer the heavy task
             setTimeout(() => {
-                const sortBy = this.getAttribute('data-sort');
-                if (!sortBy) return;
+                // Wrap the entire sorting logic in a try/finally block
+                try {
+                    const sortBy = this.getAttribute('data-sort');
+                    if (!sortBy) return;
 
-                // --- Determine Sort Direction ---
-                let newDirection = 'DESC';
-                if (currentClientSort.column === sortBy) {
-                    newDirection = currentClientSort.direction === 'DESC' ? 'ASC' : 'DESC';
-                }
+                    // --- Determine Sort Direction ---
+                    let newDirection = 'DESC';
+                    if (currentClientSort.column === sortBy) {
+                        newDirection = currentClientSort.direction === 'DESC' ? 'ASC' : 'DESC';
+                    }
+                    const tbody = document.querySelector('#papersTable tbody');
+                    if (!tbody) return;
 
-                const tbody = document.querySelector('#papersTable tbody');
-                if (!tbody) return;
+                    // --- PRE-PROCESS: Extract Sort Values and Row References ---
+                    const visibleMainRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
+                    const headerIndex = Array.prototype.indexOf.call(this.parentNode.children, this);
+                    const sortData = [];
+                    let mainRow, paperId, cellValue, detailRow, cell;
 
-                // --- PRE-PROCESS: Extract Sort Values and Row References ---
-                const visibleMainRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
-                const headerIndex = Array.prototype.indexOf.call(this.parentNode.children, this);
-                const sortData = [];
-                let mainRow, paperId, cellValue, detailRow, cell;
+                    for (let i = 0; i < visibleMainRows.length; i++) {
+                        mainRow = visibleMainRows[i];
+                        paperId = mainRow.getAttribute('data-paper-id');
 
-                for (let i = 0; i < visibleMainRows.length; i++) {
-                    mainRow = visibleMainRows[i];
-                    paperId = mainRow.getAttribute('data-paper-id');
-
-                    if (['title', 'year', 'journal', /*'authors',*/ 'page_count', 'estimated_score', 'relevance'].includes(sortBy)) { // <-- Added 'relevance'
-                        cell = mainRow.cells[headerIndex];
-                        cellValue = cell ? cell.textContent.trim() : ''; // <-- ADDED NULL CHECK
-                        if (sortBy === 'year' || sortBy === 'estimated_score' || sortBy === 'page_count' || sortBy === 'relevance') { // <-- Added 'relevance'
-                            cellValue = parseFloat(cellValue) || 0;
+                        // --- Extract cell value based on column type ---
+                        if (['title', 'year', 'journal', /*'authors',*/ 'page_count', 'estimated_score', 'relevance'].includes(sortBy)) {
+                            cell = mainRow.cells[headerIndex];
+                            cellValue = cell ? cell.textContent.trim() : '';
+                            if (sortBy === 'year' || sortBy === 'estimated_score' || sortBy === 'page_count' || sortBy === 'relevance') {
+                                cellValue = parseFloat(cellValue) || 0;
+                            }
+                        } else if (['type', 'changed', 'changed_by', 'verified', 'verified_by', 'research_area'].includes(sortBy)) {
+                            cell = mainRow.cells[headerIndex];
+                            cellValue = cell ? cell.textContent.trim() : '';
+                        } else { // Status/Feature/Technique columns
+                            cell = mainRow.querySelector(`.editable-status[data-field="${sortBy}"]`);
+                            // Use SYMBOL_SORT_WEIGHTS for sorting, defaulting to 0 if symbol not found
+                            cellValue = SYMBOL_SORT_WEIGHTS[cell?.textContent.trim()] ?? 0;
                         }
-                    } else if (['type', 'changed', 'changed_by', 'verified', 'verified_by', 'research_area'].includes(sortBy)) {
-                        cell = mainRow.cells[headerIndex];
-                        cellValue = cell ? cell.textContent.trim() : '';
-                    } else { // Status/Feature/Technique columns
-                        cell = mainRow.querySelector(`.editable-status[data-field="${sortBy}"]`);
-                        cellValue = SYMBOL_SORT_WEIGHTS[cell.textContent.trim()] ?? 0;
+
+                        detailRow = mainRow.nextElementSibling; // Get the associated detail row
+                        sortData.push({ value: cellValue, mainRow, detailRow, paperId });
                     }
 
-                    detailRow = mainRow.nextElementSibling;
-                    sortData.push({ value: cellValue, mainRow, detailRow, paperId });
-                }
 
-                // --- SORT the Array of Objects ---
-                sortData.sort((a, b) => {
-                    let comparison = 0;
-                    if (a.value > b.value) comparison = 1;
-                    else if (a.value < b.value) comparison = -1;
-                    else {
-                        if (a.paperId > b.paperId) comparison = 1;
-                        else if (a.paperId < b.paperId) comparison = -1;
+                    // --- SORT the Array of Objects ---
+                    sortData.sort((a, b) => {
+                        let comparison = 0;
+                        if (a.value > b.value) comparison = 1;
+                        else if (a.value < b.value) comparison = -1;
+                        else {
+                            // Secondary sort by paperId to ensure stable sort
+                            if (a.paperId > b.paperId) comparison = 1;
+                            else if (a.paperId < b.paperId) comparison = -1;
+                        }
+                        // Apply direction
+                        return newDirection === 'DESC' ? -comparison : comparison;
+                    });
+
+                    // --- BATCH UPDATE the DOM ---
+                    const fragment = document.createDocumentFragment();
+                    for (let i = 0; i < sortData.length; i++) {
+                        fragment.appendChild(sortData[i].mainRow);
+                        fragment.appendChild(sortData[i].detailRow);
                     }
-                    return newDirection === 'DESC' ? -comparison : comparison;
-                });
+                    tbody.appendChild(fragment); // Single DOM append operation
 
-                // --- BATCH UPDATE the DOM ---
-                const fragment = document.createDocumentFragment();
-                for (let i = 0; i < sortData.length; i++) {
-                    fragment.appendChild(sortData[i].mainRow);
-                    fragment.appendChild(sortData[i].detailRow);
+                    // --- Schedule UI Updates after DOM change ---
+                    // Use requestAnimationFrame to align with browser repaint
+                    requestAnimationFrame(() => { applyAlternatingShading(); });
+                    requestAnimationFrame(() => {
+                        const currentVisibleRowsForJournal = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
+                        applyJournalShading(currentVisibleRowsForJournal);
+                    });
+                    requestAnimationFrame(() => { updateCounts(); });
+
+                    // Update sort state
+                    currentClientSort = { column: sortBy, direction: newDirection };
+
+                    // Update sort indicators in the header
+                    document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
+                    const indicator = this.querySelector('.sort-indicator');
+                    if (indicator) {
+                         indicator.textContent = newDirection === 'ASC' ? '▲' : '▼';
+                    }
+
+
+                } catch (error) {
+                    console.error("Error during sorting:", error);
+                    // Even if there's an error, ensure cleanup happens
+                    // Remove busy cursor after a delay to allow transition
+                    setTimeout(() => {
+                       document.documentElement.classList.remove('busyCursor');
+                    }, 150); // Delay slightly longer than CSS transition
+
+                } finally {
+                    // 3. Schedule removal of the busy cursor class AFTER a guaranteed delay
+                    // This ensures the CSS transition has time to play.
+                    // The delay (150ms) should be >= CSS transition duration (0.3s) + delay (0.1s) if you want full transition,
+                    // but even a shorter delay (longer than CSS delay) often works to trigger it.
+                    setTimeout(() => {
+                        document.documentElement.classList.remove('busyCursor');
+                    }, 150); // Delay slightly longer than CSS transition delay
                 }
-                tbody.appendChild(fragment);
-
-                // --- Schedule UI Updates ---
-                requestAnimationFrame(() => { applyAlternatingShading(); });
-                requestAnimationFrame(() => {
-                    const currentVisibleRowsForJournal = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
-                    applyJournalShading(currentVisibleRowsForJournal);
-                });
-                requestAnimationFrame(() => { updateCounts(); });
-
-                currentClientSort = { column: sortBy, direction: newDirection };
-
-                document.documentElement.classList.remove('busyCursor');
-                // Update sort indicators
-                document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
-                this.querySelector('.sort-indicator').textContent = newDirection === 'ASC' ? '▲' : '▼'; // Assuming correct symbols
-
-            }, 0); // Defer execution
+            }, 20); // Initial defer for adding busy cursor (can keep this small or match rAF timing ~16ms)
         });
     });
 

@@ -12,14 +12,52 @@
     <!-- <script src="{{ url_for('static', filename='ghpages.js') }}" defer></script> -->
 </head>
 <body>
-
-<!-- Hidden file input for BibTeX upload -->
-<input type="file" id="bibtex-file-input" accept=".bib" style="display: none;">
-<div class="table-container"> <!-- Wrapper for horizontal scrolling -->
+<input type="file" id="bibtex-file-input" accept=".bib" style="display: none;"> <!-- Hidden file input for BibTeX upload -->
+<div class="table-container">
     <div id="papers-table-container">
-        <table id="papersTable">
+        <table id="papersTable" style="table-layout: fixed;">
+            <colgroup>
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Column 1: Type (Rotated Header) -->
+                <col style="width: 66%"> <!-- Column 2: Title (Should Expand)-->
+                <col style="width: 40px; min-width: 40px; max-width:40px;"> <!-- Column 3: Year -->
+                <col style="width: 34%"> <!-- Column 4: Journal/Conf (Should Expand) -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Column 5: Pages (Rotated Header) -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Off-topic -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Relevance -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Survey -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- THT -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- SMT -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- X-Ray -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Tracks -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Holes -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Solder Insufficient -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Solder Excess -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Solder Void -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Solder Crack -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Missing Comp -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Wrong Comp -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Orientation -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Cosmetic -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Classic CV -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- ML -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- CNN Classifier -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- CNN Detector -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- R-CNN Detector -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Transformers -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Other -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Hybrid -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Datasets  -->
+                <!-- Columns 31-36: Other Data (Mixed Sizes) -->
+                <col style="width: 56px; min-width: 56px; max-width: 56px;"> <!-- Last Changed -->
+                <col style="width: 56px; min-width: 56px; max-width: 56px;"> <!-- Changed By -->
+                <col style="width: 50px; min-width: 50px; max-width: 50px;"> <!-- Verified -->
+                <col style="width: 32px; min-width: 32px; max-width: 32px;"> <!-- Accr. Score -->
+                <col style="width: 50px; min-width: 50px; max-width: 50px;"> <!-- Verified By -->
+                <col style="width: 44px; min-width: 44px; max-width: 44px;"> <!-- Details -->
+            </colgroup>
             <thead>
                 <tr>
+                    <th id="main-header-wrapper" colspan=36>
                     <div class="main-header">
                         <div class="header-controls">
                             <button class="action-btn" id="import-bibtex-btn">Import <strong>BibTeX</strong></button>
@@ -31,30 +69,32 @@
                         <div class="header-controls">
                             <div class="batch-actions">
                                 <span id="batch-status-message"></span> <!-- For feedback -->
-                                <button class="action-btn" id="stats-btn">Check <strong>Stats</strong></button>
                                 <button class="action-btn" id="classify-remaining-btn">Classify <strong>Remaining</strong></button>
                                 <button class="action-btn" id="classify-all-btn">Re-Classify <strong>All</strong></button>
                                 <button class="action-btn" id="verify-remaining-btn">Verify <strong>Remaining</strong></button>
                                 <button class="action-btn" id="verify-all-btn">Re-Verify <strong>All</strong></button>
-                                <button class="action-btn" id="fullscreen-btn" title="Fullscreen"><span>⇲</span></button>
+                                <!-- <button class="action-btn" id="fullscreen-btn" title="Fullscreen"><span>⇲</span></button> -->
                             </div>
                         </div>
+                        <div class="header-controls">
+                            <button class="action-btn" id="stats-btn">Check <strong>Stats</strong></button>
+                            <button class="action-btn" id="about-btn" title="Help"><span>?</span></button>
+                        </div>
                     </div>
-
+                    </td>
                 </tr>
                 <tr>
                     <th class="ontop-header" colspan="5" rowspan="2"> 
                         <div class="header-filters" style="min-width: 540px;">
                             <div class="filter-item">
-                                <!-- <input type="checkbox" id="hide-short-checkbox"  style="display: none;"> <!-- obsolete  -->
                                 <label for="min-page-count">Min. page count ></label>
                                 <input type="number" id="min-page-count" value="{{ min_page_count_value }}" min="0" max="9">
                             </div>
                             <div class="filter-item">
                                 <label for="year-from">Year:</label>
-                                <input type="number" id="year-from" value="{{ year_from_value }}" min="2015" max="2026">
+                                <input type="number" id="year-from" value="{{ year_from_value }}" min="2010" max="2026">
                                 <label for="year-to">to</label>
-                                <input type="number" id="year-to" value="{{ year_to_value }}" min="2015" max="2026">
+                                <input type="number" id="year-to" value="{{ year_to_value }}" min="2010" max="2026">
                             </div>
                             <!-- This button will now trigger a page reload with updated URL parameters -->
                             <button class="action-btn" id="apply-serverside-filters" style="display: none;"><span>Apply</span></button>
@@ -68,16 +108,17 @@
                     </th>
                 </tr>
                 <tr>
-                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Hide Offtopic papers" id="hide-offtopic-checkbox" {% if hide_offtopic == true %}checked{% endif %}></th>
+                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to Hide Offtopic papers" id="hide-offtopic-checkbox" {% if hide_offtopic == true %}checked{% endif %}></th>
                     <th class="inferred-header ontop-header" colspan="1"></th>
-                    <th class="inferred-header ontop-header" colspan="1"></th>
-                    <th class="inferred-header ontop-header" colspan="3">Classification</th>
+                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to only show Surveys" id="only-survey-checkbox"></th>
+                    <th class="inferred-header ontop-header" colspan="2"></th>
+                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to Hide X-Ray" id="hide-xray-checkbox" checked></th><!-- client-side, default enabled -->
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="2">Features:</th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="4">Solder</th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="4">PCBA</th>
-                    <th class="inferred-header inferred-header-3 ontop-header" colspan="7">Techniques</th>
+                    <th class="inferred-header inferred-header-3 ontop-header" colspan="8">Techniques</th>
                     <!-- <th class="inferred-header inferred-header-3 ontop-header" colspan="6">DL-based</th> -->
-                    <th class="inferred-header inferred-header-3 ontop-header" colspan="2"></th>
+                    <th class="inferred-header inferred-header-3 ontop-header" colspan="1"></th>
                 </tr>
                 <tr>
                     <th class="rotate-header status-header editable-header" data-sort="type"><div><span>Type</span></div></span><span class="sort-indicator"></span></th>
@@ -86,7 +127,7 @@
                     <!-- <th data-sort="authors">Authors <span class="sort-indicator"></span></th> -->
                     <th data-sort="year">Year <span class="sort-indicator"></span></th>
                     <th data-sort="journal">Journal/Conf <span class="sort-indicator"></span></th>    
-                    <th class="rotate-header" data-sort="page_count" style="width:28px; min-width:28px; max-width:28px"><div><span>Pages</span></div> <span class="sort-indicator"></span></th>
+                    <th class="rotate-header" data-sort="page_count" ><div><span>Pages</span></div> <span class="sort-indicator"></span></th>
 
 
                     <!-- Classification Summary Columns -->
@@ -122,12 +163,12 @@
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_hybrid"><span class="sort-indicator"></span><div><span>Hybrid</span></div></th>
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_available_dataset"><span class="sort-indicator"></span><div><span>Datasets</span></div></th>
 
-                    <th data-sort="changed" style="width:46px; min-width:46px; max-width:46px">Last Changed <span class="sort-indicator"></span></th>
-                    <th data-sort="changed_by" style="width:50px; min-width:50px; max-width:50px">Changed By <span class="sort-indicator"></span></th>
-                    <th data-sort="verified" style="width:42px; min-width:42px; max-width:42px">Verified <span class="sort-indicator"></span></th>
-                    <th class="rotate-header" data-sort="estimated_score" style="width:28px; min-width:28px; max-width:28px"><div><span>Accr. Score</span></div> <span class="sort-indicator"></span></th>
-                    <th data-sort="verified_by" style="width:42px; min-width:42px; max-width:42px">Verified By <span class="sort-indicator"></span></th>
-                    <th class="rotate-header" style="width:40px; min-width:40px; max-width:40px"><div>Details</div></th> <!-- must be 50px due to 'collapse' button text -->
+                    <th data-sort="changed">Last Changed <span class="sort-indicator"></span></th>
+                    <th data-sort="changed_by">Changed By <span class="sort-indicator"></span></th>
+                    <th data-sort="verified">Verified <span class="sort-indicator"></span></th>
+                    <th class="rotate-header" data-sort="estimated_score"><div><span>Accr. Score</span></div> <span class="sort-indicator"></span></th>
+                    <th data-sort="verified_by">Verified By <span class="sort-indicator"></span></th>
+                    <th class="rotate-header"><div>Details</div></th> <!-- must be 50px due to 'collapse' button text -->
                 </tr>
             </thead>
                 <!-- tbody and tfoot come from the papers_table template-->
@@ -181,6 +222,11 @@
                 <p> Data in this page below is dynamically calculated based on <strong>currently visible</strong> papers.</p>
             </div>
         </div>
+    </div>
+</div>
+<div id="aboutModal" class="modal">
+    <div class="modal-small-content">
+        <span class="close">&times;</span>
     </div>
 </div>
 </body>

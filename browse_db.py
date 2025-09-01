@@ -12,6 +12,9 @@ import sys
 import threading
 import webbrowser
 from collections import Counter
+import htmlmin
+import rcssmin
+import rjsmin
 
 # Import globals, the classification and verification modules
 import globals
@@ -55,6 +58,15 @@ def truncate_authors(authors_str, max_authors=2):
     else:
         return authors_str
 
+def get_total_paper_count():
+    """Get the total number of papers in the database."""
+    conn = get_db_connection()
+    try:
+        count = conn.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
+        return count
+    finally:
+        conn.close()
+
 def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_count=None, search_query=None):
     """Fetch papers from the database, applying various optional filters."""
     conn = get_db_connection()
@@ -65,6 +77,7 @@ def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_coun
     # --- Existing Filters ---
     if hide_offtopic:
         conditions.append("(is_offtopic = 0 OR is_offtopic IS NULL)")
+        # conditions.append("(is_offtopic = 0)")
 
     if year_from is not None:
         try:
@@ -509,35 +522,32 @@ def index():
     min_page_count_param = request.args.get('min_page_count')
 
     search_query_param = request.args.get('search_query')
-    
+    total_paper_count = get_total_paper_count()
+
     papers_table_content = render_papers_table(
         hide_offtopic_param=hide_offtopic_param,
         year_from_param=year_from_param,
         year_to_param=year_to_param,
         min_page_count_param=min_page_count_param,
-        search_query_param=search_query_param  # Add this line
+        search_query_param=search_query_param,
     )
-
     # Pass the rendered table content and filter values to the main index template
     # Determine values to display in the input fields (use defaults if URL params were missing/invalid)
     try:
         year_from_input_value = str(int(year_from_param)) if year_from_param is not None else str(DEFAULT_YEAR_FROM)
     except ValueError:
         year_from_input_value = str(DEFAULT_YEAR_FROM)
-
     try:
         year_to_input_value = str(int(year_to_param)) if year_to_param is not None else str(DEFAULT_YEAR_TO)
     except ValueError:
         year_to_input_value = str(DEFAULT_YEAR_TO)
-
     try:
         min_page_count_input_value = str(int(min_page_count_param)) if min_page_count_param is not None else str(DEFAULT_MIN_PAGE_COUNT)
     except ValueError:
         min_page_count_input_value = str(DEFAULT_MIN_PAGE_COUNT)
-
     hide_offtopic_checkbox_checked = hide_offtopic_param is None or hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
     search_input_value = search_query_param if search_query_param is not None else ""
-    
+
     return render_template(
         'index.html',
         papers_table_content=papers_table_content,
@@ -545,114 +555,124 @@ def index():
         year_from_value=year_from_input_value,
         year_to_value=year_to_input_value,
         min_page_count_value=min_page_count_input_value,
-        search_query_value=search_input_value  # Add this line
+        search_query_value=search_input_value,
+        total_paper_count=total_paper_count
     )
+
 
 @app.route('/static_export', methods=['GET'])
 def static_export():
     """Generate and serve a downloadable HTML snapshot based on current filters."""
-    try:
-        # --- Get filter parameters from the request (URL query params) ---
-        hide_offtopic_param = request.args.get('hide_offtopic')
-        year_from_param = request.args.get('year_from')
-        year_to_param = request.args.get('year_to')
-        min_page_count_param = request.args.get('min_page_count')
-        search_query_param = request.args.get('search_query') # Include search
+    # --- Get filter parameters from the request (URL query params) ---
+    hide_offtopic_param = request.args.get('hide_offtopic')
+    year_from_param = request.args.get('year_from')
+    year_to_param = request.args.get('year_to')
+    min_page_count_param = request.args.get('min_page_count')
+    search_query_param = request.args.get('search_query') # Include search
+    # --- Determine filter values, using defaults if not provided or invalid ---
+    hide_offtopic = True # Default
+    if hide_offtopic_param is not None:
+        hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
+    year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
+    year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
+    min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
+    search_query_value = search_query_param if search_query_param is not None else ""
+    # --- Fetch papers based on these filters ---
+    papers = fetch_papers(
+        hide_offtopic=hide_offtopic,
+        year_from=year_from_value,
+        year_to=year_to_value,
+        min_page_count=min_page_count_value,
+        search_query=search_query_value # Pass the search query
+    )
+    # --- Read static file contents ---
+    fonts_css_content = ""
+    style_css_content = ""
+    chart_js_content = ""
+    ghpages_js_content = ""
+    # Assuming static files are in a 'static' directory relative to the script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    static_dir = os.path.join(script_dir, 'static')
+    with open(os.path.join(static_dir, 'fonts.css'), 'r', encoding='utf-8') as f:
+        fonts_css_content = f.read()
+    with open(os.path.join(static_dir, 'style.css'), 'r', encoding='utf-8') as f:
+        style_css_content = f.read()
+    with open(os.path.join(static_dir, 'chart.js'), 'r', encoding='utf-8') as f:
+        chart_js_content = f.read()
+    with open(os.path.join(static_dir, 'ghpages.js'), 'r', encoding='utf-8') as f:
+        ghpages_js_content = f.read()
 
-        # --- Determine filter values, using defaults if not provided or invalid ---
-        hide_offtopic = True # Default
-        if hide_offtopic_param is not None:
-            hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
+    # --- Minify static content ---
+    fonts_css_content = rcssmin.cssmin(fonts_css_content)
+    style_css_content = rcssmin.cssmin(style_css_content)
+    chart_js_content = rjsmin.jsmin(chart_js_content)
+    ghpages_js_content = rjsmin.jsmin(ghpages_js_content)
 
-        year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
-        year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
-        min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
-        search_query_value = search_query_param if search_query_param is not None else ""
+    # --- Render the static export template ---
+    # Pass the (potentially minified) static content to the papers table template
+    papers_table_static_export = render_template(
+        'papers_table_static_export.html',
+        papers=papers,
+        type_emojis=globals.TYPE_EMOJIS,
+        default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
+        hide_offtopic=hide_offtopic,
+        year_from_value=str(year_from_value),
+        year_to_value=str(year_to_value),
+        min_page_count_value=str(min_page_count_value),
+        search_query_value=search_query_value
+    )
+    # --- Render the main static export index template ---
+    # Pass the (potentially minified) static content
+    full_html_content = render_template(
+        'index_static_export.html',
+        papers_table_static_export=papers_table_static_export,
+        hide_offtopic=hide_offtopic,
+        year_from_value=year_from_value, # Pass raw values if needed by template logic
+        year_to_value=year_to_value,
+        min_page_count_value=min_page_count_value,
+        search_query=search_query_value,
+        # --- Pass potentially minified static content ---
+        fonts_css_content=Markup(fonts_css_content), # Markup was already applied if needed, or content is minified
+        style_css_content=Markup(style_css_content),
+        chart_js_content=Markup(chart_js_content),
+        ghpages_js_content=Markup(ghpages_js_content)
+    )
 
-        # --- Fetch papers based on these filters ---
-        papers = fetch_papers(
-            hide_offtopic=hide_offtopic,
-            year_from=year_from_value,
-            year_to=year_to_value,
-            min_page_count=min_page_count_value,
-            search_query=search_query_value # Pass the search query
-        )
+    # --- Minify the final HTML ---
+    # htmlmin options can be adjusted. remove_empty_space=True is common.
+    full_html_content = htmlmin.minify(
+        full_html_content,
+        remove_empty_space=True,
+        reduce_boolean_attributes=True,
+        remove_optional_attribute_quotes=True,
+        # remove_comments=True, # Enable if you want to remove HTML comments
+        # keep_pre=True, # Important if you have <pre> tags that need formatting
+    )
 
-        # --- Read static file contents ---
-        fonts_css_content = ""
-        style_css_content = ""
-        chart_js_content = ""
-        ghpages_js_content = ""
-        # Assuming static files are in a 'static' directory relative to the script
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        static_dir = os.path.join(script_dir, 'static')
-        with open(os.path.join(static_dir, 'fonts.css'), 'r') as f:
-            fonts_css_content = f.read()
-        with open(os.path.join(static_dir, 'style.css'), 'r') as f:
-            style_css_content = f.read()
-        with open(os.path.join(static_dir, 'chart.js'), 'r') as f:
-            chart_js_content = f.read()
-        with open(os.path.join(static_dir, 'ghpages.js'), 'r', encoding='utf-8') as f:
-            ghpages_js_content = f.read()
+    # --- Create a filename based on filters ---
+    filename_parts = ["PCBPapers"]
+    if year_from_value == year_to_value:
+            filename_parts.append(str(year_from_value))
+    else:
+            filename_parts.append(f"{year_from_value}-{year_to_value}")
+    if min_page_count_value > 0:
+            filename_parts.append(f"min{min_page_count_value}pg")
+    if hide_offtopic:
+            filename_parts.append("noOfftopic")
+    if search_query_value:
+            # Sanitize search query for filename (basic)
+            safe_search = "".join(c for c in search_query_value if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            if safe_search:
+                filename_parts.append(f"search_{safe_search[:20]}") # Limit length
+    filename = "_".join(filename_parts) + ".html"
+    # --- Return as a downloadable attachment ---
+    from flask import Response
+    return Response(
+        full_html_content, # This is now the minified HTML string
+        mimetype="text/html",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
-        # --- Render the static export template ---
-        papers_table_static_export = render_template(
-            'papers_table_static_export.html',
-            papers=papers,
-            type_emojis=globals.TYPE_EMOJIS,
-            default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
-            hide_offtopic=hide_offtopic,
-            year_from_value=str(year_from_value),
-            year_to_value=str(year_to_value),
-            min_page_count_value=str(min_page_count_value),
-            search_query_value=search_query_value
-        )
-
-        # --- Render the main static export index template ---
-        full_html_content = render_template(
-            'index_static_export.html',
-            papers_table_static_export=papers_table_static_export,
-            hide_offtopic=hide_offtopic,
-            year_from_value=year_from_value, # Pass raw values if needed by template logic
-            year_to_value=year_to_value,
-            min_page_count_value=min_page_count_value,
-            search_query=search_query_value,
-            # --- Pass static content ---
-            fonts_css_content=Markup(fonts_css_content),
-            style_css_content=Markup(style_css_content),
-            chart_js_content=Markup(chart_js_content),
-            ghpages_js_content=Markup(ghpages_js_content)
-        )
-
-        # --- Create a filename based on filters ---
-        filename_parts = ["PCBPapers"]
-        if year_from_value == year_to_value:
-             filename_parts.append(str(year_from_value))
-        else:
-             filename_parts.append(f"{year_from_value}-{year_to_value}")
-        if min_page_count_value > 0:
-             filename_parts.append(f"min{min_page_count_value}pg")
-        if hide_offtopic:
-             filename_parts.append("noOfftopic")
-        if search_query_value:
-             # Sanitize search query for filename (basic)
-             safe_search = "".join(c for c in search_query_value if c.isalnum() or c in (' ', '-', '_')).rstrip()
-             if safe_search:
-                 filename_parts.append(f"search_{safe_search[:20]}") # Limit length
-        filename = "_".join(filename_parts) + ".html"
-
-        # --- Return as a downloadable attachment ---
-        from flask import Response
-        return Response(
-            full_html_content,
-            mimetype="text/html",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
-
-    except Exception as e:
-        print(f"Error generating static export: {e}")
-        # Return an error message or handle gracefully
-        return "Error generating export file.", 500
 
 
 @app.route('/get_detail_row', methods=['GET'])

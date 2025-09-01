@@ -11,6 +11,55 @@ html.busyCursor,
 html.busyCursor * {
     cursor: wait !important;
 }
+
+.table-container {
+    position: relative;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 58px;
+    left: 9px;
+    margin: 0;
+    padding: 0;
+    width: calc(100% - 18px);
+    height: calc(100% - 67px);
+    /* background: #eee6; */
+    backdrop-filter: blur(6px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    /* z-index: 1000; */
+    transition-delay: 0.33s;  /*return transition*/
+    border-radius: 8px;
+    background: #eee6;
+}
+
+/* Only show spinner during filtering */
+html.busyCursor .loading-overlay {
+    opacity: 1;
+    pointer-events: all;
+    transition-delay: 0.33s; /*Start transition*/
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 12px solid #2d6770;
+    border-top: 12px solid transparent;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
 /* Ensure the table container allows internal scrolling for the sticky footer */
  .table-container { 
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
@@ -37,13 +86,12 @@ table {
     border-collapse: collapse;
     width: 100%;
     background-color: #fff;
-    min-width: 1660px;
+    min-width: 1500px;
     border-radius: 6px;
 }
 
 td {
-    padding: 8px; 
-    /*! min-width: 25px; */
+    padding: 9px 6px; 
 }
 
 /* --- Rotated Header Styles --- */
@@ -72,7 +120,6 @@ th {
     box-shadow: inset 0 -0px 0px 0.75px #0a5662;
     padding: 6px;
     text-align: left;
-    min-width: 20px;
     z-index: 10;
     font-size: 8.5pt;
     text-shadow: 1px 0 5px #0006;
@@ -222,15 +269,15 @@ input[type="search"]::-webkit-input-placeholder { /* For older Webkit */
     padding: 10px 20px;
     background-color: #2d6770; 
     color: white;
-    border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 1em;
+    font-size: 11pt;
     transition: all 0.1s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-    min-width: 175px;
+    min-width: 140px;
     height: 40px;
     text-shadow: 1px 0 5px #0006;
+    border: 1px solid #0002;
 }
 
 .action-btn:hover {
@@ -309,10 +356,10 @@ form input[type="text"] {
     transition: max-height 0.25s ease-in-out, opacity 0.3s ease-in-out;
     
     display: grid;
-    grid-template-columns: 1fr 1fr 570px;
+    grid-template-columns: 1fr 1fr 530px;
     grid-template-rows: auto; 
     
-    gap: 12px; 
+    gap: 9px; 
     box-sizing: border-box;
     width: 100%;
     padding: 0 0 0 10px;
@@ -425,6 +472,12 @@ form input[type="text"] {
     padding: 0;
     margin: 0;
 }
+#about-btn{
+    width: 30px;
+    min-width: 30px;
+    padding: 0;
+    background-color: #7a8081;
+}
 a {
     text-decoration: none;
     color: #227
@@ -455,7 +508,7 @@ input[type="checkbox"] {
     height: 12px;
     width: 12px;
     margin: 0;
-    transform: scale(2.6,2) translate(2px,-0.5px);
+    transform: scale(2,2) translate(1.5px,-0.5px);
     border-radius: 0;
     opacity: 0.5;
 }
@@ -497,11 +550,11 @@ tr.filter-hidden {
 }
 
 #counts-footer td {
-    /*! padding: 8px; */
     text-align: center; /* Center the counts */
-    box-shadow: inset 0 0px 0px 1px #115e5a66; /* Match header border */
-    font-size: 9.5pt;
-    /*! min-width: 25px; */ /* Match header min-width */
+    /*! box-shadow: inset 0 -0px 0px 0.75px #0a5662; */ /* Match header border */
+    font-size: 9pt;
+     /* Match header min-width */
+    padding: 9px 0px;
 }
 
 
@@ -535,20 +588,21 @@ tr.filter-hidden {
     flex-basis: 100%; /* Forces full width on new line(s) within flex container, adjust if needed */
     min-width: 100%; /* Allows the content to shrink below its intrinsic width if necessary */
 }
-
-/* --- New Main Header Styles --- */
+#main-header-wrapper{
+    padding: 0;
+}
 .main-header {
     /*! width: calc(100% - 30px); */
     display: grid;
-    grid-template-columns: auto 1fr auto; /* Title, Filters, Controls */
+    grid-template-columns: auto 1fr auto auto; /* Title, Filters, Controls */
     grid-template-rows: auto; /* Single row */
-    gap: 20px; /* Space between items */
+    gap: 4px; /* Space between items */
     align-items: center; /* Align items vertically */
     /*! padding: 0px 15px; */
     background-color: #e0e6ed; /* Example background */
     /* border: 1px solid #c0cacc; Example border */
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    min-width: 1660px;
+    min-width: 1500px;
     height: 48px;
 }
 
@@ -616,7 +670,7 @@ tr.filter-hidden {
     /* Two columns for the first row (Research Area, Model Name) */
     /* One column for the full-width items below (Other, Page Count, Comments) */
     /* One row for the top inputs, one for the expanding comments, one for buttons */
-    grid-template-columns: 1fr  1fr 1fr 90px; /* Two equal flexible columns */
+    grid-template-columns: 1fr 1fr 1fr 90px; /* Two equal flexible columns */
     grid-template-rows: auto auto 1fr auto; /* Rows: labels, labels, textarea, buttons */
     gap: 10px; /* Consistent gap between grid items */
     height: calc(100% - 16px); /* Fill the .detail-edit area */
@@ -712,11 +766,11 @@ tr.filter-hidden {
 }
 
 .modal-content {
-    background-color: #f5f7fa;
+    background: linear-gradient(180deg, #2d6770 0%, #2d6770 20px, #f5f7fad9 20px);
      /* 5vh top/bottom margin */
     border: 2px solid #2d6770;
     width: calc(100vw - 180px);
-    min-width: 1680px;
+    min-width: 1440px;
     height: calc(100vh - 20px); /* Limit height */
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -725,7 +779,7 @@ tr.filter-hidden {
     overflow: hidden;
     /*! transform: scale(95%) translateY(-20px); */
     
-    transform: scale3d(0.95, 0.95, 1) rotate3d(2, 1, 0, 3deg) translateY(-20px);
+    transform: scale3d(0.94, 0.94, 1) rotate3d(2, 1, 0, 2.5deg) translateY(-20px);
     transition: transform 0.3s ease-out; /* Animate transform */
     display: grid;
     grid-template-columns: 1fr 420px;
@@ -824,6 +878,7 @@ tr.filter-hidden {
     opacity: 0; /* Start fully transparent */
     pointer-events: none; /* Ignore mouse events when hidden */
     transition: opacity 0.3s ease-in-out; /* Animate opacity */
+    transition-delay: 0.15s;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -842,12 +897,14 @@ tr.filter-hidden {
     opacity: 1; /* Fully opaque */
     pointer-events: auto; /* Enable mouse events */
     /* Keep the existing backdrop styles */
+    transition-delay: 0.5s;
 }
 
 
 /* When the modal is active, move it to its final position */
 .modal.modal-active .modal-content {
     transform: none; /* Final position */
+    transition-delay: 0.5s;
 }
 /* --- End Stats Modal Animation Styles --- */
 
@@ -879,7 +936,7 @@ tr.filter-hidden {
 }
 
 
-@media screen and (max-width: 1920px) {
+@media screen and (max-width: 1880px) {
     body {
         margin: 0px;
     }
@@ -889,5 +946,12 @@ tr.filter-hidden {
         border-radius: 0px;
         background: #2d6770;
         border: none;
+    }
+        
+    .loading-overlay {
+        left: 0px;
+        width: calc(100%);
+        height: calc(100%);
+        border-radius: 0px;
     }
 }

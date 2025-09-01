@@ -98,7 +98,7 @@ OK              Automatic Dedup by DOI?
 OK      Hide unclassified and off-topic server-side
 OK      Add year range instead of "older than x years"
 
-Refactor: optimizations for larger >1000 datasets:
+Refactor: optimizations for larger >>1000 papers dataset:
 
 OK      Change min page count to server-side;
 OK      Change year to server-side;
@@ -107,5 +107,9 @@ OK      Change detail row to lazy load;
 OK      Reimplement repeated keywords, authors, areas count server-side 
 
 OK      Reimplement full-client-side GH Pages export
-                Optimize this version for speed?
+                Optimize this version for speed somehow?
+
+OK      Fix table layout dynamic widths (colgroups)
+OK      Add loading spinner for table updates
         Fix ugly hide offtopic checkbox
+        Add favicon
