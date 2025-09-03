@@ -86,7 +86,7 @@ table {
     border-collapse: collapse;
     width: 100%;
     background-color: #fff;
-    min-width: 1500px;
+    min-width: 1580px;
     border-radius: 6px;
 }
 
@@ -446,11 +446,11 @@ form input[type="text"] {
     min-width: 130px;
     background: rgb(60, 112, 75);
 }
-#apply-serverside-filters{
+#apply-serverside-filters, #static-stats-btn{
     background: rgb(185, 209, 209);
-    width: 80px;
-    max-width: 80px;
-    min-width: 80px;
+    width: 120px;
+    max-width: 120px;
+    min-width: 120px;
     color: #0a5662;
     font-size: 10.5pt;
     text-shadow: 1px 0 5px #fff6;
@@ -602,7 +602,7 @@ tr.filter-hidden {
     background-color: #e0e6ed; /* Example background */
     /* border: 1px solid #c0cacc; Example border */
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    min-width: 1500px;
+    min-width: 1580px;
     height: 48px;
 }
 
@@ -619,7 +619,8 @@ tr.filter-hidden {
     align-items: center; /* Align items vertically */
     /* Optional: justify-content: center; or space-between; */
     color: #eee;
-    font-weight: 400;
+    font-weight: 400;  
+    justify-content: space-between;
 }
 
 .filter-item {
@@ -770,7 +771,7 @@ tr.filter-hidden {
      /* 5vh top/bottom margin */
     border: 2px solid #2d6770;
     width: calc(100vw - 180px);
-    min-width: 1440px;
+    min-width: 1600px;
     height: calc(100vh - 20px); /* Limit height */
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -782,7 +783,7 @@ tr.filter-hidden {
     transform: scale3d(0.94, 0.94, 1) rotate3d(2, 1, 0, 2.5deg) translateY(-20px);
     transition: transform 0.3s ease-out; /* Animate transform */
     display: grid;
-    grid-template-columns: 1fr 420px;
+    grid-template-columns: 500px 310px 1fr;
 }
 
 
@@ -842,7 +843,7 @@ tr.filter-hidden {
 /* --- Styles for Multi-Column Stats List --- */
 .stats-list-multicolumn-short {
     /* Use CSS Columns */
-    column-count: 4;
+    column-count: 2;
     column-gap: 0px; /* Adjust gap between columns as needed */
     /* Ensure list items don't break across columns awkwardly */
     break-inside: avoid-column;
@@ -853,7 +854,7 @@ tr.filter-hidden {
 /* --- Styles for Multi-Column Stats List --- */
 .stats-list-multicolumn-2 {
     /* Use CSS Columns */
-    column-count: 2;
+    column-count: 1;
     column-gap: 0px; /* Adjust gap between columns as needed */
     /* Ensure list items don't break across columns awkwardly */
     break-inside: avoid-column;
@@ -911,7 +912,7 @@ tr.filter-hidden {
 
 .stats-lists{
     display: grid;
-    grid-template-rows: calc(20vh - 33px) calc(60vh - 20px) calc(20vh - 33px) calc(190px);
+    grid-template-rows: calc(19vh - 40px) calc(30vh - 40px) calc(20vh - 40px) calc(90px) calc(19vh - 40px) calc(20vh - 40px);
     border-right: 2px solid #2d6770;
 }
 
@@ -925,16 +926,15 @@ tr.filter-hidden {
 } */
 
 #journalStatsList{
-    height: calc(20vh - 70px);
+    height: calc(20vh - 75px);
 }
 #keywordStatsList{
-    height: calc(60vh - 60px);
+    height: calc(30vh - 75px);
 }
 
-#authorStatsList {
-    height: calc(20vh - 70px);
+#authorStatsList, #otherDetectedFeaturesStatsList, #modelNamesStatsList  {
+    height: calc(20vh - 75px);
 }
-
 
 @media screen and (max-width: 1880px) {
     body {

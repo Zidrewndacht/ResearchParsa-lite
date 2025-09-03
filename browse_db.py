@@ -12,7 +12,6 @@ import sys
 import threading
 import webbrowser
 from collections import Counter
-import htmlmin
 import rcssmin
 import rjsmin
 
@@ -22,9 +21,9 @@ import automate_classification
 import verify_classification
 
 # Define default year range
-DEFAULT_YEAR_FROM = 2020
+DEFAULT_YEAR_FROM = 2021
 DEFAULT_YEAR_TO = 2025
-DEFAULT_MIN_PAGE_COUNT = 4
+DEFAULT_MIN_PAGE_COUNT = 3
 
 app = Flask(__name__)
 DATABASE = None # Will be set from command line argument

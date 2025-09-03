@@ -19,7 +19,7 @@
                 {{ paper.title }}
             {% endif %}
         </td>
-        <td class="secondary-text-cell number-cell">{{ paper.year or '' }}</td>
+        <td class="secondary-text-cell number-cell" style="width:28px; min-width:28px; max-width:28px">{{ paper.year or '' }}</td>
         <td class="secondary-text-cell">{{ paper.journal }}</td>        
         <td class="secondary-text-cell number-cell">{{ paper.page_count or '' }}</td>
 
@@ -40,6 +40,7 @@
         <td class="status-cell editable-status highlight-status" data-field="features_wrong_component">{{ paper.features.wrong_component | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_orientation">{{ paper.features.orientation | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_cosmetic">{{ paper.features.cosmetic | render_status }}</td>
+        <td class="status-cell highlight-status" data-field="features_other_state">{{ '✔️' if paper.features.other and (paper.features.other|string).strip() else '❌' }}</td>
 
         <td class="status-cell editable-status" data-field="technique_classic_cv_based">{{ paper.technique.classic_cv_based | render_status }}</td>
         <td class="status-cell editable-status" data-field="technique_ml_traditional">{{ paper.technique.ml_traditional | render_status }}</td>
@@ -55,11 +56,12 @@
         <td class="status-cell changed-by-cell highlight-status" data-field="changed_by">{{ paper.changed_by | render_changed_by }}</td>           
         <td class="status-cell editable-status" data-field="verified">{{ paper.verified | render_status }}</td>
         <td class="secondary-text-cell number-cell" data-field="verified">{{ paper.estimated_score  or '' }}</td>
-        <td class="status-cell editable-verify" data-field="verified_by">{{ paper.verified_by | render_verified_by }}</td>           
+        <td class="status-cell editable-verify" data-field="verified_by">{{ paper.verified_by | render_verified_by }}</td>                 
+        <td class="status-cell" data-field="user_comment_state">{{ '✔️' if paper.user_trace and (paper.user_trace|string).strip() else '❌' }}</td> 
         <td class="toggle-btn" onclick="toggleDetails(this)"><span>Show</span></td>
     </tr>
     <tr class="detail-row">
-        <td colspan="36">
+        <td colspan="38">
             <div class="detail-flex-container">
                 <div class="detail-content detail-abstract">
                     <p><strong>Abstract:</strong> {{ paper.abstract }}</p>

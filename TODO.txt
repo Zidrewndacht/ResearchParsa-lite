@@ -113,3 +113,16 @@ OK      Fix table layout dynamic widths (colgroups)
 OK      Add loading spinner for table updates
         Fix ugly hide offtopic checkbox
         Add favicon
+
+
+        Add sanity check filter: offtopic papers verified as wrong classification:
+                Potential max. 177 false offtopics of 11709.
+                Instead, just add a "only wrong classifications" filter then sort by offtopic?
+
+OK      Group features;
+OK      Keep colors consistent across charts;
+OK      Fix exported HTML charts;
+        Fix chart can grow but can't shrink?
+OK      Show "has Other"
+OK      Show "has User Comment"
+        Add missing stats to server-side version. Can't be done client-side because detail row is lazy-loaded.

@@ -28,6 +28,7 @@
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- THT -->
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- SMT -->
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- X-Ray -->
+
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Tracks -->
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Holes -->
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Solder Insufficient -->
@@ -38,6 +39,8 @@
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Wrong Comp -->
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Orientation -->
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Cosmetic -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Other -->
+
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Classic CV -->
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- ML -->
                 <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- CNN Classifier -->
@@ -53,11 +56,12 @@
                 <col style="width: 50px; min-width: 50px; max-width: 50px;"> <!-- Verified -->
                 <col style="width: 32px; min-width: 32px; max-width: 32px;"> <!-- Accr. Score -->
                 <col style="width: 50px; min-width: 50px; max-width: 50px;"> <!-- Verified By -->
+                <col style="width: 30px; min-width: 30px; max-width: 30px;"> <!-- user comments state -->
                 <col style="width: 44px; min-width: 44px; max-width: 44px;"> <!-- Details -->
             </colgroup>
             <thead>
                 <tr>
-                    <th id="main-header-wrapper" colspan=36>
+                    <th id="main-header-wrapper" colspan=38>
                     <div class="main-header">
                         <div class="header-controls">
                             <button class="action-btn" id="import-bibtex-btn">Import <strong>BibTeX</strong></button>
@@ -100,9 +104,9 @@
                             <button class="action-btn" id="apply-serverside-filters" style="display: none;"><span>Apply</span></button>
                         </div>
                     </th>
-                    <th class="inferred-header" colspan="25" style="background: linear-gradient(90deg, hsl(170, 25%, 40%), rgb(77, 128, 92));"><!--NLP--->Inferred data</th>
+                    <th class="inferred-header" colspan="26" style="background: linear-gradient(90deg, hsl(170, 25%, 40%), rgb(77, 128, 92));"><!--NLP--->Inferred data</th>
                     
-                    <th class="ontop-header" colspan="6" rowspan="2" >
+                    <th class="ontop-header" colspan="7" rowspan="2" >
                         <!-- <input type="search" id="search-input" placeholder="Type to search all fields..."> -->
                         <input type="search" id="search-input" placeholder="Type to search all fields..." value="{{ search_query_value }}">
                     </th>
@@ -115,7 +119,7 @@
                     <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to Hide X-Ray" id="hide-xray-checkbox" checked></th><!-- client-side, default enabled -->
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="2">Features:</th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="4">Solder</th>
-                    <th class="inferred-header inferred-header-2 ontop-header" colspan="4">PCBA</th>
+                    <th class="inferred-header inferred-header-2 ontop-header" colspan="5">PCBA</th>
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="8">Techniques</th>
                     <!-- <th class="inferred-header inferred-header-3 ontop-header" colspan="6">DL-based</th> -->
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="1"></th>
@@ -151,6 +155,7 @@
                     <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_wrong_component"><span class="sort-indicator"></span><div><span>Wrong Comp</span></div></th>
                     <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_orientation"><span class="sort-indicator"></span><div><span>Orientation</span></div></th>
                     <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_cosmetic"><span class="sort-indicator"></span><div><span>Cosmetic</span></div></th>
+                    <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_other_state"><span class="sort-indicator"></span><div><span>Other</span></div></th>
 
                     <!-- Techniques Summary Columns (Updated list) -->
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_classic_cv_based"><span class="sort-indicator"></span><div><span>Classic CV</span></div></th>
@@ -165,9 +170,10 @@
 
                     <th data-sort="changed">Last Changed <span class="sort-indicator"></span></th>
                     <th data-sort="changed_by">Changed By <span class="sort-indicator"></span></th>
-                    <th data-sort="verified">Verified <span class="sort-indicator"></span></th>
+                    <th data-sort="verified"><!--<input type="checkbox" title="Enable to only show misclassification suspects" id="hide-approved-checkbox">-->Verified <span class="sort-indicator"></span></th>
                     <th class="rotate-header" data-sort="estimated_score"><div><span>Accr. Score</span></div> <span class="sort-indicator"></span></th>
                     <th data-sort="verified_by">Verified By <span class="sort-indicator"></span></th>
+                    <th class="rotate-header status-header" data-sort="user_comment_state"><span class="sort-indicator"></span><div><span>Ccommented</span></div></th>
                     <th class="rotate-header"><div>Details</div></th> <!-- must be 50px due to 'collapse' button text -->
                 </tr>
             </thead>
@@ -201,20 +207,29 @@
                 <h3>Repeating <strong>Research Areas</strong></h3>
                 <ul id="researchAreaStatsList" class="stats-list-multicolumn-short"></ul>
             </div>
-
+            <div class="stats-section">
+                <h3>Mentioned <strong>other detected features</strong>:</h3>
+                <ul id="otherDetectedFeaturesStatsList" class="stats-list-multicolumn-short"></ul>
+                <!-- show every non-blank instance of paper.features.other here. TBD. Can't be done client-side because detail row is lazy-loaded-->
+            </div>
+            <div class="stats-section">
+                <h3>Mentioned <strong>Model Names</strong></h3>
+                <ul id="modelNamesStatsList" class="stats-list-multicolumn-short"></ul>
+                <!-- show every non-blank instance of paper.features.other here. TBD. Can't be done client-side because detail row is lazy-loaded-->
+            </div>
         </div>
-        <!-- Add these new sections for the charts -->
+                
         <div class="stats-charts">
             <div class="stats-section">
-                <h3><strong>Features</strong> Distribution</h3>
-                <div class="chart-container" style="height:36vh; width:400px; max-width: 400px; margin: auto;">
-                    <canvas id="featuresPieChart"></canvas>
+                <h3><strong>Techniques</strong> Distribution</h3>
+                <div class="chart-container" style="height:32vh; width:315px; max-width: 315px; margin: auto;">
+                    <canvas id="techniquesPieChart"></canvas>
                 </div>
             </div>
             <div class="stats-section">
-                <h3><strong>Techniques</strong> Distribution</h3>
-                <div class="chart-container" style="height:36vh; width:400px; max-width: 400px; margin: auto;">
-                    <canvas id="techniquesPieChart"></canvas>
+                <h3><strong>Features</strong> Distribution</h3>
+                <div class="chart-container" style="height:32vh; width:315px; max-width: 315px; margin: auto;">
+                    <canvas id="featuresPieChart"></canvas>
                 </div>
             </div>
             <div class="stats-section">
@@ -222,9 +237,30 @@
                 <p> Data in this page below is dynamically calculated based on <strong>currently visible</strong> papers.</p>
             </div>
         </div>
+        <div class="stats-charts">
+            <div class="stats-section">
+                <h3><strong>Techniques</strong> per Year <span style="font-size:0.6em"> — Click on a label to show/hide its data and reflow the chart</span></h3>
+                <div class="chart-container-fullwidth" style="height:32vh; margin: auto;">
+                    <canvas id="techniquesPerYearLineChart"></canvas>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <h3><strong>Features</strong> per Year</h3>
+                <div class="chart-container-fullwidth" style="height:32vh; margin: auto;">
+                    <canvas id="featuresPerYearLineChart"></canvas>
+                </div>
+            </div>
+            <div class="stats-section">
+                <h3><strong>Survey</strong> vs <strong>Implementation</strong> Papers per Year</h3>
+                <div class="chart-container-fullwidth" style="height:20vh;  margin: auto;">
+                    <canvas id="surveyVsImplLineChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-<div id="aboutModal" class="modal">
+<div id="aboutModal" class="modal" style="display: none;">
     <div class="modal-small-content">
         <span class="close">&times;</span>
     </div>
