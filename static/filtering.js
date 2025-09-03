@@ -426,7 +426,8 @@ function applyLocalFilters() { //For local filters:
     updateCounts();
     applyAlternatingShading();
     document.documentElement.classList.remove('busyCursor');
-    document.getElementById('apply-serverside-filters').style.display = 'none';
+    document.getElementById('apply-serverside-filters').style.opacity = '0';
+    document.getElementById('apply-serverside-filters').style.pointerEvents = 'none';
 }
 
 
@@ -440,9 +441,9 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('apply-serverside-filters').addEventListener('click', applyServerSideFilters); 
     
     const applyButton = document.getElementById('apply-serverside-filters');
-    yearFromInput.addEventListener('change',   function(){applyButton.style.display = 'inline-block'});
-    yearToInput.addEventListener('change', function(){applyButton.style.display = 'inline-block'});
-    minPageCountInput.addEventListener('change', function(){applyButton.style.display = 'inline-block'});
+    yearFromInput.addEventListener('change',   function(){applyButton.style.opacity = '1';applyButton.style.pointerEvents = 'visible';});
+    yearToInput.addEventListener('change', function(){applyButton.style.opacity = '1';applyButton.style.pointerEvents = 'visible';});
+    minPageCountInput.addEventListener('change', function(){applyButton.style.opacity = '1';applyButton.style.pointerEvents = 'visible';});
 
     // document.getElementById('search-input').addEventListener('input', scheduleFilterUpdate);
     document.getElementById('search-input').addEventListener('input', function() {

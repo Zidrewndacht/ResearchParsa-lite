@@ -126,3 +126,4 @@ OK      Fix exported HTML charts;
 OK      Show "has Other"
 OK      Show "has User Comment"
         Add missing stats to server-side version. Can't be done client-side because detail row is lazy-loaded.
+        Add Export to Excel to server-side implementation.

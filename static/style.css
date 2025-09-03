@@ -440,11 +440,14 @@ form input[type="text"] {
 #export-html-btn{
     background: rgb(54, 77, 145);
 }
+#export-xlsx-btn{
+    background: rgb(58, 136, 47);
+}
 #stats-btn {
     width: 130px;
     max-width: 130px;
     min-width: 130px;
-    background: rgb(60, 112, 75);
+    /*! background: rgb(60, 112, 75); */
 }
 #apply-serverside-filters, #static-stats-btn{
     background: rgb(185, 209, 209);
@@ -454,6 +457,7 @@ form input[type="text"] {
     color: #0a5662;
     font-size: 10.5pt;
     text-shadow: 1px 0 5px #fff6;
+    transition: 0.2s all ease-in-out;
 }
 #fullscreen-btn {
     background: transparent;
@@ -594,7 +598,7 @@ tr.filter-hidden {
 .main-header {
     /*! width: calc(100% - 30px); */
     display: grid;
-    grid-template-columns: auto 1fr auto auto; /* Title, Filters, Controls */
+    grid-template-columns: auto auto 1fr auto auto; /* Title, Filters, Controls */
     grid-template-rows: auto; /* Single row */
     gap: 4px; /* Space between items */
     align-items: center; /* Align items vertically */
@@ -626,7 +630,7 @@ tr.filter-hidden {
 .filter-item {
     display: inline-flex; /* Keep flex for alignment */
     align-items: center;  /* Align items vertically */
-    white-space: nowrap;  /* Prevent wrapping within a single filter item */
+    /*! white-space: nowrap; */  /* Prevent wrapping within a single filter item */
     padding: 5px; /* Keep padding */
     font-size: 10.5pt; /* Keep font size */
     /* background: #f0f0f0; */ /* Optional background for filter items */
