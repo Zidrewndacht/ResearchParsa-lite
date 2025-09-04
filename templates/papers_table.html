@@ -16,7 +16,7 @@
             {% if paper.doi %}
                 <a href="https://doi.org/{{ paper.doi }}" target="_blank">{{ paper.title }}</a>
             {% else %}
-                {{ paper.title }}
+                <span style="font-weight: 300;">{{paper.title}}</span> 
             {% endif %}
             
         </td>

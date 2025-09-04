@@ -1,10 +1,37 @@
 /* static/style.css */
 
+:root {
+
+    --text-color: #393939;
+    --background-color: #f5f7fa;
+    --table-row-even: #0000000b;
+    --table-row-odd: #00000004;
+    --highlighted-col-background: #bbccbb1a;
+    /* --primary-ui-color: #2d6770; */
+    /* --inferred-ui-color: hsl(170, 25%, 40%); */
+    /* --inferred-gradient-end-color: rgb(77, 128, 92); */
+    --primary-ui-color: #1f606a;
+    --inferred-ui-color: hsl(154.6, 35.8%, 32.4%);
+    --inferred-gradient-end-color: rgb(57, 106, 53);
+    --modal-wrapper-background: #eee6;
+    --classify-btn-color:hsl(246, 29%, 40%);
+    --verify-btn-color:hsl(309, 29%, 40%);
+    --save-btn-color: #27ae60;
+    --export-html-btn-color: rgb(54, 77, 145);
+    --export-xlsx-btn-color: rgb(58, 136, 47);
+    --light-colored-btn-color: rgb(185, 209, 209);
+    --light-colored-btn-text: #0a5662;
+    --dark-shadow: 1px 0 5px #0006;
+    --light-shadow: 1px 0 5px #fff6;
+    --th-border-color: #0000003b;
+    --link-color: rgb(0, 45, 115);
+}
+
 body {
     font-family: "Inter Tight", Arial, sans-serif;
     margin: 8px;
-    background-color: #f5f7fa; 
-    color: #393939;
+    background-color: var(--background-color); 
+    color: var(--text-color);
 }
 
 html.busyCursor,
@@ -24,7 +51,6 @@ html.busyCursor * {
     padding: 0;
     width: calc(100% - 18px);
     height: calc(100% - 67px);
-    /* background: #eee6; */
     backdrop-filter: blur(6px);
     display: flex;
     justify-content: center;
@@ -35,7 +61,7 @@ html.busyCursor * {
     /* z-index: 1000; */
     transition-delay: 0.33s;  /*return transition*/
     border-radius: 8px;
-    background: #eee6;
+    background: var(--modal-wrapper-background);
 }
 
 /* Only show spinner during filtering */
@@ -48,7 +74,7 @@ html.busyCursor .loading-overlay {
 .loading-spinner {
     width: 60px;
     height: 60px;
-    border: 12px solid #2d6770;
+    border: 12px solid var(--primary-ui-color);
     border-top: 12px solid transparent;
     border-radius: 50%;
     animation: spin 0.75s linear infinite;
@@ -63,7 +89,7 @@ html.busyCursor .loading-overlay {
 /* Ensure the table container allows internal scrolling for the sticky footer */
  .table-container { 
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-    border: 1px solid #2f6f72;
+    border: 1px solid var(--primary-ui-color);
     overflow-y: auto; /* Allow vertical scrolling if needed */
     max-height: calc(100vh - 18px); 
     position: relative; /* Needed for sticky positioning within */
@@ -73,14 +99,14 @@ html.busyCursor .loading-overlay {
 h3 {
     margin: 0;
     padding: 10px 0 10px 10px;
-    background: #2d6770;
+    background: var(--primary-ui-color);
     color: #fefefe;
     display: inline-block;
     font-weight: 400;
     position: sticky;
     top: 0;
     width: calc(100% - 10px);
-    text-shadow: 1px 0 5px #0006;
+    text-shadow: var(--dark-shadow);
 }
 table {
     border-collapse: collapse;
@@ -94,7 +120,6 @@ td {
     padding: 9px 6px; 
 }
 
-/* --- Rotated Header Styles --- */
 th.rotate-header {
     white-space: nowrap;
     padding: 0; 
@@ -112,17 +137,17 @@ th.rotate-header > div > span {
 
 th {
     vertical-align: bottom; 
-    background-color: #2d6770; 
+    background-color: var(--primary-ui-color); 
     color: white;
     position: sticky;
     top:0;
     font-weight: bold;
-    box-shadow: inset 0 -0px 0px 0.75px #0a5662;
+    box-shadow: inset 0 -0px 0px 0.75px var(--th-border-color);
     padding: 6px;
     text-align: left;
     z-index: 10;
     font-size: 8.5pt;
-    text-shadow: 1px 0 5px #0006;
+    text-shadow: var(--dark-shadow);
 }
 
 th[data-sort]:hover {    
@@ -131,20 +156,15 @@ th[data-sort]:hover {
 }
 
 td.highlight-status {
-    background: #bbccbb1a;
+    background: var(--highlighted-col-background);
 }
-/* 
-tr:nth-child(4n+1) {    background-color: #0000000a; }
-tr:nth-child(4n+2) {    background-color: #0000000a;} */
-
-/* Add new classes for alternating shades */
-/* tr:nth-child(4n+1), etc.: Default shading before JS loads:*/
+/* Add new classes for dynamic alternating shades */
 .alt-shade-1, li:nth-child(even)  {
-    background-color: #0000000b; 
+    background-color: var(--table-row-even); 
 }
 
 .alt-shade-2, li:nth-child(odd)  {
-    background-color: #00000004; 
+    background-color: var(--table-row-odd); 
 }
 
 .secondary-text-cell {
@@ -267,7 +287,7 @@ input[type="search"]::-webkit-input-placeholder { /* For older Webkit */
 .action-btn {
     margin: 0 2px;
     padding: 10px 20px;
-    background-color: #2d6770; 
+    background-color: var(--primary-ui-color); 
     color: white;
     border-radius: 4px;
     cursor: pointer;
@@ -276,7 +296,7 @@ input[type="search"]::-webkit-input-placeholder { /* For older Webkit */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     min-width: 140px;
     height: 40px;
-    text-shadow: 1px 0 5px #0006;
+    text-shadow: var(--dark-shadow);
     border: 1px solid #0002;
 }
 
@@ -417,17 +437,17 @@ form input[type="text"] {
     background: #ffffffa0;
 }
 .save-btn {
-    background-color: #27ae60;
+    background-color: var(--save-btn-color);
     width: 170px;
     font-weight: bold;
 }
 
 #classify-remaining-btn, #classify-all-btn, .classify-btn {
-    background: hsl(246, 29%, 40%);
+    background: var(--classify-btn-color);
 }
 
 #verify-all-btn, #verify-remaining-btn, .verify-btn {
-    background: hsl(309, 29%, 40%);
+    background: var(--verify-btn-color);
 }
 
 #verify-all-btn strong, #classify-all-btn strong {
@@ -438,10 +458,10 @@ form input[type="text"] {
     min-width: 150px;
 }
 #export-html-btn{
-    background: rgb(54, 77, 145);
+    background: var(--export-html-btn-color);
 }
 #export-xlsx-btn{
-    background: rgb(58, 136, 47);
+    background: var(--export-xlsx-btn-color);
 }
 #stats-btn {
     width: 130px;
@@ -450,13 +470,13 @@ form input[type="text"] {
     /*! background: rgb(60, 112, 75); */
 }
 #apply-serverside-filters, #static-stats-btn{
-    background: rgb(185, 209, 209);
+    background: var(--light-colored-btn-color);
     width: 120px;
     max-width: 120px;
     min-width: 120px;
-    color: #0a5662;
+    color: var(--light-colored-btn-text);
     font-size: 10.5pt;
-    text-shadow: 1px 0 5px #fff6;
+    text-shadow: var(--light-shadow);
     transition: 0.2s all ease-in-out;
 }
 #fullscreen-btn {
@@ -469,13 +489,6 @@ form input[type="text"] {
     box-shadow: none;
     display: none;
 }
-#fullscreen-btn span {
-    transform: rotate(-90deg) scale(2) translateY(-2px) translateX(-0.5px);
-    color: #838a97;
-    display: inline-block;
-    padding: 0;
-    margin: 0;
-}
 #about-btn{
     width: 30px;
     min-width: 30px;
@@ -484,13 +497,14 @@ form input[type="text"] {
 }
 a {
     text-decoration: none;
-    color: #227
+    color: var(--link-color);
+    font-weight: 400;
 }
 
 
 th.inferred-header {
-    background-color: hsl(170, 25%, 40%);
-    box-shadow: inset 0 -0px 0px 0.75px #2150449c;
+    background-color: var(--inferred-ui-color);
+    box-shadow: inset 0 -0px 0px 0.75px var(--th-border-color);
 }
 th.inferred-header-2 {
     filter: contrast(1.1) saturate(0.95) hue-rotate(-16deg);
@@ -548,7 +562,7 @@ tr.filter-hidden {
 }
 
 #counts-footer tr {
-    background-color: #2d6770; /* Match header background */
+    background-color: var(--primary-ui-color); /* Match header background */
     color: white;
     font-weight: bold;
 }
@@ -598,7 +612,7 @@ tr.filter-hidden {
 .main-header {
     /*! width: calc(100% - 30px); */
     display: grid;
-    grid-template-columns: auto auto 1fr auto auto; /* Title, Filters, Controls */
+    grid-template-columns: auto auto 1fr auto auto auto; /* Title, Filters, Controls */
     grid-template-rows: auto; /* Single row */
     gap: 4px; /* Space between items */
     align-items: center; /* Align items vertically */
@@ -771,9 +785,9 @@ tr.filter-hidden {
 }
 
 .modal-content {
-    background: linear-gradient(180deg, #2d6770 0%, #2d6770 20px, #f5f7fad9 20px);
+    background: linear-gradient(180deg, var(--primary-ui-color) 0%, var(--primary-ui-color) 20px, #f5f7fad9 20px);
      /* 5vh top/bottom margin */
-    border: 2px solid #2d6770;
+    border: 2px solid var(--primary-ui-color);
     width: calc(100vw - 180px);
     min-width: 1600px;
     height: calc(100vh - 20px); /* Limit height */
@@ -792,7 +806,7 @@ tr.filter-hidden {
 
 
 .close {
-    color: #aaa;
+    color: #eee;
     float: right;
     font-size: 28px;
     font-weight: bold;
@@ -801,7 +815,7 @@ tr.filter-hidden {
     top: 4px;
     cursor: pointer;
     z-index: 1001; /* Above content */
-    text-shadow: 1px 0 5px #0006;
+    text-shadow: var(--dark-shadow);
 }
 
 .close:hover,
@@ -892,7 +906,7 @@ tr.filter-hidden {
     left: 0;
     width: 100%;
     height: 100%;
-    background: #eee6;
+    background: var(--modal-wrapper-background);
     backdrop-filter: blur(12px);
     perspective: 100vh;
 }
@@ -918,7 +932,7 @@ tr.filter-hidden {
 .stats-lists {
     display: grid;
     grid-template-rows: 1fr 1.5fr 1fr 90px 1fr 1fr;
-    border-right: 2px solid #2d6770;
+    border-right: 2px solid var(--primary-ui-color);
     flex: 1; /* Take remaining space */
     min-height: 0; /* Prevent overflow */
 }
@@ -930,7 +944,7 @@ tr.filter-hidden {
     .table-container { 
         max-height: calc(100vh);
         border-radius: 0px;
-        background: #2d6770;
+        background: var(--primary-ui-color);
         border: none;
     }
         

@@ -120,9 +120,10 @@ OK      Show "has User Comment"
 OK      Add missing stats to server-side version. Can't be done client-side because detail row is lazy-loaded.
 OK      Add Export to Excel to server-side implementation.
 
-
         Fix chart can grow but can't shrink?
         
         Add sanity check filter: offtopic papers verified as wrong classification:
                 Potential max. 177 false offtopics of 11709.
                 Instead, just add a "only wrong classifications" filter then sort by offtopic?
+
+        Refactor browse_db.py (too large)?
