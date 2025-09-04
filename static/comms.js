@@ -566,6 +566,30 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    document.getElementById('export-xlsx-btn').addEventListener('click', function() {
+        // Reuse the logic from exportStaticBtn or create a specific one
+        // This example reuses the core logic
+        const currentUrlParams = new URLSearchParams(window.location.search);
+        const exportUrlParams = new URLSearchParams();
+
+        // Copy relevant filter parameters
+        const relevantParams = ['hide_offtopic', 'year_from', 'year_to', 'min_page_count', 'search_query'];
+        relevantParams.forEach(param => {
+            const value = currentUrlParams.get(param);
+            if (value !== null) {
+                exportUrlParams.set(param, value);
+            }
+        });
+
+        // Construct the URL for the Excel export endpoint
+        const exportUrl = `/xlsx_export?${exportUrlParams.toString()}`;
+        console.log("Exporting Excel with URL:", exportUrl);
+
+        // Trigger the download
+        window.location.href = exportUrl;
+    });
+
+
 });
 
 // --- Extracted AJAX logic for reuse ---

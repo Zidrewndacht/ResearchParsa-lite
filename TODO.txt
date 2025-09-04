@@ -72,12 +72,10 @@ OK        Finer-grained classes:
                         DL: Transformer (e.g. ViT, DETR, etc.) or mixed CNN+Transformer (e.g. YOLOv12)
                         Hybrid/Ensemble methods (including ML+DL, classic+DL, not including 'hybrids' of DL+DL)
                 
-
 OK      Fix/verify after refactor:
 OK              Counters at the end of table
 OK              Sort by
         
-
 OK        Stats (calculated after filtering):
                 Count of instances of each journal
                 Count of instances of each keyword     
@@ -114,16 +112,17 @@ OK      Add loading spinner for table updates
         Fix ugly hide offtopic checkbox
         Add favicon
 
-
-        Add sanity check filter: offtopic papers verified as wrong classification:
-                Potential max. 177 false offtopics of 11709.
-                Instead, just add a "only wrong classifications" filter then sort by offtopic?
-
 OK      Group features;
 OK      Keep colors consistent across charts;
 OK      Fix exported HTML charts;
-        Fix chart can grow but can't shrink?
 OK      Show "has Other"
 OK      Show "has User Comment"
-        Add missing stats to server-side version. Can't be done client-side because detail row is lazy-loaded.
-        Add Export to Excel to server-side implementation.
+OK      Add missing stats to server-side version. Can't be done client-side because detail row is lazy-loaded.
+OK      Add Export to Excel to server-side implementation.
+
+
+        Fix chart can grow but can't shrink?
+        
+        Add sanity check filter: offtopic papers verified as wrong classification:
+                Potential max. 177 false offtopics of 11709.
+                Instead, just add a "only wrong classifications" filter then sort by offtopic?

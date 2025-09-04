@@ -14,6 +14,10 @@ import webbrowser
 from collections import Counter
 import rcssmin
 import rjsmin
+import io
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill # Ensure PatternFill is imported
+from openpyxl.worksheet.table import Table, TableStyleInfo
 
 # Import globals, the classification and verification modules
 import globals
@@ -674,6 +678,284 @@ def static_export():
     )
 
 
+@app.route('/xlsx_export', methods=['GET'])
+def export_excel():
+    """Generate and serve a downloadable Excel (.xlsx) file based on current filters."""
+    # --- Get filter parameters from the request (URL query params) ---
+    hide_offtopic_param = request.args.get('hide_offtopic')
+    year_from_param = request.args.get('year_from')
+    year_to_param = request.args.get('year_to')
+    min_page_count_param = request.args.get('min_page_count')
+    search_query_param = request.args.get('search_query') # Include search
+
+    # --- Determine filter values, using defaults if not provided or invalid ---
+    hide_offtopic = True # Default
+    if hide_offtopic_param is not None:
+        hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
+    year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
+    year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
+    min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
+    search_query_value = search_query_param if search_query_param is not None else ""
+
+    # --- Fetch papers based on these filters ---
+    papers = fetch_papers(
+        hide_offtopic=hide_offtopic,
+        year_from=year_from_value,
+        year_to=year_to_value,
+        min_page_count=min_page_count_value,
+        search_query=search_query_value # Pass the search query
+    )
+
+    # --- Create Excel Workbook in Memory ---
+    output = io.BytesIO()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "PCB Inspection Papers"
+
+    # --- Define Headers (Matching your request, translated for clarity if needed) ---
+    # Note: Headers themselves can be in any language, but English keys are often easier for formulas.
+    # If you need headers in another language, translate this list.
+    headers = [
+        "Type", "Title", "Year", "Journal/Conf name", "Pages count",
+        # Features
+        "Off-topic", "Relevance", "Survey", "THT", "SMT", "X-Ray",
+        "Tracks", "Holes", "Solder Insufficient", "Solder Excess",
+        "Solder Void", "Solder Crack", "Missing Comp", "Wrong Comp",
+        "Orientation", "Cosmetic", "Other_state", "Other defects",
+        # Techniques
+        "Classic CV", "ML", "CNN Classifier", "CNN Detector",
+        "R-CNN Detector", "Transformers", "Other", "Hybrid", "Datasets",
+        "Model name",
+        # Metadata
+        "Last Changed", "Changed By", "Verified", "Accr. Score", "Verified By",
+        "User Comment State", "User Comments"
+    ]
+
+    # --- Write Headers ---
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num, value=header)
+        cell.font = Font(bold=True)
+        # Optional: Add background color to header
+        # from openpyxl.styles import PatternFill
+        # cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+
+    # --- Write Data Rows ---
+    for row_num, paper in enumerate(papers, 2): # Start from row 2
+        # --- Helper function for consistent Excel value conversion ---
+        def format_excel_value(val):
+            """
+            Converts Python/DB values to Excel-friendly values:
+            - True/1   -> TRUE (Excel boolean)
+            - False/0  -> FALSE (Excel boolean)
+            - None/''/etc. -> "" (Empty string for blank Excel cell)
+            - Other    -> str(val) (Text)
+            """
+            if val is True or (isinstance(val, (int, float)) and val == 1):
+                return True # Excel TRUE
+            elif val is False or (isinstance(val, (int, float)) and val == 0):
+                return False # Excel FALSE
+            elif val is None or val == "":
+                 return "" # Explicitly empty cell for NULL/empty
+            else:
+                # Handle potential string representations of booleans from inconsistent DB
+                if isinstance(val, str):
+                    lower_val = val.lower()
+                    if lower_val in ('true', '1'):
+                        return True
+                    elif lower_val in ('false', '0'):
+                        return False
+                    # elif lower_val in ('null', 'none', ''): # If DB stores 'null' as string
+                    #     return ""
+                # Default: Convert to string for text fields
+                return str(val)
+
+        # Extract and format data
+        features = paper.get('features', {})
+        technique = paper.get('technique', {})
+
+        # --- Format the 'Last Changed' date ---
+        changed_timestamp_str = paper.get('changed', '')
+        formatted_changed_date = ""
+        if changed_timestamp_str:
+            try:
+                # Parse the ISO format timestamp
+                dt = datetime.fromisoformat(changed_timestamp_str.replace('Z', '+00:00'))
+                # Format as 'YYYY-MM-DD HH:MM:SS' for Excel compatibility
+                formatted_changed_date = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                # If parsing fails, keep the original string or leave blank
+                formatted_changed_date = changed_timestamp_str # Or ""
+
+        row_data = [
+            paper.get('type', ''),                    # Type (text)
+            paper.get('title', ''),                   # Title (text)
+            paper.get('year'),                        # Year (integer)
+            paper.get('journal', ''),                 # Journal/Conf name (text)
+            paper.get('page_count'),                  # Pages count (integer)
+
+            # --- Features ---
+            # Use format_excel_value for ALL boolean/nullable fields
+            format_excel_value(paper.get('is_offtopic')), # Off-topic (boolean/null)
+            paper.get('relevance'),                   # Relevance (integer)
+            format_excel_value(paper.get('is_survey')), # Survey (boolean/null)
+            format_excel_value(paper.get('is_through_hole')), # THT (boolean/null)
+            format_excel_value(paper.get('is_smt')),    # SMT (boolean/null)
+            format_excel_value(paper.get('is_x_ray')),  # X-Ray (boolean/null) <-- CORRECTED
+            format_excel_value(features.get('tracks')), # Tracks (boolean/null)
+            format_excel_value(features.get('holes')),  # Holes (boolean/null)
+            format_excel_value(features.get('solder_insufficient')), # Solder Insufficient (boolean/null)
+            format_excel_value(features.get('solder_excess')), # Solder Excess (boolean/null)
+            format_excel_value(features.get('solder_void')), # Solder Void (boolean/null)
+            format_excel_value(features.get('solder_crack')), # Solder Crack (boolean/null)
+            format_excel_value(features.get('missing_component')), # Missing Comp (boolean/null)
+            format_excel_value(features.get('wrong_component')), # Wrong Comp (boolean/null)
+            format_excel_value(features.get('orientation')), # Orientation (boolean/null)
+            format_excel_value(features.get('cosmetic')), # Cosmetic (boolean/null)
+            # Other_state (boolean based on 'other' text content) <-- CORRECTED
+            format_excel_value(features.get('other') is not None and str(features.get('other', '')).strip() != ""),
+            features.get('other', ''),               # Other defects (text) <-- This one shows the text
+
+            # --- Techniques ---
+            format_excel_value(technique.get('classic_cv_based')), # Classic CV (boolean/null)
+            format_excel_value(technique.get('ml_traditional')), # ML (boolean/null)
+            format_excel_value(technique.get('dl_cnn_classifier')), # CNN Classifier (boolean/null)
+            format_excel_value(technique.get('dl_cnn_detector')), # CNN Detector (boolean/null)
+            format_excel_value(technique.get('dl_rcnn_detector')), # R-CNN Detector (boolean/null)
+            format_excel_value(technique.get('dl_transformer')), # Transformers (boolean/null)
+            format_excel_value(technique.get('dl_other')), # Other (boolean/null)
+            format_excel_value(technique.get('hybrid')), # Hybrid (boolean/null)
+            format_excel_value(technique.get('available_dataset')), # Datasets (boolean/null)
+            technique.get('model', ''),              # Model name (text)
+
+            # --- Metadata ---
+            formatted_changed_date,                 # Last Changed (formatted date string)
+            paper.get('changed_by', ''),            # Changed By (text)
+            format_excel_value(paper.get('verified')), # Verified (boolean/null)
+            paper.get('estimated_score'),           # Accr. Score (integer)
+            paper.get('verified_by', ''),           # Verified By (text)
+            # User comments state (boolean based on 'user_trace' text content) <-- CORRECTED
+            format_excel_value(paper.get('user_trace') is not None and str(paper.get('user_trace', '')).strip() != ""),
+            paper.get('user_trace', '')             # User comments contents (text) <-- This one shows the text
+        ]
+
+        # Write the row data to Excel
+        for col_num, cell_value in enumerate(row_data, 1):
+            ws.cell(row=row_num, column=col_num, value=cell_value)
+
+
+    # Optional: Auto-adjust column widths (basic attempt)
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter # Get the column name
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        # Cap the width to prevent extremely wide columns
+        ws.column_dimensions[column_letter].width = min(adjusted_width, 50)
+
+    # Optional: Format the data as a table (requires openpyxl >= 2.5)
+    try:
+        if len(papers) > 0:
+            # Adjust the column reference to 'AN' (assuming 34 columns: A through AN)
+            # Headers are row 1, data starts row 2, so last row is len(papers) + 1
+            tab = Table(displayName="PCBPapersTable", ref=f"A1:AN{len(papers) + 1}")
+            style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
+                                   showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+            tab.tableStyleInfo = style
+            ws.add_table(tab)
+    except Exception as e:
+        print(f"Warning: Could not create Excel table: {e}")
+
+    # --- NEW: Apply Conditional Formatting for Boolean Cells ---
+    # Define fills for TRUE and FALSE
+    true_fill = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid") # Light Green
+    false_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid") # Light Red
+    # Define the columns that contain boolean data (1-based index)
+    # Based on your headers list:
+    # Off-topic(6), Survey(8), THT(9), SMT(10), X-Ray(11),
+    # Tracks(12), Holes(13), Solder Insufficient(14), Solder Excess(15),
+    # Solder Void(16), Solder Crack(17), Missing Comp(18), Wrong Comp(19),
+    # Orientation(20), Cosmetic(21), Other_state(22),
+    # Classic CV(24), ML(25), CNN Classifier(26), CNN Detector(27),
+    # R-CNN Detector(28), Transformers(29), Other(30), Hybrid(31), Datasets(32),
+    # Verified(35), User Comment State(37)
+    # Note: Skipping Relevance(7), Pages(5), Year(3) as they are numbers,
+    # Other defects(23), Model name(33), Last Changed(34), Changed By(35-str),
+    # Accr. Score(36-int), Verified By(37-str), User Comments(38-str)
+    boolean_columns = [
+        6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+        24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 37 # Added 37 (User Comment State)
+    ]
+
+    # Iterate through rows and specified boolean columns to apply formatting
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+        for col_idx in boolean_columns:
+            # Adjust for 0-based indexing in the row list
+            cell = row[col_idx - 1] # col_idx is 1-based, list index is 0-based
+            if cell.value is True:
+                cell.fill = true_fill
+            elif cell.value is False:
+                cell.fill = false_fill
+            # If cell.value is None or "", it remains unformatted (blank cell)
+
+    # --- Optional: Format the data as a table (ensure column ref is correct) ---
+    try:
+        if len(papers) > 0:
+            # Ensure the table reference matches the actual data width (AN = 34th column)
+            # Assuming 34 columns (A-AN) based on headers list count.
+            # If you added conditional formatting, it's still 34 columns.
+            # Let's recount headers list to be sure:
+            # 1. Type, 2. Title, 3. Year, 4. Journal/Conf name, 5. Pages count,
+            # 6. Off-topic, 7. Relevance, 8. Survey, 9. THT, 10. SMT, 11. X-Ray,
+            # 12. Tracks, 13. Holes, 14. Solder Insufficient, 15. Solder Excess,
+            # 16. Solder Void, 17. Solder Crack, 18. Missing Comp, 19. Wrong Comp,
+            # 20. Orientation, 21. Cosmetic, 22. Other_state, 23. Other defects,
+            # 24. Classic CV, 25. ML, 26. CNN Classifier, 27. CNN Detector,
+            # 28. R-CNN Detector, 29. Transformers, 30. Other, 31. Hybrid, 32. Datasets,
+            # 33. Model name, 34. Last Changed, 35. Changed By, 36. Verified, 37. Accr. Score,
+            # 38. Verified By, 39. User Comment State, 40. User Comments
+            # Recount shows 40 columns. Excel columns: A=1, B=2, ..., AN=34, AO=35, AP=36, AQ=37, AR=38, AS=39, AT=40
+            # Correct table reference should be A1:AT{len(papers)+1}
+            tab = Table(displayName="PCBPapersTable", ref=f"A1:AT{len(papers) + 1}") # CHANGED TO AT
+            style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
+                                   showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+            tab.tableStyleInfo = style
+            ws.add_table(tab)
+    except Exception as e:
+        print(f"Warning: Could not create Excel table: {e}")
+
+    # --- Save Workbook to BytesIO object ---
+    wb.save(output)
+    output.seek(0)
+
+    # --- Create a filename based on filters ---
+    filename_parts = ["PCBPapers"]
+    if year_from_value == year_to_value:
+            filename_parts.append(str(year_from_value))
+    else:
+            filename_parts.append(f"{year_from_value}-{year_to_value}")
+    if min_page_count_value > 0:
+            filename_parts.append(f"min{min_page_count_value}pg")
+    if hide_offtopic:
+            filename_parts.append("noOfftopic")
+    if search_query_value:
+            # Sanitize search query for filename (basic)
+            safe_search = "".join(c for c in search_query_value if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            if safe_search:
+                filename_parts.append(f"search_{safe_search[:20]}") # Limit length
+    filename = "_".join(filename_parts) + ".xlsx"
+
+    # --- Return as a downloadable attachment ---
+    from flask import Response
+    return Response(
+        output.getvalue(), # Get the bytes from the BytesIO object
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 @app.route('/get_detail_row', methods=['GET'])
 def get_detail_row():
@@ -803,11 +1085,48 @@ def get_stats():
             # Convert back to a list of dictionaries for JSON serialization
             return [{'name': name, 'count': count} for name, count in sorted_items]
 
+        # --- NEW CODE: Collect all non-empty 'other' features and 'model' names ---
+        other_features_counter = Counter()
+        model_names_counter = Counter()
+
+        for paper in papers:
+            # Get 'other' feature text
+            features_other_text = paper.get('features', {}).get('other', '')
+            if features_other_text and isinstance(features_other_text, str):
+                # Split by semicolon if multiple features are listed, otherwise treat as one item
+                # Strip whitespace and filter out empty strings after splitting
+                other_features_list = [feat.strip() for feat in features_other_text.split(';') if feat.strip()]
+                other_features_counter.update(other_features_list)
+            # If features_other_text is not a string (e.g., None, dict), it's ignored
+
+            # Get 'model' name text
+            technique_model_text = paper.get('technique', {}).get('model', '')
+            if technique_model_text and isinstance(technique_model_text, str):
+                # Split by semicolon if multiple models are listed, otherwise treat as one item
+                # Strip whitespace and filter out empty strings after splitting
+                model_names_list = [model.strip() for model in technique_model_text.split(';') if model.strip()]
+                model_names_counter.update(model_names_list)
+            # If technique_model_text is not a string (e.g., None, dict), it's ignored
+
+        # Convert Counters to lists of {'name': item, 'count': count} dictionaries
+        # Include ALL items, not just repeating ones (> 1)
+        def counter_to_list_all(counter):
+            # Sort by count descending, then alphabetically ascending for ties
+            sorted_items = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
+            return [{'name': name, 'count': count} for name, count in sorted_items]
+
+        # --- END NEW CODE ---
+
+        # --- Modified stats_data preparation ---
         stats_data = {
+            # Existing repeating stats
             'journals': filter_and_sort(journal_counter),
             'keywords': filter_and_sort(keyword_counter),
             'authors': filter_and_sort(author_counter),
-            'research_areas': filter_and_sort(research_area_counter)
+            'research_areas': filter_and_sort(research_area_counter),
+            # NEW: All non-empty features.other and technique.model
+            'other_features_all': counter_to_list_all(other_features_counter), # Changed key name for clarity
+            'model_names_all': counter_to_list_all(model_names_counter)       # Changed key name for clarity
         }
 
         return jsonify({'status': 'success', 'data': stats_data})

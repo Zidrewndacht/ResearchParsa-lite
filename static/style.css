@@ -787,7 +787,7 @@ tr.filter-hidden {
     transform: scale3d(0.94, 0.94, 1) rotate3d(2, 1, 0, 2.5deg) translateY(-20px);
     transition: transform 0.3s ease-out; /* Animate transform */
     display: grid;
-    grid-template-columns: 500px 310px 1fr;
+    grid-template-columns: 540px 305px 1fr;
 }
 
 
@@ -858,12 +858,12 @@ tr.filter-hidden {
 /* --- Styles for Multi-Column Stats List --- */
 .stats-list-multicolumn-2 {
     /* Use CSS Columns */
-    column-count: 1;
+    /*! column-count: 1; */
     column-gap: 0px; /* Adjust gap between columns as needed */
     /* Ensure list items don't break across columns awkwardly */
     break-inside: avoid-column;
     /* Optional: Add a small padding if the columns feel too close to the edge */
-    /* padding: 0 10px; */
+    /*! padding: 0 10px; */
 }
 /* Ensure list items behave well within the multi-column layout */
 .stats-list-multicolumn li {
@@ -905,7 +905,9 @@ tr.filter-hidden {
     transition-delay: 0.5s;
 }
 
-
+.stats-section {
+    overflow: scroll;
+}
 /* When the modal is active, move it to its final position */
 .modal.modal-active .modal-content {
     transform: none; /* Final position */
@@ -913,33 +915,13 @@ tr.filter-hidden {
 }
 /* --- End Stats Modal Animation Styles --- */
 
-
-.stats-lists{
+.stats-lists {
     display: grid;
-    grid-template-rows: calc(19vh - 40px) calc(30vh - 40px) calc(20vh - 40px) calc(90px) calc(19vh - 40px) calc(20vh - 40px);
+    grid-template-rows: 1fr 1.5fr 1fr 90px 1fr 1fr;
     border-right: 2px solid #2d6770;
+    flex: 1; /* Take remaining space */
+    min-height: 0; /* Prevent overflow */
 }
-
-/* .stats-lists .stats-section{
-    overflow: scroll;
-    ! max-height: 30vh;
-}
-
-#researchAreaStatsList{
-    height: 66px
-} */
-
-#journalStatsList{
-    height: calc(20vh - 75px);
-}
-#keywordStatsList{
-    height: calc(30vh - 75px);
-}
-
-#authorStatsList, #otherDetectedFeaturesStatsList, #modelNamesStatsList  {
-    height: calc(20vh - 75px);
-}
-
 @media screen and (max-width: 1880px) {
     body {
         margin: 0px;
