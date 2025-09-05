@@ -956,6 +956,7 @@ tr.filter-hidden {
     flex: 1; /* Take remaining space */
     min-height: 0; /* Prevent overflow */
 }
+
 @media screen and (max-width: 1880px) {
     body {
         margin: 0px;
