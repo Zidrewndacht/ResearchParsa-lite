@@ -1,7 +1,6 @@
 /* static/style.css */
 
 :root {
-
     --text-color: #393939;
     --background-color: #f5f7fa;
     --table-row-even: #00000006;
@@ -974,5 +973,9 @@ tr.filter-hidden {
         width: calc(100%);
         height: calc(100%);
         border-radius: 0px;
+    }
+        
+    .main-header {
+        border-radius: 0;
     }
 }
