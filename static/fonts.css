@@ -27,3 +27,21 @@
     src: url('./fonts/inter-tight-v7-latin_latin-ext-600.woff2') format('woff2'), /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
             url('./fonts/inter-tight-v7-latin_latin-ext-600.ttf') format('truetype'); /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
 }
+
+/* noto-color-emoji-regular */
+@font-face {
+    font-display: swap; /* or 'optional' or 'swap' depending on your preference */
+    font-family: 'Noto Color Emoji'; /* Use the standard name for the font */
+    font-style: normal;
+    font-weight: 400;
+    src: url('./fonts/NotoColorEmoji-Regular.ttf') format('truetype'); /* Path to your local TTF file */
+}
+
+/* SegoeUIEmojiWin11 */
+@font-face {
+    font-display: swap; /* or 'optional' or 'swap' depending on your preference */
+    font-family: 'Segoe UI Emoji Windows 11'; /* Use the standard name for the font */
+    font-style: normal;
+    font-weight: 400;
+    src: url('./fonts/SegoeUIEmojiWin11.ttf') format('truetype'); /* Path to your local TTF file */
+}

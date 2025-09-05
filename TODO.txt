@@ -81,11 +81,9 @@ OK        Stats (calculated after filtering):
                 Count of instances of each keyword     
                         Multiple keywords per row
                 Count of instances of each research area and count
-                Fix CSS
+OK              Fix CSS
 
 OK      Read manually-set page count.
-
-        Automatically reset 'verified' after 're-classify this paper' or manual changes.
 
 OK      Import bibTeX from GUI?
 OK              Automatic Dedup by DOI?
@@ -120,10 +118,18 @@ OK      Show "has User Comment"
 OK      Add missing stats to server-side version. Can't be done client-side because detail row is lazy-loaded.
 OK      Add Export to Excel to server-side implementation.
 
-        Fix chart can grow but can't shrink?
-        
-        Add sanity check filter: offtopic papers verified as wrong classification:
-                Potential max. 177 false offtopics of 11709.
-                Instead, just add a "only wrong classifications" filter then sort by offtopic?
+OK      Add sanity check filter: offtopic papers verified as wrong classification:
+OK              Instead, just add a "only wrong classifications" filter then sort by offtopic?
+                Potential max. 177 false offtopics of 11709?
+
+
+OK      Fix server-side search not being capable of searching strings that are JSON keys (as they return all rows because they have the key)?
+OK              Index JSON contents for fast search
 
         Refactor browse_db.py (too large)?
+        Refactor filtering.js (too large)?
+        Automatically reset 'verified' after 're-classify this paper' or manual changes.
+
+        Fix chart can grow but can't shrink?
+                Just close and reopen stats modal in such case for now.
+        

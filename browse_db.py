@@ -25,19 +25,96 @@ import automate_classification
 import verify_classification
 
 # Define default year range
-DEFAULT_YEAR_FROM = 2021
+DEFAULT_YEAR_FROM = 2016
 DEFAULT_YEAR_TO = 2025
 DEFAULT_MIN_PAGE_COUNT = 3
 
 app = Flask(__name__)
 DATABASE = None # Will be set from command line argument
 
+
+
+
 # --- Helper Functions ---
+def ensure_fts_tables(conn):
+    """
+    Creates FTS5 virtual tables for searchable JSON text if they don't exist
+    and populates them.
+    This should ideally be called once at startup or when data changes.
+    Handles potential NULLs and datatype mismatches robustly.
+    """
+    cursor = conn.cursor()
+    
+    # Check if FTS tables exist by checking for their docsize tables (internal to FTS)
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='papers_features_fts_docsize'")
+    features_fts_exists = cursor.fetchone() is not None
+    
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='papers_technique_fts_docsize'")
+    technique_fts_exists = cursor.fetchone() is not None
+
+    if not features_fts_exists:
+        print("Creating FTS table for features JSON text...")
+        # Create FTS table for features text (currently only 'other')
+        # content='papers' links it to the main table, content_rowid='id' specifies the PK
+        # papers_fts is the name, features_text is the column to be searched
+        # Using 'porter' tokenizer can be helpful for matching word variations
+        cursor.execute("""
+            CREATE VIRTUAL TABLE papers_features_fts USING fts5(
+                features_text, 
+                content='papers', 
+                content_rowid='id',
+                tokenize='porter'
+            )
+        """)
+        # Populate the FTS table for features
+        # Extract text from features JSON. Handle potential NULLs/Non-JSON robustly.
+        # COALESCE handles NULL features or NULL json_extract result.
+        # IFNULL is similar to COALESCE in SQLite.
+        # Ensure the final result passed to FTS is TEXT.
+        # Using CAST(... AS TEXT) ensures text type, even if json_extract returns a number or the column is not strictly text.
+        cursor.execute("""
+            INSERT INTO papers_features_fts (rowid, features_text)
+            SELECT id, CAST(COALESCE(json_extract(features, '$.other'), '') AS TEXT)
+            FROM papers
+        """)
+        conn.commit()
+        print("Features FTS table created and populated.")
+
+    if not technique_fts_exists:
+        print("Creating FTS table for technique JSON text...")
+        # Create FTS table for technique text (currently only 'model')
+        cursor.execute("""
+            CREATE VIRTUAL TABLE papers_technique_fts USING fts5(
+                technique_text, 
+                content='papers', 
+                content_rowid='id',
+                tokenize='porter'
+            )
+        """)
+        # Populate the FTS table for technique
+        # Same robust handling for technique JSON and potential NULLs.
+        cursor.execute("""
+            INSERT INTO papers_technique_fts (rowid, technique_text)
+            SELECT id, CAST(COALESCE(json_extract(technique, '$.model'), '') AS TEXT)
+            FROM papers
+        """)
+        conn.commit()
+        print("Technique FTS table created and populated.")
 
 def get_db_connection():
-    """Create a connection to the SQLite database."""
+    """Create a connection to the SQLite database and ensure FTS tables."""
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row  # Allows accessing columns by name
+    # Ensure FTS tables exist and are populated
+    # Note: For very large DBs or frequent updates, you might want a more sophisticated trigger/update mechanism
+    # For now, checking/creating on every connection is a simple way to ensure they exist.
+    # Consider optimizing this if performance on initial load becomes an issue.
+    try:
+        ensure_fts_tables(conn)
+    except sqlite3.Error as e:
+        print(f"Warning: Could not ensure FTS tables: {e}. Search might be slow or not work as expected for JSON text.")
+        # Depending on requirements, you might want to raise the error or continue
+        # raise # Re-raise if FTS is critical
     return conn
 
 def format_changed_timestamp(changed_str):
@@ -73,83 +150,143 @@ def get_total_paper_count():
 def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_count=None, search_query=None):
     """Fetch papers from the database, applying various optional filters."""
     conn = get_db_connection()
-    query = "SELECT * FROM papers"
+    # Start building the main query parts
+    # We will JOIN with the FTS results if there's a search query
+    base_query = "SELECT p.* FROM papers p"
     conditions = []
     params = []
 
-    # --- Existing Filters ---
+    # --- Existing Filters (remain the same) ---
     if hide_offtopic:
-        conditions.append("(is_offtopic = 0 OR is_offtopic IS NULL)")
-        # conditions.append("(is_offtopic = 0)")
-
+        conditions.append("(p.is_offtopic = 0 OR p.is_offtopic IS NULL)")
     if year_from is not None:
         try:
             year_from = int(year_from)
-            conditions.append("year >= ?")
+            conditions.append("p.year >= ?")
             params.append(year_from)
         except (ValueError, TypeError):
             pass
-
     if year_to is not None:
         try:
             year_to = int(year_to)
-            conditions.append("year <= ?")
+            conditions.append("p.year <= ?")
             params.append(year_to)
         except (ValueError, TypeError):
             pass
-
     if min_page_count is not None:
         try:
             min_page_count = int(min_page_count)
-            conditions.append("(page_count IS NULL OR page_count = '' OR page_count > ?)")
+            conditions.append("(p.page_count IS NULL OR p.page_count = '' OR p.page_count > ?)")
             params.append(min_page_count)
         except (ValueError, TypeError):
             pass
 
-    # --- NEW: Search Filter ---
+    # --- MODIFIED: Search Filter using FTS ---
+    fts_join_clause = "" # To hold the JOIN clause if FTS is used
     if search_query:
-        # Define the columns to search (exclude reasoning_trace, verifier_trace, features, technique as they need special handling or are JSON)
+        # Sanitize the search query for FTS. Basic escaping for quotes.
+        # FTS5 handles most things well, but escaping quotes is generally good practice.
+        # Using parameterized queries handles the main injection risk.
+        # For complex FTS queries (phrases, boolean operators), more processing might be needed.
+        
+        # Define the columns to search in the main table (excluding JSON columns now)
         searchable_columns = [
-            'id', 'type', 'title', 'authors', 'month', 'journal',
-            'volume', 'pages', 'doi', 'issn', 'abstract', 'keywords',
-            'research_area', 'user_trace' # Include user_trace in search
+            'p.id', 'p.type', 'p.title', 'p.authors', 'p.month', 'p.journal',
+            'p.volume', 'p.pages', 'p.doi', 'p.issn', 'p.abstract', 'p.keywords',
+            'p.research_area', 'p.user_trace' # Include user_trace in search
         ]
-        # Create a list of LIKE conditions for each searchable column
+        
+        # Create a list of LIKE conditions for each searchable column (basic text search)
+        # Alternatively, you could include these in the FTS search if you denormalized them into an FTS table too.
         search_conditions = []
-        # Add wildcard to the search term for partial matching
-        search_term_like = f"%{search_query}%"
+        search_term_like = f"%{search_query}%" # For LIKE on non-FTS columns
         for col in searchable_columns:
             search_conditions.append(f"LOWER({col}) LIKE LOWER(?)")
             params.append(search_term_like)
 
-        # Handle JSON columns (features, technique) - search within the JSON text representation
-        # Note: This is a basic text search within the JSON string. For complex JSON queries, consider using SQLite's JSON1 extension.
-        json_search_term = search_term_like # Use the same search term
-        json_conditions = []
-        for json_col in ['features', 'technique']:
-             # Search within the JSON string representation
-             json_conditions.append(f"LOWER({json_col}) LIKE LOWER(?)")
-             params.append(json_search_term)
+        # --- NEW: Handle JSON text search using FTS ---
+        # We will JOIN the main papers table with the results from FTS searches on the virtual tables.
+        # We'll search both FTS tables and UNION the results to get relevant paper IDs.
+        
+        # Prepare the FTS search term. FTS5 handles stemming with 'porter' tokenizer.
+        # For simple term matching, just use the term. For phrase matching, wrap in quotes.
+        # Let's assume simple term matching for now. You can refine this.
+        fts_search_term = search_query # FTS can handle the raw term
 
-        # Combine column and JSON search conditions
-        all_search_conditions = search_conditions + json_conditions
-        if all_search_conditions:
-            # Group search conditions together with OR
-            combined_search_condition = " OR ".join(all_search_conditions)
-            # Wrap the search conditions in parentheses to ensure correct precedence with other filters
-            conditions.append(f"({combined_search_condition})")
-
+        # Create a subquery that finds matching rowids from both FTS tables
+        fts_subquery = f"""
+            SELECT rowid FROM papers_features_fts WHERE papers_features_fts MATCH ?
+            UNION
+            SELECT rowid FROM papers_technique_fts WHERE papers_technique_fts MATCH ?
+        """
+        # Add the FTS search term twice (once for each FTS table search)
+        params.append(fts_search_term)
+        params.append(fts_search_term)
+        
+        # Join the main papers table with the FTS results
+        # This ensures we only get papers whose IDs are returned by the FTS search
+        # OR that match the LIKE conditions on non-JSON columns
+        fts_join_clause = f" JOIN ({fts_subquery}) AS fts_results ON p.id = fts_results.rowid"
+        
+        # Combine the LIKE conditions with the FTS requirement
+        # An paper matches if it matches any non-JSON field (LIKE) OR if it's in the FTS results
+        if search_conditions:
+             # If there are non-JSON fields matched by LIKE
+             non_json_search_condition = " OR ".join(search_conditions)
+             # The paper must match (non-JSON LIKE OR FTS match)
+             # We need to ensure the FTS join is part of the logic correctly.
+             # The simplest way is to make the FTS join conditional or always present if search.
+             # Let's adjust: Always do the JOIN if there's a search query, and then filter.
+             # The JOIN brings in papers matching FTS. The WHERE clause filters further.
+             # So, WHERE (non_json_condition OR FTS matched via JOIN)
+             # But the JOIN itself doesn't filter unless we make it an INNER JOIN based on FTS.
+             # Let's restructure slightly for clarity:
+             # 1. Base query includes potential FTS join
+             # 2. WHERE clause includes non-JSON LIKE conditions OR the fact that the join succeeded (meaning FTS matched)
+             # However, the JOIN as written just brings in rowids. We need the condition that the join happened.
+             # Easier: Make the FTS subquery part of the WHERE clause directly.
+             # Revert the JOIN idea slightly for this structure:
+             # Keep base SELECT FROM papers p
+             # Add potential JOINs if needed later for more complex FTS
+             # Modify WHERE: (existing filters) AND ((non_json_conditions) OR (id IN (fts_subquery)))
+             # This is cleaner.
+             # Remove the fts_join_clause concept for now in this structure.
+             # Rebuild the conditions list:
+             conditions.append(f"(({non_json_search_condition}) OR p.id IN ({fts_subquery}))")
+             # The params for the FTS terms were already added above.
+        else:
+            # If no non-JSON fields are searched, only rely on FTS
+            # This case is less likely given the columns listed, but handle it
+            conditions.append(f"p.id IN ({fts_subquery})")
+            # params for FTS already added
 
     # --- Build Final Query ---
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
+    # Start with base query
+    query_parts = [base_query]
+    
+    # Add FTS join if it was needed (alternative approach, not used with the IN clause above)
+    # if fts_join_clause:
+    #     query_parts.append(fts_join_clause)
 
-    # Debug: Print the final query and params (optional)
+    # Add WHERE clause if conditions exist
+    if conditions:
+        query_parts.append("WHERE " + " AND ".join(conditions))
+
+    # Combine all parts
+    query = " ".join(query_parts)
+
+    # Debug: Print the final query and params (optional, be careful with sensitive data)
     # print(f"DEBUG SQL Query: {query}")
     # print(f"DEBUG SQL Params: {params}")
 
-    papers = conn.execute(query, params).fetchall()
-    conn.close()
+    try:
+        papers = conn.execute(query, params).fetchall()
+    except sqlite3.Error as e:
+        conn.close()
+        print(f"Database error during fetch_papers: {e}")
+        raise # Re-raise to be caught by the calling function (e.g., render_papers_table)
+    finally:
+        conn.close()
 
     # --- Process Results (Same as before) ---
     paper_list = []
@@ -166,9 +303,9 @@ def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_coun
         paper_dict['changed_formatted'] = format_changed_timestamp(paper_dict.get('changed'))
         paper_dict['authors_truncated'] = truncate_authors(paper_dict.get('authors', ''))
         paper_list.append(paper_dict)
+    
     return paper_list
 
-# Editing functions: update_paper_custom_fields, fetch_updated_paper_data
 def update_paper_custom_fields(paper_id, data, changed_by="user"):
     """Update the custom classification fields for a paper and audit fields.
        Handles partial updates based on keys present in `data`."""
@@ -466,10 +603,10 @@ def fetch_updated_paper_data(paper_id):
             return {'status': 'error', 'message': 'Paper not found after update.'}
     finally:
         conn.close()
-
-# render_papers_table Used for initial render from / and XHR updates     
+  
 def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_param=None, min_page_count_param=None, search_query_param=None):
-    """Fetches papers based on filters and renders the papers_table.html template."""
+    """Fetches papers based on filters and renders the papers_table.html template. 
+       Used for initial render from / and XHR updates."""
     try:
         # Determine hide_offtopic state
         hide_offtopic = True # Default
@@ -512,6 +649,9 @@ def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_
         print(f"Error rendering papers table: {e}")
         # Return an error fragment or re-raise if preferred for the main route
         return "<p>Error loading table.</p>" # Basic error display
+
+
+
 
 
 #Routes: 
@@ -561,7 +701,6 @@ def index():
         search_query_value=search_input_value,
         total_paper_count=total_paper_count
     )
-
 
 @app.route('/static_export', methods=['GET'])
 def static_export():
@@ -676,7 +815,6 @@ def static_export():
         mimetype="text/html",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
-
 
 @app.route('/xlsx_export', methods=['GET'])
 def export_excel():
@@ -920,7 +1058,7 @@ def export_excel():
             # 38. Verified By, 39. User Comment State, 40. User Comments
             # Recount shows 40 columns. Excel columns: A=1, B=2, ..., AN=34, AO=35, AP=36, AQ=37, AR=38, AS=39, AT=40
             # Correct table reference should be A1:AT{len(papers)+1}
-            tab = Table(displayName="PCBPapersTable", ref=f"A1:AT{len(papers) + 1}") # CHANGED TO AT
+            tab = Table(displayName="PCBPapersTable", ref=f"A1:AT{len(papers) + 1}") # CHANGED TO AT - why?
             style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
                                    showLastColumn=False, showRowStripes=True, showColumnStripes=False)
             tab.tableStyleInfo = style
@@ -990,7 +1128,6 @@ def get_detail_row():
         print(f"Error fetching detail row for paper {paper_id}: {e}")
         return jsonify({'status': 'error', 'message': 'Failed to fetch detail row'}), 500
 
-# Endpoint to load the table content via AJAX 
 @app.route('/load_table', methods=['GET'])
 def load_table():
     """Endpoint to fetch and render the table content based on current filters."""
@@ -1152,7 +1289,6 @@ def update_paper():
         print(f"Error updating paper {paper_id}: {e}") # Log error
         return jsonify({'status': 'error', 'message': 'Failed to update database'}), 500
 
-# --- New Routes for Classification and Verification ---
 @app.route('/classify', methods=['POST'])
 def classify_paper():
     """Endpoint to handle classification requests (single or batch)."""
@@ -1260,7 +1396,6 @@ def verify_paper():
     else:
         return jsonify({'status': 'error', 'message': 'Invalid mode or missing paper_id for single verification.'}), 400
 
-
 @app.route('/upload_bibtex', methods=['POST'])
 def upload_bibtex():
     """Endpoint to handle BibTeX file upload and import."""
@@ -1304,6 +1439,8 @@ def upload_bibtex():
             return jsonify({'status': 'error', 'message': f'Import failed: {str(e)}'}), 500
     else:
         return jsonify({'status': 'error', 'message': 'Invalid file type. Please upload a .bib file.'}), 400
+
+
 
 
 
@@ -1362,6 +1499,9 @@ def render_verified_by_filter(value):
     # Use Markup to tell Jinja2 that the output is safe HTML
     return Markup(render_verified_by(value)) 
 
+
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Browse and edit PCB inspection papers database.')
     parser.add_argument('db_file', nargs='?', help='SQLite database file path (optional)')
@@ -1394,6 +1534,20 @@ if __name__ == '__main__':
     except sqlite3.Error as e:
         print(f"Error verifying database: {e}")
         sys.exit(1)
+
+   # --- NEW: Pre-populate FTS tables on startup ---
+    # This ensures they are ready before the first search request.
+    # It might take a moment on the first run or with a large DB.
+    try:
+        print("Ensuring FTS tables are ready...")
+        conn = get_db_connection() # This will trigger ensure_fts_tables
+        conn.close()
+        print("FTS tables are ready.")
+    except Exception as e:
+        print(f"Warning: Could not pre-populate FTS tables on startup: {e}")
+        # Decide if you want to continue or exit based on requirements
+        # For now, let's continue, search might be slow or use fallback
+        # sys.exit(1) # Uncomment if FTS is mandatory
 
     print(f"Starting server, database: {DATABASE}")
 

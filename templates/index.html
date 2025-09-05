@@ -87,7 +87,7 @@
                             </div>
                         </div>
                         <div class="header-controls">
-                            <button class="action-btn" id="about-btn" title="Help"><span>?</span></button>
+                            <button class="action-btn" id="about-btn" title="Sorry, you are helpless at this time. Good luck" disabled ><span>?</span></button>
                         </div>
                     </div>
                     </td>
@@ -109,8 +109,10 @@
                             <button class="action-btn" id="apply-serverside-filters" style="opacity:0; pointer-events: none;"><span>Apply</span></button>
                         </div>
                     </th>
-                    <th class="inferred-header" colspan="26" style="background: linear-gradient(90deg, var(--inferred-ui-color), var(--inferred-gradient-end-color));"><!--NLP--->Inferred data</th>
-                    
+                    <th class="inferred-header" id="inferred-header-title" colspan="26"><div>
+                        <span>Inferred data </span>
+                        <input type="checkbox" title="Enable to only show misclassification suspects" id="hide-approved-checkbox"></th>
+                    </div><!--NLP--->
                     <th class="ontop-header" colspan="7" rowspan="2" >
                         <!-- <input type="search" id="search-input" placeholder="Type to search all fields..."> -->
                         <input type="search" id="search-input" placeholder="Type to search all fields..." value="{{ search_query_value }}">
@@ -175,7 +177,10 @@
 
                     <th data-sort="changed">Last Changed <span class="sort-indicator"></span></th>
                     <th data-sort="changed_by">Changed By <span class="sort-indicator"></span></th>
-                    <th data-sort="verified"><!--<input type="checkbox" title="Enable to only show misclassification suspects" id="hide-approved-checkbox">-->Verified <span class="sort-indicator"></span></th>
+                    <th data-sort="verified">
+                        <!--<input type="checkbox" title="Enable to only show misclassification suspects" id="hide-approved-checkbox">-->
+                        Verified <span class="sort-indicator"></span>
+                    </th>
                     <th class="rotate-header" data-sort="estimated_score"><div><span>Accr. Score</span></div> <span class="sort-indicator"></span></th>
                     <th data-sort="verified_by">Verified By <span class="sort-indicator"></span></th>
                     <th class="rotate-header status-header" data-sort="user_comment_state"><span class="sort-indicator"></span><div><span>Ccommented</span></div></th>
@@ -197,7 +202,7 @@
         <!-- <p> Data in <strong>all lists</strong> below is dynamically calculated based on <strong>currently visible</strong> papers:</p> -->
         <div class="stats-lists">
             <div class="stats-section">
-                <h3>Repeating <strong>Journal/Conferences</strong> <span style="font-size:0.6em">↓</span></h3> 
+                <h3>Repeating <strong>Journal/Conferences</strong><span style="font-size:0.6em"> — Scroll down on each list for more ↓</span></h3> </span></h3>  
                 <ul id="journalStatsList"  class="stats-list-multicolumn-2"></ul>
             </div>
             <div class="stats-section">

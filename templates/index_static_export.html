@@ -61,6 +61,9 @@
             </colgroup>
             <thead>
                 <tr>
+                    <th id="main-header-wrapper" colspan=38 style="display: none;"></th><!-- kept to allow nth-child(4) to be consistent-->
+                </tr>
+                <tr>
                     <th class="ontop-header" colspan="5" rowspan="2"> 
                         <div class="header-filters">
                             <div class="filter-item">
@@ -77,7 +80,10 @@
                             <button class="action-btn" id="static-stats-btn">Check <strong>Stats</strong></button>
                         </div>
                     </th>
-                    <th class="inferred-header" colspan="26" style="background: linear-gradient(90deg, var(--inferred-ui-color), var(--inferred-gradient-end-color));"><!--NLP--->Inferred data</th>
+                    <th class="inferred-header" id="inferred-header-title" colspan="26"><div>
+                        <span>Inferred data </span>
+                        <input type="checkbox" title="Enable to only show misclassification suspects" id="hide-approved-checkbox"></th>
+                    </div><!--NLP--->
                     
                     <th class="ontop-header" colspan="7" rowspan="2" >
                         <!-- <input type="search" id="search-input" placeholder="Type to search all fields..."> -->

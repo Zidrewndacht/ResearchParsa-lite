@@ -29,7 +29,7 @@ DEFAULT_FEATURES = {
     "wrong_component": None,
     "missing_component": None,
     "cosmetic": None,
-    "other": None
+    "other": None   #text
 }
 
 DEFAULT_TECHNIQUE = {
@@ -41,8 +41,8 @@ DEFAULT_TECHNIQUE = {
     "dl_transformer": None,
     "dl_other": None,
     "hybrid": None,
-    "model": None,
-    "available_dataset": None
+    "model": None,   #text
+    "available_dataset": None   #text
 }
 
 # mover para client-side?

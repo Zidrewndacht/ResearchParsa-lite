@@ -4,6 +4,7 @@
 const searchInput = document.getElementById('search-input');
 const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
 const hideXrayCheckbox = document.getElementById('hide-xray-checkbox');
+const hideApprovedCheckbox = document.getElementById('hide-approved-checkbox');
 const onlySurveyCheckbox = document.getElementById('only-survey-checkbox');
 const minPageCountInput = document.getElementById('min-page-count');
 const yearFromInput = document.getElementById('year-from');
@@ -382,7 +383,7 @@ function applyServerSideFilters() {
                 tbody.innerHTML = html;
                 const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
                 window.history.replaceState({ path: newUrl }, '', newUrl);
-                applyLocalFilters();
+                scheduleFilterUpdate();
             }
             document.documentElement.classList.remove('busyCursor');
         })
@@ -398,6 +399,7 @@ function applyLocalFilters() { //For local filters:
 
     const hideXrayChecked = hideXrayCheckbox.checked;
     const onlySurveyChecked = onlySurveyCheckbox.checked;
+    const hideApprovedChecked = hideApprovedCheckbox.checked;
 
     const rows = tbody.querySelectorAll('tr[data-paper-id]');
     rows.forEach(row => {
@@ -412,6 +414,12 @@ function applyLocalFilters() { //For local filters:
         if (showRow && onlySurveyChecked) {
             const offtopicCell = row.querySelector('.editable-status[data-field="is_survey"]');
             if (offtopicCell && offtopicCell.textContent.trim() === '❌') {
+                showRow = false;
+            }
+        }
+        if (showRow && hideApprovedChecked) {
+            const offtopicCell = row.querySelector('.editable-status[data-field="verified"]');
+            if (offtopicCell && offtopicCell.textContent.trim() === '✔️') {
                 showRow = false;
             }
         }
@@ -437,6 +445,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     hideOfftopicCheckbox.addEventListener('change', applyServerSideFilters);
     hideXrayCheckbox.addEventListener('change', scheduleFilterUpdate);
+    hideApprovedCheckbox.addEventListener('change', scheduleFilterUpdate);
     onlySurveyCheckbox.addEventListener('change', scheduleFilterUpdate);
     document.getElementById('apply-serverside-filters').addEventListener('click', applyServerSideFilters);
 
@@ -1184,5 +1193,5 @@ document.addEventListener('DOMContentLoaded', function () {
     window.addEventListener('click', function (event) {
         if (event.target === modal) { closeModal(); }
     });
-    applyLocalFilters(); //apply initial filtering    
+    scheduleFilterUpdate(); //apply initial filtering    
 });

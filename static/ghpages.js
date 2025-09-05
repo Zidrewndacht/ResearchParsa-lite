@@ -2,6 +2,7 @@
 const searchInput = document.getElementById('search-input');
 const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
 const hideXrayCheckbox = document.getElementById('hide-xray-checkbox');
+const hideApprovedCheckbox = document.getElementById('hide-approved-checkbox');
 const onlySurveyCheckbox = document.getElementById('only-survey-checkbox');
 const minPageCountInput = document.getElementById('min-page-count');
 const yearFromInput = document.getElementById('year-from');
@@ -181,55 +182,6 @@ function applyAlternatingShading() {
     });
 }
 
-function applyJournalShading(rows) {
-    //Disabled, redundant after stats.
-    // const journalCounts = new Map();
-    // rows.forEach(row => {
-    //     if (!row.classList.contains('filter-hidden')) {
-    //         const journalCell = row.cells[3];
-    //         if (journalCell) {
-    //             const journalName = journalCell.textContent.trim();
-    //             if (journalName) {
-    //                 journalCounts.set(journalName, (journalCounts.get(journalName) || 0) + 1);
-    //             }
-    //         }
-    //     }
-    // });
-
-    // let maxCount = 0;
-    // for (const count of journalCounts.values()) {
-    //     if (count > maxCount) maxCount = count;
-    // }
-
-    // const baseHue = 210;
-    // const baseSaturation = 70;
-    // const minLightness = 97;
-    // const maxLightness = 80;
-
-    // rows.forEach(row => {
-    //     const journalCell = row.cells[3];
-    //     if (journalCell) {
-    //         journalCell.style.backgroundColor = '';
-    //         if (!row.classList.contains('filter-hidden')) {
-    //             const journalName = journalCell.textContent.trim();
-    //             if (journalName) {
-    //                 const count = journalCounts.get(journalName) || 0;
-    //                 if (count > 1) {
-    //                     let lightness;
-    //                     if (maxCount <= 1) {
-    //                         lightness = minLightness;
-    //                     } else {
-    //                         lightness = maxLightness + (minLightness - maxLightness) * (1 - (count - 1) / (maxCount - 1));
-    //                         lightness = Math.max(maxLightness, Math.min(minLightness, lightness));
-    //                     }
-    //                     journalCell.style.backgroundColor = `hsl(${baseHue}, ${baseSaturation}%, ${lightness}%)`;
-    //                 }
-    //             }
-    //         }
-    //     }
-    // });
-}
-
 function applyFilters() {
     const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const tbody = document.querySelector('#papersTable tbody');
@@ -239,6 +191,7 @@ function applyFilters() {
     const hideOfftopicChecked = hideOfftopicCheckbox.checked;
     const hideXrayChecked = hideXrayCheckbox.checked;
     const onlySurveyChecked = onlySurveyCheckbox.checked;
+    const hideApprovedChecked = hideApprovedCheckbox.checked;
     const minPageCountValue = minPageCountInput ? parseInt(minPageCountInput.value, 10) || 0 : 0;
     // Get year range values
     const yearFromValue = yearFromInput ? parseInt(yearFromInput.value, 10) || 0 : 0;
@@ -269,6 +222,12 @@ function applyFilters() {
         if (showRow && hideXrayChecked) {
             const offtopicCell = row.querySelector('.editable-status[data-field="is_x_ray"]');
             if (offtopicCell && offtopicCell.textContent.trim() === '✔️') { 
+                showRow = false;
+            }
+        }
+        if (showRow && hideApprovedChecked) {
+            const offtopicCell = row.querySelector('.editable-status[data-field="verified"]');
+            if (offtopicCell && offtopicCell.textContent.trim() === '✔️') {
                 showRow = false;
             }
         }
@@ -333,10 +292,6 @@ function applyFilters() {
             detailRow.classList.toggle('filter-hidden', !showRow);
         }
     });
-
-    // Update UI elements that depend on visible rows
-    const currentVisibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
-    applyJournalShading(currentVisibleRows);
     updateCounts();
     applyAlternatingShading();
 
@@ -356,9 +311,10 @@ document.addEventListener('DOMContentLoaded', function () {
     yearFromInput.addEventListener('change', scheduleFilterUpdate); 
     yearToInput.addEventListener('input', scheduleFilterUpdate);
     yearToInput.addEventListener('change', scheduleFilterUpdate); 
-    
-    document.getElementById('hide-xray-checkbox').addEventListener('change', applyFilters);
-    document.getElementById('only-survey-checkbox').addEventListener('change', applyFilters);
+    hideXrayCheckbox.addEventListener('change', scheduleFilterUpdate);
+    hideApprovedCheckbox.addEventListener('change', scheduleFilterUpdate);
+    onlySurveyCheckbox.addEventListener('change', scheduleFilterUpdate);
+
  // --- Single Event Listener for Headers (Handles Optimized Client-Side Sorting) ---
     headers.forEach(header => {
         header.addEventListener('click', function () {
@@ -436,10 +392,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     // --- Schedule UI Updates after DOM change ---
                     // Use requestAnimationFrame to align with browser repaint
                     requestAnimationFrame(() => { applyAlternatingShading(); });
-                    requestAnimationFrame(() => {
-                        const currentVisibleRowsForJournal = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
-                        applyJournalShading(currentVisibleRowsForJournal);
-                    });
                     requestAnimationFrame(() => { updateCounts(); });
 
                     // Update sort state
@@ -1200,6 +1152,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    applyFilters();
+    scheduleFilterUpdate();
 
 });
