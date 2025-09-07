@@ -5,6 +5,12 @@
 // --- New Global Variables for Batch Status ---
 let isBatchRunning = false; // Simple flag to prevent multiple simultaneous batches
 
+//Hardocoded cells - used for both scripts:
+const yearCellIndex = 2;
+const journalCellIndex = 3;
+const pageCountCellIndex = 4;
+const estScoreCellIndex = 34;
+
 // --- Status Cycling Logic ---
 const STATUS_CYCLE = {
     '❔': { next: '✔️', value: 'true' },
@@ -357,10 +363,10 @@ document.addEventListener('DOMContentLoaded', function () {
                              // Assuming render_verified_by function exists or create one based on Python logic
                              verifiedByCell.innerHTML = renderVerifiedBy(data.verified_by);
                         }
-                        const estimatedScoreCell = row.cells[33];   //Updates score dynamically after verification.
+                        const estimatedScoreCell = row.cells[estScoreCellIndex];  //Updates score dynamically after verification.
                         if (estimatedScoreCell) estimatedScoreCell.textContent = data.estimated_score !== null && data.estimated_score !== undefined ? data.estimated_score : ''; // Example formatting
 
-                        const pageCountCell = row.cells[4]; //moved afer hiding authors column
+                        const pageCountCell = row.cells[pageCountCellIndex]; 
                         if (pageCountCell) pageCountCell.textContent = data.page_count !== null && data.page_count !== undefined ? data.page_count : '';
 
                         // Update detail row traces if expanded
@@ -629,7 +635,7 @@ function sendAjaxRequest(cell, dataToSend, currentText, row, paperId, field) {
                     mainRow.querySelector('.changed-by-cell').innerHTML = renderChangedBy(data.changed_by);
                 }
                 if (data.estimated_score !== undefined) {
-                     const estimatedScoreCell = mainRow.cells[24]; 
+                     const estimatedScoreCell = mainRow.cells[estScoreCellIndex]; 
                      if (estimatedScoreCell) {
                          estimatedScoreCell.textContent = data.estimated_score !== null && data.estimated_score !== undefined ? data.estimated_score : ''; // Example formatting
                      }
@@ -752,7 +758,7 @@ function saveChanges(paperId) {
                     row.querySelector('.changed-by-cell').innerHTML = renderChangedBy(data.changed_by);
                 }
                 // Update displayed page count if returned
-                const pageCountCell = row.cells[4]; // Adjusted index if authors column is hidden
+                const pageCountCell = row.cells[pageCountCellIndex];
                 if (pageCountCell) {
                      pageCountCell.textContent = data.page_count !== null && data.page_count !== undefined ? data.page_count : '';
                 }

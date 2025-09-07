@@ -1,6 +1,4 @@
 // static/filtering.js
-/** For filtering, stats counters and other purely-local functionality that doesn't do any communication with the server: */
-// --- Filtering Logic ---
 const searchInput = document.getElementById('search-input');
 const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
 const hideXrayCheckbox = document.getElementById('hide-xray-checkbox');
@@ -11,33 +9,21 @@ const yearFromInput = document.getElementById('year-from');
 const yearToInput = document.getElementById('year-to');
 const visiblePapersCountCell = document.getElementById('visible-papers-count');
 const loadedPapersCountCell = document.getElementById('loaded-papers-count');
+const applyButton = document.getElementById('apply-serverside-filters');
 // const totalPapersCountCell = document.getElementById('total-papers-count');
+
+const headers = document.querySelectorAll('th[data-sort]');
+let currentClientSort = { column: null, direction: 'ASC' };
 
 let filterTimeoutId = null;
 const FILTER_DEBOUNCE_DELAY = 200;
 
-
-// --- Optimized Client-Side Sorting ---
 // Pre-calculate symbol weights OUTSIDE the sort loop for efficiency
 const SYMBOL_SORT_WEIGHTS = {
     '✔️': 2, // Yes
     '❌': 1, // No
     '❔': 0  // Unknown
 };
-
-function scheduleFilterUpdate() {
-    clearTimeout(filterTimeoutId);
-    // Set the cursor immediately on user interaction
-    document.documentElement.classList.add('busyCursor');
-    // Debounce the actual filtering
-    filterTimeoutId = setTimeout(() => {
-        // Use setTimeout(0) to defer the heavy work to the next event loop tick.
-        // This allows the browser to process the 'progress' cursor change.
-        setTimeout(() => {
-            applyLocalFilters();
-        }, 20);
-    }, FILTER_DEBOUNCE_DELAY);
-}
 
 function toggleDetails(element) {
     const row = element.closest('tr');
@@ -46,202 +32,34 @@ function toggleDetails(element) {
     const paperId = row.getAttribute('data-paper-id');
 
     if (isExpanded) {
-        // Collapse the detail row
-        if (detailRow) detailRow.classList.remove('expanded');
+        detailRow.classList.remove('expanded');
         element.innerHTML = '<span>Show</span>';
     } else {
-        // Expand the detail row
-        if (detailRow) {
-            detailRow.classList.add('expanded');
-            element.innerHTML = '<span>Hide</span>';
-
-            if (paperId) {
-                // Find the placeholder content div within the detail row
-                const contentPlaceholder = detailRow.querySelector('.detail-content-placeholder');
-                // Check if content is already loaded (e.g., if it's not the loading message anymore)
-                // A simple check: if the placeholder contains the loading message or is empty-ish
-                if (contentPlaceholder &&
-                    (contentPlaceholder.children.length === 0 ||
-                        (contentPlaceholder.children.length === 1 &&
-                            contentPlaceholder.children[0].tagName === 'P' &&
-                            contentPlaceholder.children[0].textContent.trim() === 'Loading details...')
-                    )
-                ) {
-                    // Content not loaded yet, fetch it via AJAX
-                    // Show loading indicator (optional, it's already there)
+        detailRow.classList.add('expanded');
+        element.innerHTML = '<span>Hide</span>';
+        const contentPlaceholder = detailRow.querySelector('.detail-content-placeholder');
+        fetch(`/get_detail_row?paper_id=${encodeURIComponent(paperId)}`)
+            .then(response => {
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success' && data.html) {
+                    contentPlaceholder.innerHTML = data.html;
+                } else {  // Handle error from server
+                    console.error(`Error loading detail row for paper ${paperId}:`, data.message);
                     if (contentPlaceholder) {
-                        contentPlaceholder.innerHTML = '<p>Loading details...</p>'; // Ensure loading message
+                        contentPlaceholder.innerHTML = `<p>Error loading details: ${data.message || 'Unknown error'}</p>`;
                     }
-
-                    // Make AJAX request to fetch the rendered detail row HTML
-                    fetch(`/get_detail_row?paper_id=${encodeURIComponent(paperId)}`)
-                        .then(response => {
-                            return response.json();
-                        })
-                        .then(data => {
-                            if (data.status === 'success' && data.html) {
-                                contentPlaceholder.innerHTML = data.html;
-                            } else {
-                                // Handle error from server
-                                console.error(`Error loading detail row for paper ${paperId}:`, data.message);
-                                if (contentPlaceholder) {
-                                    contentPlaceholder.innerHTML = `<p>Error loading details: ${data.message || 'Unknown error'}</p>`;
-                                }
-                            }
-                        })
-                        .catch(error => {
-                            // Handle network or other errors
-                            console.error(`Error fetching detail row for paper ${paperId}:`, error);
-                            if (contentPlaceholder) {
-                                contentPlaceholder.innerHTML = `<p>Error loading details: ${error.message}</p>`;
-                            }
-                        });
                 }
-                // If content is already loaded, do nothing on expand.
-            }
-        }
+            })
+            .catch(error => {  // Handle network or other errors
+                console.error(`Error fetching detail row for paper ${paperId}:`, error);
+                if (contentPlaceholder) {
+                    contentPlaceholder.innerHTML = `<p>Error loading details: ${error.message}</p>`;
+                }
+            });
     }
 }
-
-// --- Modified updateCounts Function ---
-let latestCounts = {}; // This will store the counts calculated by updateCounts
-let latestYearlyData = {}; // NEW: Store yearly data for charts
-
-// Define the fields for which we want to count '✔️'
-const COUNT_FIELDS = [
-    'is_offtopic', 'is_survey', 'is_through_hole', 'is_smt', 'is_x_ray', // Classification (Top-level)
-    'features_tracks', 'features_holes', 'features_solder_insufficient', 'features_solder_excess',
-    'features_solder_void', 'features_solder_crack', 'features_orientation', 'features_wrong_component',
-    'features_missing_component', 'features_cosmetic', 'features_other_state', // Features (Nested under 'features')
-    'technique_classic_cv_based', 'technique_ml_traditional',
-    'technique_dl_cnn_classifier', 'technique_dl_cnn_detector', 'technique_dl_rcnn_detector',
-    'technique_dl_transformer', 'technique_dl_other', 'technique_hybrid', 'technique_available_dataset', // Techniques (Nested under 'technique')
-    'changed_by', 'verified', 'verified_by', 'user_comment_state' // Add these for user counting (Top-level)
-];
-
-// NEW: Define fields for techniques and features to track per year
-const TECHNIQUE_FIELDS_FOR_YEARLY = [
-    'technique_classic_cv_based', 'technique_ml_traditional',
-    'technique_dl_cnn_classifier', 'technique_dl_cnn_detector', 'technique_dl_rcnn_detector',
-    'technique_dl_transformer', 'technique_dl_other', 'technique_hybrid'
-    // 'technique_available_dataset' is excluded from line chart per request
-];
-const FEATURE_FIELDS_FOR_YEARLY = [
-    'features_tracks', 'features_holes', 'features_solder_insufficient', 'features_solder_excess',
-    'features_solder_void', 'features_solder_crack', 'features_orientation', 'features_wrong_component',
-    'features_missing_component', 'features_cosmetic', 'features_other_state'
-];
-
-function updateCounts() {
-    const counts = {};
-    // NEW: Initialize structures for yearly data
-    const yearlySurveyImpl = {}; // { year: { surveys: count, impl: count } }
-    const yearlyTechniques = {}; // { year: { technique_field: count, ... } }
-    const yearlyFeatures = {};   // { year: { feature_field: count, ... } }
-
-    // Initialize counts for ALL status fields (including changed_by, verified_by)
-    COUNT_FIELDS.forEach(field => counts[field] = 0);
-
-    // Select only VISIBLE main rows for counting '✔️' and calculating visible count
-    const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
-    const visiblePaperCount = visibleRows.length;
-
-    //count on each update since server-side async can change this:
-    const allRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
-    const loadedPaperCount = allRows.length;
-
-    // NEW: Map field names to chart labels (reusing existing FIELD_LABELS if available globally or defining here)
-    // Ensure FIELD_LABELS is accessible or define a local version if needed.
-    // Assuming FIELD_LABELS is defined globally in displayStats or needs to be accessible here.
-    // For now, we'll assume it's accessible or define a minimal version if not.
-    // Let's assume FIELD_LABELS is available in the scope of displayStats.
-    // If not, we might need to pass it or define it here.
-
-    // Count symbols in visible rows and collect yearly data
-    visibleRows.forEach(row => {
-        // --- Existing Counting Logic ---
-        COUNT_FIELDS.forEach(field => {
-            const cell = row.querySelector(`[data-field="${field}"]`);
-            if (cell) {
-                const cellText = cell.textContent.trim();
-                if (field === 'changed_by' || field === 'verified_by') {
-                    if (cellText === '👤') {
-                        counts[field]++;
-                    }
-                } else {
-                    if (cellText === '✔️') {
-                        counts[field]++;
-                    }
-                }
-            }
-        });
-
-        // --- NEW: Collect Yearly Data for Charts ---
-        const yearCell = row.cells[2]; // Assuming Year is the 3rd column (index 2)
-        const yearText = yearCell ? yearCell.textContent.trim() : '';
-        const year = yearText ? parseInt(yearText, 10) : null;
-
-        if (year && !isNaN(year)) {
-            // Initialize yearly data objects for the year if they don't exist
-            if (!yearlySurveyImpl[year]) {
-                yearlySurveyImpl[year] = { surveys: 0, impl: 0 };
-            }
-            if (!yearlyTechniques[year]) {
-                yearlyTechniques[year] = {};
-                TECHNIQUE_FIELDS_FOR_YEARLY.forEach(f => yearlyTechniques[year][f] = 0);
-            }
-            if (!yearlyFeatures[year]) {
-                yearlyFeatures[year] = {};
-                FEATURE_FIELDS_FOR_YEARLY.forEach(f => yearlyFeatures[year][f] = 0);
-            }
-
-            // Update Survey/Impl counts
-            const isSurveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
-            const isSurvey = isSurveyCell && isSurveyCell.textContent.trim() === '✔️';
-            if (isSurvey) {
-                yearlySurveyImpl[year].surveys++;
-            } else {
-                yearlySurveyImpl[year].impl++;
-            }
-
-            // Update Technique counts
-            TECHNIQUE_FIELDS_FOR_YEARLY.forEach(field => {
-                const techCell = row.querySelector(`.editable-status[data-field="${field}"]`);
-                if (techCell && techCell.textContent.trim() === '✔️') {
-                    yearlyTechniques[year][field]++;
-                }
-            });
-
-            // Update Feature counts
-            FEATURE_FIELDS_FOR_YEARLY.forEach(field => {
-                // const featCell = row.querySelector(`.editable-status[data-field="${field}"]`); //breaks "other" counts in chart, as it's a calculated, non-editable cell!
-                const featCell = row.querySelector(`[data-field="${field}"]`);
-                if (featCell && featCell.textContent.trim() === '✔️') {
-                    yearlyFeatures[year][field]++;
-                }
-            });
-        }
-    });
-
-    latestCounts = counts; // Make counts available outside this function
-    // NEW: Make yearly data available
-    latestYearlyData = {
-        surveyImpl: yearlySurveyImpl,
-        techniques: yearlyTechniques,
-        features: yearlyFeatures
-    };
-
-    // --- Existing UI Update Logic ---
-    loadedPapersCountCell.textContent = loadedPaperCount;
-    visiblePapersCountCell.textContent = visiblePaperCount;
-    COUNT_FIELDS.forEach(field => {
-        const countCell = document.getElementById(`count-${field}`);
-        if (countCell) {
-            countCell.textContent = counts[field];
-        }
-    });
-}
-
 /**
  * Applies alternating row shading to visible main rows.
  * Ensures detail rows follow their main row's shading.
@@ -269,23 +87,14 @@ function applyAlternatingShading() {
     });
 }
 
-
-// --- Journal Shading Logic ---
 function applyJournalShading(rows) {
     const journalCounts = new Map();
 
-    rows.forEach(row => {
-        // Only count visible rows (not hidden by filters)
+    rows.forEach(row => {        // Only count visible rows (not hidden by filters)
         if (!row.classList.contains('filter-hidden')) {
-            // Assuming Journal/Conf is the 5th column (index 4)
-            const journalCell = row.cells[3]; //moved afer hiding authors column
-            if (journalCell) {
-                const journalName = journalCell.textContent.trim();
-                // Only count non-empty journal names
-                if (journalName) {
-                    journalCounts.set(journalName, (journalCounts.get(journalName) || 0) + 1);
-                }
-            }
+            const journalCell = row.cells[journalCellIndex]; //see comms.js
+            const journalName = journalCell.textContent.trim();
+            journalCounts.set(journalName, (journalCounts.get(journalName) || 0) + 1);
         }
     });
     // Determine the maximum count for scaling
@@ -302,31 +111,24 @@ function applyJournalShading(rows) {
     const maxLightness = 84; // Darkest shade when maxCount is high
 
     rows.forEach(row => {
-        // Reset shading first for all rows/cells
-        const journalCell = row.cells[3]; //moved afer hiding authors column
-        if (journalCell) {
-            // Reset to default background (inherits from row)
-            journalCell.style.backgroundColor = '';
+        const journalCell = row.cells[journalCellIndex];
+        journalCell.style.backgroundColor = '';
 
-            // Only apply shading if the row is visible and has a journal name
-            if (!row.classList.contains('filter-hidden')) {
-                const journalName = journalCell.textContent.trim();
-                if (journalName) {
-                    const count = journalCounts.get(journalName) || 0;
-                    if (count > 1) { // Only shade if appears more than once
-                        // Calculate lightness: higher count -> lower lightness (darker)
-                        // Scale lightness between maxLightness and minLightness
-                        let lightness;
-                        if (maxCount <= 1) {
-                            lightness = minLightness; // Avoid division by zero or negative
-                        } else {
-                            // Interpolate lightness based on count relative to maxCount
-                            lightness = maxLightness + (minLightness - maxLightness) * (1 - (count - 1) / (maxCount - 1));
-                            // Ensure lightness stays within bounds
-                            lightness = Math.max(maxLightness, Math.min(minLightness, lightness));
-                        }
-                        journalCell.style.backgroundColor = `hsl(${baseHue}, ${baseSaturation}%, ${lightness}%)`;
+        // Only apply shading if the row is visible and has a journal name
+        if (!row.classList.contains('filter-hidden')) {
+            const journalName = journalCell.textContent.trim();
+            if (journalName) {  //avoids shading blank journals
+                const count = journalCounts.get(journalName) || 0;
+                if (count >= 2) { 
+                    // Scale lightness between maxLightness and minLightness
+                    let lightness;
+                    if (maxCount <= 1) {
+                        lightness = minLightness; // Avoid division by zero or negative
+                    } else {
+                        lightness = maxLightness + (minLightness - maxLightness) * (1 - (count - 1) / (maxCount - 1));
+                        lightness = Math.max(maxLightness, Math.min(minLightness, lightness));         // Ensure lightness stays within bounds
                     }
+                    journalCell.style.backgroundColor = `hsl(${baseHue}, ${baseSaturation}%, ${lightness}%)`;
                 }
             }
         }
@@ -383,9 +185,8 @@ function applyServerSideFilters() {
                 tbody.innerHTML = html;
                 const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
                 window.history.replaceState({ path: newUrl }, '', newUrl);
-                scheduleFilterUpdate();
+                applyLocalFilters(); //update local filters and let it remove busy state
             }
-            document.documentElement.classList.remove('busyCursor');
         })
         .catch(error => {
             console.error('Error fetching updated table:', error);
@@ -393,805 +194,261 @@ function applyServerSideFilters() {
         });
 }
 
-function applyLocalFilters() { //For local filters:    
-    const tbody = document.querySelector('#papersTable tbody');
-    if (!tbody) return;
+function applyLocalFilters() {
+    clearTimeout(filterTimeoutId);
+    document.documentElement.classList.add('busyCursor');    // Set the cursor immediately on user interaction
+    filterTimeoutId = setTimeout(() => {// Debounce the actual filtering
+        const tbody = document.querySelector('#papersTable tbody');
+        if (!tbody) return;
 
-    const hideXrayChecked = hideXrayCheckbox.checked;
-    const onlySurveyChecked = onlySurveyCheckbox.checked;
-    const hideApprovedChecked = hideApprovedCheckbox.checked;
+        const hideXrayChecked = hideXrayCheckbox.checked;
+        const onlySurveyChecked = onlySurveyCheckbox.checked;
+        const hideApprovedChecked = hideApprovedCheckbox.checked;
 
-    const rows = tbody.querySelectorAll('tr[data-paper-id]');
-    rows.forEach(row => {
-        let showRow = true;
-        let detailRow = null;
-        if (showRow && hideXrayChecked) {
-            const offtopicCell = row.querySelector('.editable-status[data-field="is_x_ray"]');
-            if (offtopicCell && offtopicCell.textContent.trim() === '✔️') {
-                showRow = false;
+        const rows = tbody.querySelectorAll('tr[data-paper-id]');
+        rows.forEach(row => {
+            let showRow = true;
+            let detailRow = null;
+            if (showRow && hideXrayChecked) {
+                const offtopicCell = row.querySelector('.editable-status[data-field="is_x_ray"]');
+                if (offtopicCell && offtopicCell.textContent.trim() === '✔️') {
+                    showRow = false;
+                }
             }
-        }
-        if (showRow && onlySurveyChecked) {
-            const offtopicCell = row.querySelector('.editable-status[data-field="is_survey"]');
-            if (offtopicCell && offtopicCell.textContent.trim() === '❌') {
-                showRow = false;
+            if (showRow && onlySurveyChecked) {
+                const offtopicCell = row.querySelector('.editable-status[data-field="is_survey"]');
+                if (offtopicCell && offtopicCell.textContent.trim() === '❌') {
+                    showRow = false;
+                }
             }
-        }
-        if (showRow && hideApprovedChecked) {
-            const offtopicCell = row.querySelector('.editable-status[data-field="verified"]');
-            if (offtopicCell && offtopicCell.textContent.trim() === '✔️') {
-                showRow = false;
+            if (showRow && hideApprovedChecked) {
+                const offtopicCell = row.querySelector('.editable-status[data-field="verified"]');
+                if (offtopicCell && offtopicCell.textContent.trim() === '✔️') {
+                    showRow = false;
+                }
             }
+            // Apply the visibility state
+            row.classList.toggle('filter-hidden', !showRow);
+            if (detailRow) { // Ensure detailRow exists before toggling
+                detailRow.classList.toggle('filter-hidden', !showRow);
+            }
+        });
+
+        applyAlternatingShading();
+        applyJournalShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
+        updateCounts();
+        document.getElementById('apply-serverside-filters').style.opacity = '0';
+        document.getElementById('apply-serverside-filters').style.pointerEvents = 'none';
+        setTimeout(() => {
+            document.documentElement.classList.remove('busyCursor');
+        }, 150); // doesn't really work since the contents are completely replaced eliminating the animation. Not worth fixing.
+    }, FILTER_DEBOUNCE_DELAY);
+}
+
+function sortTable(){
+    document.documentElement.classList.add('busyCursor');
+
+    setTimeout(() => {
+        const sortBy = this.getAttribute('data-sort');
+        if (!sortBy) return;
+
+        let newDirection = 'DESC';
+        if (currentClientSort.column === sortBy) {
+            newDirection = currentClientSort.direction === 'DESC' ? 'ASC' : 'DESC';
         }
-        // Apply the visibility state
-        row.classList.toggle('filter-hidden', !showRow);
-        if (detailRow) { // Ensure detailRow exists before toggling
-            detailRow.classList.toggle('filter-hidden', !showRow);
+        const tbody = document.querySelector('#papersTable tbody');
+
+        // --- PRE-PROCESS: Extract Sort Values and Row References ---
+        const visibleMainRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
+        const headerIndex = Array.prototype.indexOf.call(this.parentNode.children, this);
+        const sortData = [];
+        let mainRow, paperId, cellValue, detailRow, cell;
+
+        for (let i = 0; i < visibleMainRows.length; i++) {
+            mainRow = visibleMainRows[i];
+            paperId = mainRow.getAttribute('data-paper-id');
+
+            // --- Extract cell value based on column type ---
+            if (['title', 'year', 'journal', /*'authors',*/ 'page_count', 'estimated_score', 'relevance'].includes(sortBy)) {
+                cell = mainRow.cells[headerIndex];
+                cellValue = cell ? cell.textContent.trim() : '';
+                if (sortBy === 'year' || sortBy === 'estimated_score' || sortBy === 'page_count' || sortBy === 'relevance') {
+                    cellValue = parseFloat(cellValue) || 0;
+                }
+            } else if (['type', 'changed', 'changed_by', 'verified', 'verified_by', 'research_area', 'user_comment_state', 'features_other_state'].includes(sortBy)) {
+                cell = mainRow.cells[headerIndex];
+                cellValue = cell ? cell.textContent.trim() : '';
+            } else { // Status/Feature/Technique columns
+                cell = mainRow.querySelector(`.editable-status[data-field="${sortBy}"]`);
+                // Use SYMBOL_SORT_WEIGHTS for sorting, defaulting to 0 if symbol not found
+                cellValue = SYMBOL_SORT_WEIGHTS[cell?.textContent.trim()] ?? 0;
+            }
+
+            detailRow = mainRow.nextElementSibling; // Get the associated detail row
+            sortData.push({ value: cellValue, mainRow, detailRow, paperId });
+        }
+
+        sortData.sort((a, b) => {
+            let comparison = 0;
+            if (a.value > b.value) comparison = 1;
+            else if (a.value < b.value) comparison = -1;
+            else {  // Secondary sort by paperId to ensure stable sort
+                if (a.paperId > b.paperId) comparison = 1;
+                else if (a.paperId < b.paperId) comparison = -1;
+            }
+            return newDirection === 'DESC' ? -comparison : comparison;
+        });
+
+        // --- BATCH UPDATE the DOM ---
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < sortData.length; i++) {
+            fragment.appendChild(sortData[i].mainRow);
+            fragment.appendChild(sortData[i].detailRow);
+        }
+        tbody.appendChild(fragment); // Single DOM append operation
+
+        // --- Schedule UI Updates after DOM change ---
+        // Use requestAnimationFrame to align with browser repaint
+        requestAnimationFrame(() => {
+            applyAlternatingShading();
+            const currentVisibleRowsForJournal = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
+            applyJournalShading(currentVisibleRowsForJournal);
+            updateCounts();
+        });
+        currentClientSort = { column: sortBy, direction: newDirection };
+        document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
+        const indicator = this.querySelector('.sort-indicator');
+        if (indicator) {
+            indicator.textContent = newDirection === 'ASC' ? '▲' : '▼';
+        }
+        // 3. Schedule removal of the busy cursor class AFTER a guaranteed delay
+        // This ensures the CSS transition has time to play.
+        // The delay (150ms) should be >= CSS transition duration (0.3s) + delay (0.1s) if you want full transition,
+        // but even a shorter delay (longer than CSS delay) often works to trigger it.
+        setTimeout(() => {
+            document.documentElement.classList.remove('busyCursor');
+        }, 150); // Delay slightly longer than CSS transition delay
+    }, 20); // Initial defer for adding busy cursor (can keep this small or match rAF timing ~16ms)
+}
+
+function showApplyButton(){  applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; }
+
+
+function updateCounts() {   //used by stats, comms and filtering
+    const counts = {};
+    const yearlySurveyImpl = {}; // { year: { surveys: count, impl: count } }
+    const yearlyTechniques = {}; // { year: { technique_field: count, ... } }
+    const yearlyFeatures = {};   // { year: { feature_field: count, ... } }
+
+    COUNT_FIELDS.forEach(field => counts[field] = 0);
+
+    // Select only VISIBLE main rows for counting '✔️' and calculating visible count
+    const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
+    const visiblePaperCount = visibleRows.length;
+
+    //count on each update since server-side async can change this:
+    const allRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
+    const loadedPaperCount = allRows.length;
+
+    // Count symbols in visible rows and collect yearly data
+    visibleRows.forEach(row => {
+        COUNT_FIELDS.forEach(field => {
+            const cell = row.querySelector(`[data-field="${field}"]`);
+            const cellText = cell.textContent.trim();
+            if (field === 'changed_by' || field === 'verified_by') {
+                if (cellText === '👤') {
+                    counts[field]++;
+                }
+            } else {
+                if (cellText === '✔️') {
+                    counts[field]++;
+                }
+            }
+        });
+
+        const yearCell = row.cells[yearCellIndex]; // Assuming Year is the 3rd column (index 2)
+        const yearText = yearCell ? yearCell.textContent.trim() : '';
+        const year = yearText ? parseInt(yearText, 10) : null;
+
+        if (year && !isNaN(year)) {
+            // Initialize yearly data objects for the year if they don't exist
+            if (!yearlySurveyImpl[year]) {
+                yearlySurveyImpl[year] = { surveys: 0, impl: 0 };
+            }
+            if (!yearlyTechniques[year]) {
+                yearlyTechniques[year] = {};
+                TECHNIQUE_FIELDS_FOR_YEARLY.forEach(f => yearlyTechniques[year][f] = 0);
+            }
+            if (!yearlyFeatures[year]) {
+                yearlyFeatures[year] = {};
+                FEATURE_FIELDS_FOR_YEARLY.forEach(f => yearlyFeatures[year][f] = 0);
+            }
+
+            // Update Survey/Impl counts
+            const isSurveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
+            const isSurvey = isSurveyCell && isSurveyCell.textContent.trim() === '✔️';
+            if (isSurvey) {
+                yearlySurveyImpl[year].surveys++;
+            } else {
+                yearlySurveyImpl[year].impl++;
+            }
+
+            // Update Technique counts
+            TECHNIQUE_FIELDS_FOR_YEARLY.forEach(field => {
+                const techCell = row.querySelector(`.editable-status[data-field="${field}"]`);
+                if (techCell && techCell.textContent.trim() === '✔️') {
+                    yearlyTechniques[year][field]++;
+                }
+            });
+
+            // Update Feature counts
+            FEATURE_FIELDS_FOR_YEARLY.forEach(field => {
+                // const featCell = row.querySelector(`.editable-status[data-field="${field}"]`); //breaks "other" counts in chart, as it's a calculated, non-editable cell!
+                const featCell = row.querySelector(`[data-field="${field}"]`);
+                if (featCell && featCell.textContent.trim() === '✔️') {
+                    yearlyFeatures[year][field]++;
+                }
+            });
         }
     });
+    // Make counts available outside this function
+    latestCounts = counts; 
+    latestYearlyData = {
+        surveyImpl: yearlySurveyImpl,
+        techniques: yearlyTechniques,
+        features: yearlyFeatures
+    };
 
-    applyJournalShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
-    updateCounts();
-    applyAlternatingShading();
-    document.documentElement.classList.remove('busyCursor');
-    document.getElementById('apply-serverside-filters').style.opacity = '0';
-    document.getElementById('apply-serverside-filters').style.pointerEvents = 'none';
+    loadedPapersCountCell.textContent = loadedPaperCount;
+    visiblePapersCountCell.textContent = visiblePaperCount;
+    COUNT_FIELDS.forEach(field => {
+        const countCell = document.getElementById(`count-${field}`);
+        if (countCell) {
+            countCell.textContent = counts[field];
+        }
+    });
 }
 
 
 document.addEventListener('DOMContentLoaded', function () {
-    const headers = document.querySelectorAll('th[data-sort]');
-    let currentClientSort = { column: null, direction: 'ASC' };
-
     hideOfftopicCheckbox.addEventListener('change', applyServerSideFilters);
-    hideXrayCheckbox.addEventListener('change', scheduleFilterUpdate);
-    hideApprovedCheckbox.addEventListener('change', scheduleFilterUpdate);
-    onlySurveyCheckbox.addEventListener('change', scheduleFilterUpdate);
+    hideXrayCheckbox.addEventListener('change', applyLocalFilters);
+    hideApprovedCheckbox.addEventListener('change', applyLocalFilters);
+    onlySurveyCheckbox.addEventListener('change', applyLocalFilters);
+
+    yearFromInput.addEventListener('change', showApplyButton);
+    yearToInput.addEventListener('change', showApplyButton);
+    minPageCountInput.addEventListener('change', showApplyButton);
+
     document.getElementById('apply-serverside-filters').addEventListener('click', applyServerSideFilters);
 
-    const applyButton = document.getElementById('apply-serverside-filters');
-    yearFromInput.addEventListener('change', function () { applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; });
-    yearToInput.addEventListener('change', function () { applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; });
-    minPageCountInput.addEventListener('change', function () { applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; });
-
-    // document.getElementById('search-input').addEventListener('input', scheduleFilterUpdate);
     document.getElementById('search-input').addEventListener('input', function () {
         clearTimeout(filterTimeoutId);
         filterTimeoutId = setTimeout(() => {
             applyServerSideFilters();
-        }, FILTER_DEBOUNCE_DELAY);
+        }, 300);  //additional debounce for typing
     });
-    // --- Single Event Listener for Headers (Handles Optimized Client-Side Sorting) ---
-    headers.forEach(header => {
-        header.addEventListener('click', function () {
-            // 1. Add the busy cursor class immediately
-            document.documentElement.classList.add('busyCursor');
-
-            // 2. Defer the heavy task
-            setTimeout(() => {
-                // Wrap the entire sorting logic in a try/finally block
-                try {
-                    const sortBy = this.getAttribute('data-sort');
-                    if (!sortBy) return;
-
-                    // --- Determine Sort Direction ---
-                    let newDirection = 'DESC';
-                    if (currentClientSort.column === sortBy) {
-                        newDirection = currentClientSort.direction === 'DESC' ? 'ASC' : 'DESC';
-                    }
-                    const tbody = document.querySelector('#papersTable tbody');
-                    if (!tbody) return;
-
-                    // --- PRE-PROCESS: Extract Sort Values and Row References ---
-                    const visibleMainRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
-                    const headerIndex = Array.prototype.indexOf.call(this.parentNode.children, this);
-                    const sortData = [];
-                    let mainRow, paperId, cellValue, detailRow, cell;
-
-                    for (let i = 0; i < visibleMainRows.length; i++) {
-                        mainRow = visibleMainRows[i];
-                        paperId = mainRow.getAttribute('data-paper-id');
-
-                        // --- Extract cell value based on column type ---
-                        if (['title', 'year', 'journal', /*'authors',*/ 'page_count', 'estimated_score', 'relevance'].includes(sortBy)) {
-                            cell = mainRow.cells[headerIndex];
-                            cellValue = cell ? cell.textContent.trim() : '';
-                            if (sortBy === 'year' || sortBy === 'estimated_score' || sortBy === 'page_count' || sortBy === 'relevance') {
-                                cellValue = parseFloat(cellValue) || 0;
-                            }
-                        } else if (['type', 'changed', 'changed_by', 'verified', 'verified_by', 'research_area', 'user_comment_state', 'features_other_state'].includes(sortBy)) {
-                            cell = mainRow.cells[headerIndex];
-                            cellValue = cell ? cell.textContent.trim() : '';
-                        } else { // Status/Feature/Technique columns
-                            cell = mainRow.querySelector(`.editable-status[data-field="${sortBy}"]`);
-                            // Use SYMBOL_SORT_WEIGHTS for sorting, defaulting to 0 if symbol not found
-                            cellValue = SYMBOL_SORT_WEIGHTS[cell?.textContent.trim()] ?? 0;
-                        }
-
-                        detailRow = mainRow.nextElementSibling; // Get the associated detail row
-                        sortData.push({ value: cellValue, mainRow, detailRow, paperId });
-                    }
-
-
-                    // --- SORT the Array of Objects ---
-                    sortData.sort((a, b) => {
-                        let comparison = 0;
-                        if (a.value > b.value) comparison = 1;
-                        else if (a.value < b.value) comparison = -1;
-                        else {
-                            // Secondary sort by paperId to ensure stable sort
-                            if (a.paperId > b.paperId) comparison = 1;
-                            else if (a.paperId < b.paperId) comparison = -1;
-                        }
-                        // Apply direction
-                        return newDirection === 'DESC' ? -comparison : comparison;
-                    });
-
-                    // --- BATCH UPDATE the DOM ---
-                    const fragment = document.createDocumentFragment();
-                    for (let i = 0; i < sortData.length; i++) {
-                        fragment.appendChild(sortData[i].mainRow);
-                        fragment.appendChild(sortData[i].detailRow);
-                    }
-                    tbody.appendChild(fragment); // Single DOM append operation
-
-                    // --- Schedule UI Updates after DOM change ---
-                    // Use requestAnimationFrame to align with browser repaint
-                    requestAnimationFrame(() => { applyAlternatingShading(); });
-                    requestAnimationFrame(() => {
-                        const currentVisibleRowsForJournal = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
-                        applyJournalShading(currentVisibleRowsForJournal);
-                    });
-                    requestAnimationFrame(() => { updateCounts(); });
-
-                    // Update sort state
-                    currentClientSort = { column: sortBy, direction: newDirection };
-
-                    // Update sort indicators in the header
-                    document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
-                    const indicator = this.querySelector('.sort-indicator');
-                    if (indicator) {
-                        indicator.textContent = newDirection === 'ASC' ? '▲' : '▼';
-                    }
-
-
-                } catch (error) {
-                    console.error("Error during sorting:", error);
-                    // Even if there's an error, ensure cleanup happens
-                    // Remove busy cursor after a delay to allow transition
-                    setTimeout(() => {
-                        document.documentElement.classList.remove('busyCursor');
-                    }, 150); // Delay slightly longer than CSS transition
-
-                } finally {
-                    // 3. Schedule removal of the busy cursor class AFTER a guaranteed delay
-                    // This ensures the CSS transition has time to play.
-                    // The delay (150ms) should be >= CSS transition duration (0.3s) + delay (0.1s) if you want full transition,
-                    // but even a shorter delay (longer than CSS delay) often works to trigger it.
-                    setTimeout(() => {
-                        document.documentElement.classList.remove('busyCursor');
-                    }, 150); // Delay slightly longer than CSS transition delay
-                }
-            }, 20); // Initial defer for adding busy cursor (can keep this small or match rAF timing ~16ms)
-        });
-    });
-
-    // --- Stats Modal Functionality ---
-    const statsBtn = document.getElementById('stats-btn');
-    const modal = document.getElementById('statsModal');
-    const spanClose = document.querySelector('#statsModal .close'); // Specific close button
-
-    function displayStats() {
-        updateCounts(); // Run updateCounts to get the latest data for visible rows
-
-        // --- Define Consistent Colors for Techniques ---
-        // Define the fixed color order used in the Techniques Distribution chart (sorted)
-        const techniquesColors = [
-            'hsla(347, 70%, 49%, 0.66)', // Red - Classic CV
-            'hsla(204, 82%, 37%, 0.66)',  // Blue - Traditional ML
-            'hsla(42, 100%, 37%, 0.66)',  // Yellow - CNN Classifier
-            'hsla(180, 48%, 32%, 0.66)',  // Teal - CNN Detector
-            'hsla(260, 80%, 50%, 0.66)', // Purple - R-CNN Detector
-            'hsla(30, 100%, 43%, 0.66)',  // Orange - Transformer
-            'hsla(0, 0%, 48%, 0.66)',  // Grey - Other DL
-            'hsla(96, 100%, 29%, 0.66)', // Green - Hybrid
-        ];
-        const techniquesBorderColors = [
-            'hsla(347, 70%, 29%, 1.00)',
-            'hsla(204, 82%, 18%, 1.00)',
-            'hsla(42, 100%, 18%, 1.00)',
-            'hsla(180, 48%, 18%, 1.00)',
-            'hsla(260, 100%, 30%, 1.00)',
-            'hsla(30, 100%, 23%, 1.00)',
-            'hsla(0, 0%, 28%, 1.00)',
-            'hsla(147, 48%, 18%, 1.00)',
-        ];
-
-        // Map technique fields to their *original* color index in the unsorted list
-        // IMPORTANT: This list must match the order of TECHNIQUE_FIELDS_FOR_YEARLY
-        const TECHNIQUE_FIELDS_FOR_YEARLY = [
-            'technique_classic_cv_based', 'technique_ml_traditional',
-            'technique_dl_cnn_classifier', 'technique_dl_cnn_detector', 'technique_dl_rcnn_detector',
-            'technique_dl_transformer', 'technique_dl_other', 'technique_hybrid'
-        ];
-        const TECHNIQUE_FIELD_COLOR_MAP = {};
-        TECHNIQUE_FIELDS_FOR_YEARLY.forEach((field, index) => {
-            TECHNIQUE_FIELD_COLOR_MAP[field] = index; // Map field to its original index
-        });
-
-        // --- Define Consistent Colors for Features ---
-        // These are the original colors used in the Features Distribution chart (in original order)
-        // Note: There are 10 features but only 4 distinct colors used.
-        const featuresColorsOriginalOrder = [
-            'hsla(180, 48%, 32%, 0.66)',    // 0 - PCB - Tracks (Teal)
-            'hsla(180, 48%, 32%, 0.66)',    // 1 - PCB - Holes (Teal)
-            'hsla(0, 0%, 48%, 0.66)',       // 2 - solder - Insufficient (Grey)
-            'hsla(0, 0%, 48%, 0.66)',       // 3 - solder - Excess (Grey)
-            'hsla(0, 0%, 48%, 0.66)',       // 4 - solder - Void (Grey)
-            'hsla(0, 0%, 48%, 0.66)',       // 5 - solder - Crack (Grey)
-            'hsla(347, 70%, 49%, 0.66)',    // 6 - PCBA - Orientation (Red)
-            'hsla(347, 70%, 49%, 0.66)',    // 7 - PCBA - Missing Comp (Red)
-            'hsla(347, 70%, 49%, 0.66)',    // 8 - PCBA - Wrong Comp (Red)
-            'hsla(204, 82%, 37%, 0.66)',    // 9 - Cosmetic (Blue)
-            'hsla(284, 82%, 37%, 0.66)',    // 10 - Other 
-        ];
-        const featuresBorderColorsOriginalOrder = [
-            'hsla(204, 82%, 18%, 1.00)',    // 0 - PCB - Tracks
-            'hsla(204, 82%, 18%, 1.00)',    // 1 - PCB - Holes
-            'hsla(0, 0%, 28%, 1.00)',       // 2 - solder - Insufficient
-            'hsla(0, 0%, 28%, 1.00)',       // 3 - solder - Excess
-            'hsla(0, 0%, 28%, 1.00)',       // 4 - solder - Void
-            'hsla(0, 0%, 28%, 1.00)',       // 5 - solder - Crack
-            'hsla(347, 70%, 29%, 1.00)',    // 6 - PCBA - Orientation
-            'hsla(347, 70%, 29%, 1.00)',    // 7 - PCBA - Missing Comp
-            'hsla(347, 70%, 29%, 1.00)',    // 8 - PCBA - Wrong Comp
-            'hsla(219, 100%, 30%, 1.00)',   // 9 - Cosmetic
-            'hsla(284, 82%, 37%, 1.00)',    // 10 - Other 
-        ];
-
-        // Map feature fields to their *original* index in the unsorted list
-        // IMPORTANT: This list must match the order of FEATURE_FIELDS_FOR_YEARLY
-        const FEATURE_FIELDS_FOR_YEARLY = [
-            'features_tracks', 'features_holes', 'features_solder_insufficient', 'features_solder_excess',
-            'features_solder_void', 'features_solder_crack', 'features_orientation', 'features_wrong_component',
-            'features_missing_component', 'features_cosmetic', 'features_other_state'
-        ];
-        const FEATURE_FIELD_INDEX_MAP = {};
-        FEATURE_FIELDS_FOR_YEARLY.forEach((field, index) => {
-            FEATURE_FIELD_INDEX_MAP[field] = index; // Map field to its original index
-        });
-
-        // --- Map Feature Fields to their Color Groups for Line Chart ---
-        // Define the distinct color groups for the line chart based on original colors
-        // The keys are the indices in the original color arrays that represent unique colors
-        const featureColorGroups = {
-            0: { label: 'PCB Features', fields: [] },      // Teal
-            2: { label: 'Solder Defects', fields: [] },    // Grey
-            6: { label: 'PCBA Issues', fields: [] },       // Red
-            9: { label: 'Cosmetic', fields: [] },          // Blue
-            10: { label: 'Other', fields: [] }
-        };
-
-        // Populate the groups with the actual feature fields
-        FEATURE_FIELDS_FOR_YEARLY.forEach(field => {
-            const originalIndex = FEATURE_FIELD_INDEX_MAP[field];
-            const originalColorHSLA = featuresColorsOriginalOrder[originalIndex];
-
-            // Find the base color index (0, 2, 6, 9) that matches this feature's color
-            let baseColorIndex = null;
-            for (let key in featureColorGroups) {
-                const keyIndex = parseInt(key);
-                if (featuresColorsOriginalOrder[keyIndex] === originalColorHSLA) {
-                    baseColorIndex = keyIndex;
-                    break;
-                }
-            }
-
-            if (baseColorIndex !== null && featureColorGroups[baseColorIndex]) {
-                featureColorGroups[baseColorIndex].fields.push(field);
-            } else {
-                console.warn(`Could not find matching base color for feature ${field}`);
-            }
-        });
-
-
-        const FEATURE_FIELDS = [
-            'features_tracks', 'features_holes', 'features_solder_insufficient',
-            'features_solder_excess', 'features_solder_void', 'features_solder_crack',
-            'features_orientation', 'features_missing_component', 'features_wrong_component',
-            'features_cosmetic', 'features_other_state'
-        ];
-        // Include Datasets here temporarily to get the label mapping easily,
-        // then filter it out for data/labels for the Techniques chart
-        const TECHNIQUE_FIELDS_ALL = [
-            'technique_classic_cv_based', 'technique_ml_traditional',
-            'technique_dl_cnn_classifier', 'technique_dl_cnn_detector', 'technique_dl_rcnn_detector',
-            'technique_dl_transformer', 'technique_dl_other', 'technique_hybrid',
-            'technique_available_dataset' // Included to get label easily
-        ];
-        // Map NEW field names (data-field values / structure keys) to user-friendly labels (based on your table headers)
-        const FIELD_LABELS = {
-            // Features
-            'features_tracks': 'Tracks',
-            'features_holes': 'Holes',
-            'features_solder_insufficient': 'Insufficient Solder',
-            'features_solder_excess': 'Excess Solder',
-            'features_solder_void': 'Solder Voids',
-            'features_solder_crack': 'Solder Cracks',
-            'features_orientation': 'Orientation/Polarity', // Combined as per previous logic
-            'features_wrong_component': 'Wrong Component',
-            'features_missing_component': 'Missing Component',
-            'features_cosmetic': 'Cosmetic',
-            'features_other_state': 'Other',
-            // Techniques
-            'technique_classic_cv_based': 'Classic CV',
-            'technique_ml_traditional': 'Traditional ML',
-            'technique_dl_cnn_classifier': 'CNN Classifier',
-            'technique_dl_cnn_detector': 'CNN Detector',
-            'technique_dl_rcnn_detector': 'R-CNN Detector',
-            'technique_dl_transformer': 'Transformer',
-            'technique_dl_other': 'Other DL',
-            'technique_hybrid': 'Hybrid',
-            'technique_available_dataset': 'Datasets' // Label for Datasets
-        };
-
-
-        // --- Read Counts from Footer Cells ---
-        // We read the counts directly from the cells updated by updateCounts()
-        function getCountFromFooter(fieldId) {
-            const cell = document.getElementById(`count-${fieldId}`);
-            if (cell) {
-                const text = cell.textContent.trim();
-                const number = parseInt(text, 10);
-                return isNaN(number) ? 0 : number;
-            }
-            return 0;
-        }
-
-        // --- Prepare Features Distribution Chart Data (in original order) ---
-        const featuresLabels = FEATURE_FIELDS.map(field => FIELD_LABELS[field] || field);
-        const featuresValues = FEATURE_FIELDS.map(field => getCountFromFooter(field));
-
-        const featuresChartData = {
-            labels: featuresLabels,
-            datasets: [{
-                label: 'Features Count',
-                data: featuresValues,
-                backgroundColor: featuresColorsOriginalOrder, // Use original colors
-                borderColor: featuresBorderColorsOriginalOrder, // Use original border colors
-                borderWidth: 1,
-                hoverOffset: 4
-            }]
-        };
-
-        // --- Prepare Techniques Distribution Chart Data (Excluding Datasets count) ---
-        const TECHNIQUE_FIELDS_NO_DATASET = TECHNIQUE_FIELDS_ALL.filter(field => field !== 'technique_available_dataset');
-        // Read and sort the data for the distribution chart
-        const techniquesData = TECHNIQUE_FIELDS_NO_DATASET.map(field => ({
-            label: FIELD_LABELS[field] || field,
-            value: getCountFromFooter(field),
-            originalIndex: TECHNIQUE_FIELD_COLOR_MAP[field] !== undefined ? TECHNIQUE_FIELD_COLOR_MAP[field] : -1 // Get original color index
-        }));
-        // Sort by value descending (largest first) for the distribution chart display
-        techniquesData.sort((a, b) => b.value - a.value);
-        // Extract sorted labels and values
-        const sortedTechniquesLabels = techniquesData.map(item => item.label);
-        const sortedTechniquesValues = techniquesData.map(item => item.value);
-        // Map the sorted order back to the original colors using the stored originalIndex
-        const sortedTechniquesBackgroundColors = techniquesData.map(item => techniquesColors[item.originalIndex] || 'rgba(0,0,0,0.1)');
-        const sortedTechniquesBorderColors = techniquesData.map(item => techniquesBorderColors[item.originalIndex] || 'rgba(0,0,0,1)');
-
-        const techniquesChartData = {
-            labels: sortedTechniquesLabels,
-            datasets: [{
-                label: 'Techniques Count',
-                data: sortedTechniquesValues,
-                backgroundColor: sortedTechniquesBackgroundColors, // Use mapped colors
-                borderColor: sortedTechniquesBorderColors,         // Use mapped colors
-                borderWidth: 1,
-                hoverOffset: 4
-            }]
-        };
-
-        // --- Destroy existing charts if they exist (important for re-renders) ---
-        if (window.featuresPieChartInstance) {
-            window.featuresPieChartInstance.destroy();
-            delete window.featuresPieChartInstance;
-        }
-        if (window.techniquesPieChartInstance) {
-            window.techniquesPieChartInstance.destroy();
-            delete window.techniquesPieChartInstance;
-        }
-        if (window.surveyVsImplLineChartInstance) {
-            window.surveyVsImplLineChartInstance.destroy();
-            delete window.surveyVsImplLineChartInstance;
-        }
-        if (window.techniquesPerYearLineChartInstance) {
-            window.techniquesPerYearLineChartInstance.destroy();
-            delete window.techniquesPerYearLineChartInstance;
-        }
-        if (window.featuresPerYearLineChartInstance) {
-            window.featuresPerYearLineChartInstance.destroy();
-            delete window.featuresPerYearLineChartInstance;
-        }
-
-        // --- Get Canvas Contexts for ALL charts ---
-        const featuresCtx = document.getElementById('featuresPieChart')?.getContext('2d');
-        const techniquesCtx = document.getElementById('techniquesPieChart')?.getContext('2d');
-        const surveyVsImplCtx = document.getElementById('surveyVsImplLineChart')?.getContext('2d');
-        const techniquesPerYearCtx = document.getElementById('techniquesPerYearLineChart')?.getContext('2d');
-        const featuresPerYearCtx = document.getElementById('featuresPerYearLineChart')?.getContext('2d');
-
-        // --- Render Features Distribution Bar Chart (unchanged logic) ---
-        if (featuresCtx) {
-            window.featuresPieChartInstance = new Chart(featuresCtx, {
-                type: 'bar',
-                data: featuresChartData,
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    return `${context.label}: ${context.raw}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            ticks: { precision: 0 }
-                        }
-                    }
-                }
-            });
-        } else {
-            console.warn("Canvas context for featuresPieChart not found.");
-        }
-
-        // --- Render Techniques Distribution Bar Chart (using mapped colors) ---
-        if (techniquesCtx) {
-            window.techniquesPieChartInstance = new Chart(techniquesCtx, {
-                type: 'bar',
-                data: techniquesChartData, // Uses sortedTechniques* with mapped colors
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    return `${context.label}: ${context.raw}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            ticks: { precision: 0 }
-                        }
-                    }
-                }
-            });
-        } else {
-            console.warn("Canvas context for techniquesPieChart not found.");
-        }
-
-        // --- NEW: Render Line Charts ---
-
-        // 1. Survey vs Implementation Papers per Year (unchanged)
-        const surveyImplData = latestYearlyData.surveyImpl || {};
-        const yearsForSurveyImpl = Object.keys(surveyImplData).map(Number).sort((a, b) => a - b);
-        const surveyCounts = yearsForSurveyImpl.map(year => surveyImplData[year].surveys || 0);
-        const implCounts = yearsForSurveyImpl.map(year => surveyImplData[year].impl || 0);
-
-        if (surveyVsImplCtx) {
-            window.surveyVsImplLineChartInstance = new Chart(surveyVsImplCtx, {
-                type: 'line',
-                data: {
-                    labels: yearsForSurveyImpl,
-                    datasets: [
-                        {
-                            label: 'Survey Papers',
-                            data: surveyCounts,
-                            borderColor: 'hsl(204, 82%, 37%)', // Blue
-                            backgroundColor: 'hsla(204, 82%, 37%, 0.66)',
-                            fill: false,
-                            tension: 0.25
-                        },
-                        {
-                            label: 'Implementation Papers',
-                            data: implCounts,
-                            borderColor: 'hsl(347, 70%, 49%)', // Red
-                            backgroundColor: 'hsla(347, 70%, 49%, 0.66)',
-                            fill: false,
-                            tension: 0.25
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,  // Use the point style
-                                pointStyle: 'circle'  // Specify the circle style
-                            }
-                        },
-                        title: { display: false, text: 'Survey vs Implementation Papers per Year' },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    return `${context.dataset.label}: ${context.raw}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { precision: 0 } },
-                        x: { ticks: { precision: 0 } }
-                    }
-                }
-            });
-        }
-
-        // 2. Techniques per Year (Consistent Colors)
-        const techniquesYearlyData = latestYearlyData.techniques || {};
-        const yearsForTechniques = Object.keys(techniquesYearlyData).map(Number).sort((a, b) => a - b);
-
-        // Create datasets for the line chart using the ORIGINAL field order and ORIGINAL colors
-        // This ensures color consistency regardless of sorting in the bar chart
-        const techniqueLineDatasets = TECHNIQUE_FIELDS_FOR_YEARLY.map(field => {
-            const label = (typeof FIELD_LABELS !== 'undefined' && FIELD_LABELS[field]) ? FIELD_LABELS[field] : field;
-            const data = yearsForTechniques.map(year => techniquesYearlyData[year]?.[field] || 0);
-            // Use the ORIGINAL color index from the map
-            const originalIndex = TECHNIQUE_FIELD_COLOR_MAP[field] !== undefined ? TECHNIQUE_FIELD_COLOR_MAP[field] : -1;
-            const borderColor = (originalIndex !== -1 && techniquesColors[originalIndex]) ? techniquesColors[originalIndex] : 'rgba(0, 0, 0, 1)';
-            const backgroundColor = (originalIndex !== -1 && techniquesColors[originalIndex]) ? techniquesColors[originalIndex] : 'rgba(0, 0, 0, 0.1)';
-            return {
-                label: label,
-                data: data,
-                borderColor: borderColor,       // Use original consistent color
-                backgroundColor: backgroundColor, // Use original consistent color (often transparent for lines)
-                fill: false,
-                tension: 0.25
-            };
-        });
-
-        if (techniquesPerYearCtx && techniqueLineDatasets.length > 0) {
-            window.techniquesPerYearLineChartInstance = new Chart(techniquesPerYearCtx, {
-                type: 'line',
-                data: {
-                    labels: yearsForTechniques, // Use years sorted
-                    datasets: techniqueLineDatasets // Use datasets prepared with consistent colors
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,  // Use the point style
-                                pointStyle: 'circle'  // Specify the circle style
-                            }
-                        },
-                        title: { display: false, text: 'Techniques per Year' },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    return `${context.dataset.label}: ${context.raw}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { precision: 0 } },
-                        x: { ticks: { precision: 0 } }
-                    }
-                }
-            });
-        } else if (techniquesPerYearCtx) {
-            window.techniquesPerYearLineChartInstance = new Chart(techniquesPerYearCtx, {
-                type: 'line',
-                data: { labels: [], datasets: [] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: 'Techniques per Year (No Data)' }
-                    }
-                }
-            });
-        }
-
-        // 3. Features per Year (Summed by Color Group)
-        const featuresYearlyData = latestYearlyData.features || {};
-        const yearsForFeatures = Object.keys(featuresYearlyData).map(Number).sort((a, b) => a - b);
-
-        // --- Create Aggregated Data by Color Group ---
-        // Aggregate yearly data for each color group
-        const aggregatedFeatureDataByColor = {};
-        Object.keys(featureColorGroups).forEach(baseColorIndex => {
-            const group = featureColorGroups[baseColorIndex];
-            aggregatedFeatureDataByColor[group.label] = yearsForFeatures.map(year => {
-                return group.fields.reduce((sum, field) => {
-                    return sum + (featuresYearlyData[year]?.[field] || 0);
-                }, 0);
-            });
-        });
-
-        // Create datasets for the line chart using the aggregated data and corresponding colors
-        const featureLineDatasets = Object.keys(featureColorGroups).map(baseColorIndex => {
-            const group = featureColorGroups[baseColorIndex];
-            const colorIndex = parseInt(baseColorIndex); // Use the base color index to get the actual color
-            const borderColor = (featuresColorsOriginalOrder[colorIndex]) ? featuresColorsOriginalOrder[colorIndex] : 'rgba(0, 0, 0, 1)';
-            const backgroundColor = (featuresColorsOriginalOrder[colorIndex]) ? featuresColorsOriginalOrder[colorIndex] : 'rgba(0, 0, 0, 0.1)';
-            return {
-                label: group.label,
-                data: aggregatedFeatureDataByColor[group.label],
-                borderColor: borderColor,       // Use color corresponding to the group's base color
-                backgroundColor: backgroundColor, // Use color corresponding to the group's base color
-                fill: false,
-                tension: 0.25
-            };
-        });
-
-        if (featuresPerYearCtx && featureLineDatasets.length > 0) {
-            window.featuresPerYearLineChartInstance = new Chart(featuresPerYearCtx, {
-                type: 'line',
-                data: {
-                    labels: yearsForFeatures, // Use years sorted
-                    datasets: featureLineDatasets // Use datasets prepared with aggregated data and consistent colors
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,  // Use the point style
-                                pointStyle: 'circle'  // Specify the circle style
-                            }
-                        },
-                        title: { display: false, text: 'Features per Year' },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    return `${context.dataset.label}: ${context.raw}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { precision: 0 } },
-                        x: { ticks: { precision: 0 } }
-                    }
-                }
-            });
-        } else if (featuresPerYearCtx) {
-            window.featuresPerYearLineChartInstance = new Chart(featuresPerYearCtx, {
-                type: 'line',
-                data: { labels: [], datasets: [] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: 'Features per Year (No Data)' }
-                    }
-                }
-            });
-        }
-
-        // --- 1. FETCH SERVER STATS (unchanged) ---
-        const urlParams = new URLSearchParams(window.location.search);
-        const statsUrl = `/get_stats?${urlParams.toString()}`;
-        fetch(statsUrl).then(response => {
-            return response.json();
-        }).then(data => {
-            if (data.status === 'success' && data.data) {
-                const statsData = data.data;
-                // --- 2. POPULATE LISTS WITH SERVER DATA (ONLY) (unchanged) ---
-                function populateListFromServer(listElementId, dataArray) {
-                    const listElement = document.getElementById(listElementId);
-                    listElement.innerHTML = '';
-                    if (!dataArray || dataArray.length === 0) {
-                        listElement.innerHTML = '<li>No items with count > 1.</li>';
-                        return;
-                    }
-                    dataArray.forEach(item => {
-                        const listItem = document.createElement('li');
-                        const escapedName = (item.name || '').toString()
-                            .replace(/&/g, "&amp;").replace(/</g, "<")
-                            .replace(/>/g, ">").replace(/"/g, "&quot;")
-                            .replace(/'/g, "&#39;");
-                        listItem.innerHTML = `<span class="count">${item.count}</span> <span class="name">${escapedName}</span>`;
-                        listElement.appendChild(listItem);
-                    });
-                }
-                populateListFromServer('journalStatsList', statsData.journals);
-                populateListFromServer('keywordStatsList', statsData.keywords);
-                populateListFromServer('authorStatsList', statsData.authors);
-                populateListFromServer('researchAreaStatsList', statsData.research_areas);
-
-
-                // --- NEW CODE: Populate 'All' lists ---
-                function populateAllListFromServer(listElementId, dataArray) {
-                    // Function to populate lists showing ALL items, not just repeating ones
-                    const listElement = document.getElementById(listElementId);
-                    listElement.innerHTML = '';
-                    if (!dataArray || dataArray.length === 0) {
-                        listElement.innerHTML = '<li>No non-empty items found.</li>';
-                        return;
-                    }
-                    dataArray.forEach(item => {
-                        const listItem = document.createElement('li');
-                        const escapedName = (item.name || '').toString()
-                            .replace(/&/g, "&amp;").replace(/</g, "<")
-                            .replace(/>/g, ">").replace(/"/g, "&quot;")
-                            .replace(/'/g, "&#39;");
-                        // Use the same format for consistency
-                        listItem.innerHTML = `<span class="count">${item.count}</span> <span class="name">${escapedName}</span>`;
-                        listElement.appendChild(listItem);
-                    });
-                }
-
-                // Populate the new lists using the new data keys and the new function
-                populateAllListFromServer('otherDetectedFeaturesStatsList', statsData.other_features_all);
-                populateAllListFromServer('modelNamesStatsList', statsData.model_names_all);
-                // --- END NEW CODE ---
-
-            }
-        })
-        // Trigger reflow to ensure styles are applied before adding the active class
-        // This helps ensure the transition plays correctly on the first open
-        modal.offsetHeight;
-        // Add the active class to trigger the animation
-        modal.classList.add('modal-active');
-        // --- End Animate In ---
-
-    }
-
-
-    // Function to close the modal
-    function closeModal() {
-        // modal.style.display = 'none';
-        modal.classList.remove('modal-active');
-    }
-
-    // Event Listeners for Stats Modal
-    statsBtn.addEventListener('click', function () {
-        // Add busy cursor while calculating
-        document.documentElement.classList.add('busyCursor');
-        // Use setTimeout to allow cursor change to render
-        setTimeout(() => {
-            displayStats();
-            document.documentElement.classList.remove('busyCursor');
-        }, 20);
-    });
-    spanClose.addEventListener('click', closeModal);
-
-    // --- Close Modal
-    document.addEventListener('keydown', function (event) {
-        // Check if the pressed key is 'Escape' and if the modal is currently active
-        if (event.key === 'Escape' && modal.classList.contains('modal-active')) { closeModal(); }
-    });
-    window.addEventListener('click', function (event) {
-        if (event.target === modal) { closeModal(); }
-    });
-    scheduleFilterUpdate(); //apply initial filtering    
+    
+    headers.forEach(header => { header.addEventListener('click', sortTable);   });
+    applyLocalFilters(); //apply initial filtering    
 });

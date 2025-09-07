@@ -9,6 +9,7 @@
     <script src="{{ url_for('static', filename='chart.js') }}"></script>
     <script src="{{ url_for('static', filename='comms.js') }}" defer></script>
     <script src="{{ url_for('static', filename='filtering.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='stats.js') }}" defer></script>
     <!-- <script src="{{ url_for('static', filename='ghpages.js') }}" defer></script> -->
 </head>
 <body>
@@ -96,7 +97,7 @@
                     <th class="ontop-header" colspan="5" rowspan="2"> 
                         <div class="header-filters">
                             <div class="filter-item">
-                                <label for="min-page-count">Min. page count ></label>
+                                <label for="min-page-count">Min. page count ≥</label>
                                 <input type="number" id="min-page-count" value="{{ min_page_count_value }}" min="0" max="9">
                             </div>
                             <div class="filter-item">

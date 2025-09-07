@@ -1,17 +1,20 @@
 /* static/style.css */
 
+
 :root {
     --text-color: #393939;
     --background-color: #f5f7fa;
     --table-row-even: #00000006;
     --table-row-odd: #0000;
     --highlighted-col-background: #bbccbb22;
-/*     --primary-ui-color: #2d6770; */
+    /* --primary-ui-color: #2d6770; */
     /* --inferred-ui-color: hsl(170, 25%, 40%); */
     /* --inferred-gradient-end-color: rgb(77, 128, 92); */
-/*     --primary-ui-color: #1f606a; */
-    --primary-ui-color: #18616d;
-    --primary-ui-color-darker: #1f606a;
+    /* --primary-ui-color: #1f606a; */
+    /* --primary-ui-color: #18616d; */
+    /* --primary-ui-color-darker: #1f606a; */
+    --primary-ui-color: hsl(188, 36%, 30%);
+    --primary-ui-color-darker: hsl(188, 38%, 28%);
     --inferred-ui-color: hsl(154.6, 35.8%, 32.4%);
     --inferred-gradient-end-color: rgb(57, 106, 53);
     --stats-primary-ui-color:#1f606a;
@@ -27,7 +30,35 @@
     --light-shadow: 1px 0 5px #fff6;
     --th-border-color: #0000003b;
     --link-color: rgb(0, 45, 115);
+    --detail-button-background: linear-gradient(180deg, hsl(210, 20%, 83%) 0%, hsl(210, 25%, 92%) 100%);
 }
+
+/* desaturated ver. */
+/* :root {
+    --text-color: #393939;
+    --background-color: #f5f7fa;
+    --table-row-even: #00000006;
+    --table-row-odd: #0000;
+    --highlighted-col-background: #bbccbb22;
+    --primary-ui-color: #444E4A;
+    --primary-ui-color-darker: #404A46;
+    --inferred-ui-color: hsl(154.6, 25.8%, 32.4%);
+    --inferred-gradient-end-color: rgb(66, 99, 63);
+    --stats-primary-ui-color:#444E4A;
+    --modal-wrapper-background: #eee6;
+    --classify-btn-color:hsl(154.6, 35.8%, 32.4%);
+    --verify-btn-color:rgb(57, 106, 53);
+    --save-btn-color: #2f6546;
+    --export-html-btn-color: rgb(57, 106, 53);
+    --export-xlsx-btn-color: rgb(57, 106, 53);
+    --light-colored-btn-color: rgb(185, 209, 209);
+    --light-colored-btn-text: #0a5662;
+    --dark-shadow: 1px 0 5px #0006;
+    --light-shadow: 1px 0 5px #fff6;
+    --th-border-color: #0000003b;
+    --link-color: rgb(0, 45, 115);
+    --detail-button-background: linear-gradient(180deg, hsl(180, 16%, 82.9%) 0%, hsl(210, 15%, 92%) 100%);
+} */
 
 body {
     font-family: "Inter Tight", Arial, sans-serif;
@@ -189,7 +220,7 @@ td.highlight-status {
     cursor: pointer;
     text-decoration: none;
     color: #000b;
-    background: linear-gradient(180deg, hsl(210, 20%, 83%) 0%, hsl(210, 25%, 92%) 100%);
+    background: var(--detail-button-background);
     /*! border: 1px solid #0004; */
     font-size: 9.5pt;
     font-weight: 400;
@@ -212,18 +243,17 @@ td.highlight-status {
     font-size: 0.9em;
 }
 
-.editable {
+/* .editable {
     padding: 4px;
     border-radius: 3px;
-    /*! min-width: 150px; */
     transition: border-color 0.3s, box-shadow 0.3s;
-}
+} 
 
 .editable:focus {
     border: 1px solid #3498db;
     outline: none;
     box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
+}*/
 
 input[type="search"] {
     width: calc(100% - 4px);
@@ -302,7 +332,7 @@ input[type="search"]::-webkit-input-placeholder { /* For older Webkit */
     font-size: 11pt;
     transition: all 0.1s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-    min-width: 140px;
+    min-width: 155px;
     height: 40px;
     text-shadow: var(--dark-shadow);
     border: 1px solid #0002;
@@ -363,20 +393,20 @@ form input[type="text"] {
     cursor: pointer; 
     transition: background-color 0.2s, transform 0.1s; 
     border-radius: 3px; 
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 2px rgba(64, 64, 64, 0.1);
     -webkit-user-select: none; /* Prevent text selection */
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
 }
 .editable-status:hover, .editable-verify:hover  {
-    background-color: #d6eaf8; 
+    background-color: var(--light-colored-btn-color); 
     transform: scale(1.1);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 .editable-status:active, .editable-verify:active  {
     transform: scale(0.95); 
-    background-color: #aed6f1; 
+    background-color: var(--light-colored-btn-color); 
 }
 .detail-flex-container {
     max-height: 0;
@@ -640,7 +670,7 @@ tr.filter-hidden {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     min-width: 1580px;
     height: 48px;
-    background: linear-gradient(180deg, hsl(210, 20%, 83%) 0%, hsl(210, 25%, 92%) 100%);
+    background: var(--detail-button-background);
     border-radius: 8px 8px 0 0;
 }
 

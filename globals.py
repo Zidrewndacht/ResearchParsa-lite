@@ -13,7 +13,7 @@ LLM_SERVER_URL = "http://localhost:8080"
 
 MAX_CONCURRENT_WORKERS = 8 # Match your server slots
 DATABASE_FILE = "new.sqlite"
-GRAMMAR_FILE = "" #"output.gbnf" #disabled for reasoning models.
+GRAMMAR_FILE = "" #"output.gbnf" # obsolete, disabled for reasoning models.
 PROMPT_TEMPLATE = "prompt_template.txt"
 VERIFIER_TEMPLATE = "verifier_template.txt"
 

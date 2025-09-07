@@ -127,9 +127,10 @@ OK      Fix server-side search not being capable of searching strings that are J
 OK              Index JSON contents for fast search
 
         Refactor browse_db.py (too large)?
-        Refactor filtering.js (too large)?
+OK      Refactor filtering.js (too large): separate stats.js
         Automatically reset 'verified' after 're-classify this paper' or manual changes.
 
         Fix chart can grow but can't shrink?
                 Just close and reopen stats modal in such case for now.
         
+OK      Fix fixed-position JS columns (e.g. verifier score updating wrong column);

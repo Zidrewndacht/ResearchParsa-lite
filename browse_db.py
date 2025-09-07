@@ -27,15 +27,13 @@ import verify_classification
 # Define default year range
 DEFAULT_YEAR_FROM = 2016
 DEFAULT_YEAR_TO = 2025
-DEFAULT_MIN_PAGE_COUNT = 3
+DEFAULT_MIN_PAGE_COUNT = 4
 
 app = Flask(__name__)
 DATABASE = None # Will be set from command line argument
 
+# DB functions:
 
-
-
-# --- Helper Functions ---
 def ensure_fts_tables(conn):
     """
     Creates FTS5 virtual tables for searchable JSON text if they don't exist
@@ -117,6 +115,17 @@ def get_db_connection():
         # raise # Re-raise if FTS is critical
     return conn
 
+def get_total_paper_count():
+    """Get the total number of papers in the database."""
+    conn = get_db_connection()
+    try:
+        count = conn.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
+        return count
+    finally:
+        conn.close()
+
+# --- Helper Functions ---
+
 def format_changed_timestamp(changed_str):
     """Format the ISO timestamp string to dd/mm/yy hh:mm:ss"""
     if not changed_str:
@@ -137,15 +146,6 @@ def truncate_authors(authors_str, max_authors=2):
         return "; ".join(authors_list[:max_authors]) + " et al."
     else:
         return authors_str
-
-def get_total_paper_count():
-    """Get the total number of papers in the database."""
-    conn = get_db_connection()
-    try:
-        count = conn.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
-        return count
-    finally:
-        conn.close()
 
 def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_count=None, search_query=None):
     """Fetch papers from the database, applying various optional filters."""
@@ -176,7 +176,7 @@ def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_coun
     if min_page_count is not None:
         try:
             min_page_count = int(min_page_count)
-            conditions.append("(p.page_count IS NULL OR p.page_count = '' OR p.page_count > ?)")
+            conditions.append("(p.page_count IS NULL OR p.page_count = '' OR p.page_count >= ?)")
             params.append(min_page_count)
         except (ValueError, TypeError):
             pass
@@ -207,12 +207,12 @@ def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_coun
         # --- NEW: Handle JSON text search using FTS ---
         # We will JOIN the main papers table with the results from FTS searches on the virtual tables.
         # We'll search both FTS tables and UNION the results to get relevant paper IDs.
-        
-        # Prepare the FTS search term. FTS5 handles stemming with 'porter' tokenizer.
-        # For simple term matching, just use the term. For phrase matching, wrap in quotes.
-        # Let's assume simple term matching for now. You can refine this.
-        fts_search_term = search_query # FTS can handle the raw term
-
+                
+        # Ensure the search query itself is safe for FTS phrase search (mainly about escaping internal quotes)
+        # A simple way is to escape double quotes or remove them, or wrap in single quotes if needed.
+        # For basic robustness against the hyphen issue, phrase search is good.
+        escaped_search_query = search_query.replace('"', '""') # Escape double quotes for FTS phrase syntax
+        fts_search_term = f'"{escaped_search_query}"' # Force phrase matching in FTS
         # Create a subquery that finds matching rowids from both FTS tables
         fts_subquery = f"""
             SELECT rowid FROM papers_features_fts WHERE papers_features_fts MATCH ?
@@ -222,62 +222,27 @@ def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_coun
         # Add the FTS search term twice (once for each FTS table search)
         params.append(fts_search_term)
         params.append(fts_search_term)
-        
-        # Join the main papers table with the FTS results
-        # This ensures we only get papers whose IDs are returned by the FTS search
-        # OR that match the LIKE conditions on non-JSON columns
-        fts_join_clause = f" JOIN ({fts_subquery}) AS fts_results ON p.id = fts_results.rowid"
-        
         # Combine the LIKE conditions with the FTS requirement
         # An paper matches if it matches any non-JSON field (LIKE) OR if it's in the FTS results
         if search_conditions:
              # If there are non-JSON fields matched by LIKE
              non_json_search_condition = " OR ".join(search_conditions)
-             # The paper must match (non-JSON LIKE OR FTS match)
-             # We need to ensure the FTS join is part of the logic correctly.
-             # The simplest way is to make the FTS join conditional or always present if search.
-             # Let's adjust: Always do the JOIN if there's a search query, and then filter.
-             # The JOIN brings in papers matching FTS. The WHERE clause filters further.
-             # So, WHERE (non_json_condition OR FTS matched via JOIN)
-             # But the JOIN itself doesn't filter unless we make it an INNER JOIN based on FTS.
-             # Let's restructure slightly for clarity:
-             # 1. Base query includes potential FTS join
-             # 2. WHERE clause includes non-JSON LIKE conditions OR the fact that the join succeeded (meaning FTS matched)
-             # However, the JOIN as written just brings in rowids. We need the condition that the join happened.
-             # Easier: Make the FTS subquery part of the WHERE clause directly.
-             # Revert the JOIN idea slightly for this structure:
-             # Keep base SELECT FROM papers p
-             # Add potential JOINs if needed later for more complex FTS
-             # Modify WHERE: (existing filters) AND ((non_json_conditions) OR (id IN (fts_subquery)))
-             # This is cleaner.
-             # Remove the fts_join_clause concept for now in this structure.
-             # Rebuild the conditions list:
              conditions.append(f"(({non_json_search_condition}) OR p.id IN ({fts_subquery}))")
-             # The params for the FTS terms were already added above.
         else:
             # If no non-JSON fields are searched, only rely on FTS
             # This case is less likely given the columns listed, but handle it
             conditions.append(f"p.id IN ({fts_subquery})")
-            # params for FTS already added
 
     # --- Build Final Query ---
     # Start with base query
     query_parts = [base_query]
     
-    # Add FTS join if it was needed (alternative approach, not used with the IN clause above)
-    # if fts_join_clause:
-    #     query_parts.append(fts_join_clause)
-
     # Add WHERE clause if conditions exist
     if conditions:
         query_parts.append("WHERE " + " AND ".join(conditions))
 
     # Combine all parts
     query = " ".join(query_parts)
-
-    # Debug: Print the final query and params (optional, be careful with sensitive data)
-    # print(f"DEBUG SQL Query: {query}")
-    # print(f"DEBUG SQL Params: {params}")
 
     try:
         papers = conn.execute(query, params).fetchall()
@@ -649,9 +614,6 @@ def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_
         print(f"Error rendering papers table: {e}")
         # Return an error fragment or re-raise if preferred for the main route
         return "<p>Error loading table.</p>" # Basic error display
-
-
-
 
 
 #Routes: 
@@ -1442,8 +1404,6 @@ def upload_bibtex():
 
 
 
-
-
 # --- Jinja2-like filters ---
 def render_status(value):
     """Render status value as emoji/symbol"""
@@ -1501,7 +1461,6 @@ def render_verified_by_filter(value):
 
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Browse and edit PCB inspection papers database.')
     parser.add_argument('db_file', nargs='?', help='SQLite database file path (optional)')
@@ -1551,16 +1510,23 @@ if __name__ == '__main__':
 
     print(f"Starting server, database: {DATABASE}")
 
-    # Function to open the browser after a delay
-    def open_browser():
-        import time
-        time.sleep(2)  # Wait for the server to start
-        webbrowser.open("http://127.0.0.1:5000")
+    # --- CORRECTED: Open browser only once ---
+    # The standard Flask/Werkzeug reloader runs the script twice:
+    # 1. Once in the parent process (to manage the reloader)
+    # 2. Once in the child process (the actual server, where WERKZEUG_RUN_MAIN is set)
+    # We only want to open the browser in the child process.
+    import os
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        # Function to open the browser after a delay
+        def open_browser():
+            import time
+            time.sleep(2)  # Wait for the server to start
+            webbrowser.open("http://127.0.0.1:5000")
 
-    # Start the browser opener in a separate thread
-    threading.Thread(target=open_browser).start()
-
-    print(" * Visit http://127.0.0.1:5000 to view the table.")
+        # Start the browser opener in a separate thread
+        threading.Thread(target=open_browser, daemon=True).start()
+        print(" * Visit http://127.0.0.1:5000 to view the table.")
+    # --- END CORRECTED ---
     
     # Ensure the templates and static folders exist
     if not os.path.exists('templates'):

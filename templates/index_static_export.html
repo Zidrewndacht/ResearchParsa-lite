@@ -6,8 +6,21 @@
 
     <link rel="stylesheet" type="text/css" href="static/fonts.css">
     <style>
-    
     {{ style_css_content | safe }}
+    /* Overrides for static export: */
+    /* Disable editable status hover/active: 
+        Doing it here because .editable-status is used by JS for sorting, etc.*/        
+    .editable-status:hover, .editable-verify:hover  {
+        transform: unset;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        background-color: unset; 
+        cursor: default;
+    }
+    .editable-status:active, .editable-verify:active  {
+        transform: unset;
+        background-color: unset; 
+        cursor: default;
+    }
     </style>
     <script>
     {{ chart_js_content | safe }}
@@ -68,7 +81,7 @@
                         <div class="header-filters">
                             <div class="filter-item">
                                 <input type="checkbox" id="hide-short-checkbox"  style="display: none;">
-                                <label for="min-page-count">Min. page count ></label>
+                                <label for="min-page-count">Min. page count ≥</label>
                                 <input type="number" id="min-page-count" value="{{ min_page_count_value }}" min="{{ min_page_count_value }}" max="9">
                             </div>
                             <div class="filter-item">
