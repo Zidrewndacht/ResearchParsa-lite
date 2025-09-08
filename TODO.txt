@@ -134,3 +134,7 @@ OK      Refactor filtering.js (too large): separate stats.js
                 Just close and reopen stats modal in such case for now.
         
 OK      Fix fixed-position JS columns (e.g. verifier score updating wrong column);
+
+        Update commented&other field displays on save;
+
+        Fix sort by date to actually sort by date instead of alphabetic;

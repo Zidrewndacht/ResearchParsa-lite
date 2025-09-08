@@ -1,4 +1,4 @@
-# browse_db.py
+    # browse_db.py
 import sqlite3
 import json
 import argparse
@@ -1515,6 +1515,8 @@ if __name__ == '__main__':
     # 1. Once in the parent process (to manage the reloader)
     # 2. Once in the child process (the actual server, where WERKZEUG_RUN_MAIN is set)
     # We only want to open the browser in the child process.
+
+    #WTF, still loads twice when reloading on save. 
     import os
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         # Function to open the browser after a delay

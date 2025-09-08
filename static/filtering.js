@@ -451,4 +451,32 @@ document.addEventListener('DOMContentLoaded', function () {
     
     headers.forEach(header => { header.addEventListener('click', sortTable);   });
     applyLocalFilters(); //apply initial filtering    
+
+
+    // 2. After initial filters are applied (which includes the initial sortTable call
+    //    if triggered by applyLocalFilters, but we'll override it),
+    //    find the 'user_comment_state' header and trigger the sort.
+    //    Use setTimeout with 0 delay to ensure it runs after the current
+    //    execution stack (including the applyLocalFilters timeout) is clear.
+    setTimeout(() => {
+        const commentedHeader = document.querySelector('th[data-sort="user_comment_state"]');
+        if (commentedHeader) {
+            // Set the initial sort state so the UI indicator is correct
+            currentClientSort = { column: "user_comment_state", direction: 'DESC' }; // Or 'ASC' if preferred
+
+            // Call sortTable with the correct 'this' context (the header element)
+            // We need to bind 'this' or call it directly on the element
+            sortTable.call(commentedHeader);
+
+            // Update the sort indicator visually
+            // Clear previous indicators
+            document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
+            // Set the indicator on the target header
+            const indicator = commentedHeader.querySelector('.sort-indicator');
+            if (indicator) {
+                 // Use '▼' for DESC, '▲' for ASC based on your sortTable logic
+                indicator.textContent = currentClientSort.direction === 'ASC' ? '▲' : '▼';
+            }
+        }
+    }, 0); // Ensures it runs after applyLocalFilters' timeout finishes
 });
