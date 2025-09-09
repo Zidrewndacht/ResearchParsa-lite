@@ -879,7 +879,7 @@ tr.filter-hidden {
     list-style-type: none;
     padding-left: 0;
     margin: 0;
-    overflow: scroll;
+    overflow: hidden;
 }
 
 .stats-section li {
@@ -970,7 +970,8 @@ tr.filter-hidden {
 }
 
 .stats-section {
-    overflow: scroll;
+    overflow-y: scroll;
+    overflow-x: hidden;
 }
 /* When the modal is active, move it to its final position */
 .modal.modal-active .modal-content {
@@ -1009,4 +1010,8 @@ tr.filter-hidden {
     .main-header {
         border-radius: 0;
     }
+}
+::-webkit-scrollbar { /* WebKit */
+    width: 0;
+    height: 0;
 }
