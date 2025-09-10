@@ -1,4 +1,3 @@
-<!-- templates/index_static_export.html -->
 <!DOCTYPE html>
 <html class="busyCursor">
 <head>
@@ -7,20 +6,9 @@
     <link rel="stylesheet" type="text/css" href="static/fonts.css">
     <style>
     {{ style_css_content | safe }}
-    /* Overrides for static export: */
-    /* Disable editable status hover/active: 
-        Doing it here because .editable-status is used by JS for sorting, etc.*/        
-    .editable-status:hover, .editable-verify:hover  {
-        transform: unset;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-        background-color: unset; 
-        cursor: default;
-    }
-    .editable-status:active, .editable-verify:active  {
-        transform: unset;
-        background-color: unset; 
-        cursor: default;
-    }
+    /* Overrides for static export: Disable editable status hover/active, doing it here because .editable-status is used by JS for sorting, etc.*/        
+    .editable-status:active,.editable-status:hover,.editable-verify:active,.editable-verify:hover{transform:unset;background-color:unset;cursor:default}
+    .editable-status:hover,.editable-verify:hover{box-shadow:0 1px 2px rgba(0,0,0,.1)}
     </style>
     <script>
     {{ chart_js_content | safe }}
@@ -30,51 +18,51 @@
 <div class="table-container">
         <table id="papersTable" style="table-layout: fixed;">
             <colgroup>
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Column 1: Type (Rotated Header) -->
-                <col style="width: 66%"> <!-- Column 2: Title (Should Expand)-->
-                <col style="width: 40px; min-width: 40px; max-width:40px;"> <!-- Column 3: Year -->
-                <col style="width: 34%"> <!-- Column 4: Journal/Conf (Should Expand) -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Column 5: Pages (Rotated Header) -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Off-topic -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Relevance -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Survey -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- THT -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- SMT -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- X-Ray -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 66%"> 
+                <col style="width: 40px; min-width: 40px; max-width:40px;"> 
+                <col style="width: 34%"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
 
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Tracks -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Holes -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Solder Insufficient -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Solder Excess -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Solder Void -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Solder Crack -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Missing Comp -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Wrong Comp -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Orientation -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Cosmetic -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Other -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
 
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Classic CV -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- ML -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- CNN Classifier -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- CNN Detector -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- R-CNN Detector -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Transformers -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Other -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Hybrid -->
-                <col style="width: 30px; min-width: 30px; max-width:30px;"> <!-- Datasets  -->
-                <!-- Columns 31-36: Other Data (Mixed Sizes) -->
-                <col style="width: 56px; min-width: 56px; max-width: 56px;"> <!-- Last Changed -->
-                <col style="width: 56px; min-width: 56px; max-width: 56px;"> <!-- Changed By -->
-                <col style="width: 50px; min-width: 50px; max-width: 50px;"> <!-- Verified -->
-                <col style="width: 32px; min-width: 32px; max-width: 32px;"> <!-- Accr. Score -->
-                <col style="width: 50px; min-width: 50px; max-width: 50px;"> <!-- Verified By -->
-                <col style="width: 30px; min-width: 30px; max-width: 30px;"> <!-- user comments state -->
-                <col style="width: 44px; min-width: 44px; max-width: 44px;"> <!-- Details -->
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                <col style="width: 30px; min-width: 30px; max-width:30px;"> 
+                
+                <col style="width: 56px; min-width: 56px; max-width: 56px;"> 
+                <col style="width: 56px; min-width: 56px; max-width: 56px;"> 
+                <col style="width: 50px; min-width: 50px; max-width: 50px;"> 
+                <col style="width: 32px; min-width: 32px; max-width: 32px;"> 
+                <col style="width: 50px; min-width: 50px; max-width: 50px;"> 
+                <col style="width: 30px; min-width: 30px; max-width: 30px;"> 
+                <col style="width: 44px; min-width: 44px; max-width: 44px;"> 
             </colgroup>
             <thead>
                 <tr>
-                    <th id="main-header-wrapper" colspan=38 style="display: none;"></th><!-- kept to allow nth-child(4) to be consistent-->
+                    <th id="main-header-wrapper" colspan=38 style="display: none;"></th>
                 </tr>
                 <tr>
                     <th class="ontop-header" colspan="5" rowspan="2"> 
@@ -93,13 +81,15 @@
                             <button class="action-btn" id="static-stats-btn">Check <strong>Stats</strong></button>
                         </div>
                     </th>
-                    <th class="inferred-header" id="inferred-header-title" colspan="26"><div>
-                        <span>Inferred data </span>
-                        <input type="checkbox" title="Enable to only show misclassification suspects" id="hide-approved-checkbox"></th>
-                    </div><!--NLP--->
+                    <th class="inferred-header" id="inferred-header-title" colspan="26">
+                        <div>
+                            <span>Inferred data </span>
+                            <input type="checkbox" title="Enable to only show misclassification suspects" id="hide-approved-checkbox">
+                        </div>
+                    </th>
                     
                     <th class="ontop-header" colspan="7" rowspan="2" >
-                        <!-- <input type="search" id="search-input" placeholder="Type to search all fields..."> -->
+                        
                         <input type="search" id="search-input" placeholder="Type to search all fields..." value="{{ search_query_value }}">
                     </th>
                 </tr>
@@ -108,25 +98,24 @@
                     <th class="inferred-header ontop-header" colspan="1"></th>
                     <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to only show Surveys" id="only-survey-checkbox"></th>
                     <th class="inferred-header ontop-header" colspan="2"></th>
-                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to Hide X-Ray" id="hide-xray-checkbox" checked></th><!-- client-side, default enabled -->
+                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to Hide X-Ray" id="hide-xray-checkbox" checked></th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="2">Features:</th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="4">Solder</th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="5">PCBA</th>
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="8">Techniques</th>
-                    <!-- <th class="inferred-header inferred-header-3 ontop-header" colspan="6">DL-based</th> -->
+                    
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="1"></th>
                 </tr>
                 <tr>
-                    <th class="rotate-header status-header editable-header" data-sort="type"><div><span>Type</span></div></span><span class="sort-indicator"></span></th>
+                    <th class="rotate-header status-header editable-header" data-sort="type"><div><span>Type</span></div> <span class="sort-indicator"></span></th>
 
                     <th data-sort="title">Title (Click for article) <span class="sort-indicator"></span></th>
-                    <!-- <th data-sort="authors">Authors <span class="sort-indicator"></span></th> -->
+                    
                     <th data-sort="year">Year <span class="sort-indicator"></span></th>
                     <th data-sort="journal">Journal/Conf <span class="sort-indicator"></span></th>    
                     <th class="rotate-header" data-sort="page_count" ><div><span>Pages</span></div> <span class="sort-indicator"></span></th>
 
-
-                    <!-- Classification Summary Columns -->
+                    
                     <th class="inferred-header rotate-header status-header editable-header" data-sort="is_offtopic"><span class="sort-indicator"></span><div><span>Off-topic</span></div></th>
                     <th class="inferred-header rotate-header status-header" data-sort="relevance"><span class="sort-indicator"></span><div><span>Relevance</span></div></th>
                     <th class="inferred-header rotate-header status-header editable-header" data-sort="is_survey"><span class="sort-indicator"></span><div><span>Survey</span></div></th>
@@ -134,7 +123,7 @@
                     <th class="inferred-header rotate-header status-header editable-header" data-sort="is_smt"><span class="sort-indicator"></span><div><span>SMT</span></div></th>
                     <th class="inferred-header rotate-header status-header editable-header" data-sort="is_x_ray"><span class="sort-indicator"></span><div><span>X-Ray</span></div></th>
 
-                    <!-- Features Summary Columns (Updated list) -->
+                    
                     <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_tracks"><span class="sort-indicator"></span><div><span>Tracks</span></div></th>
                     <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_holes"><span class="sort-indicator"></span><div><span>Holes / Vias</span></div></th>
 
@@ -149,7 +138,7 @@
                     <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_cosmetic"><span class="sort-indicator"></span><div><span>Cosmetic</span></div></th>
                     <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_other_state"><span class="sort-indicator"></span><div><span>Other</span></div></th>
 
-                    <!-- Techniques Summary Columns (Updated list) -->
+                    
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_classic_cv_based"><span class="sort-indicator"></span><div><span>Classic CV</span></div></th>
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_ml_traditional"><span class="sort-indicator"></span><div><span>ML</span></div></th>
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_dl_cnn_classifier"><span class="sort-indicator"></span><div><span>CNN Classifier</span></div></th>
@@ -162,25 +151,21 @@
 
                     <th data-sort="changed">Last Changed <span class="sort-indicator"></span></th>
                     <th data-sort="changed_by">Changed By <span class="sort-indicator"></span></th>
-                    <th data-sort="verified"><!--<input type="checkbox" title="Enable to only show misclassification suspects" id="hide-approved-checkbox">-->Verified <span class="sort-indicator"></span></th>
+                    <th data-sort="verified">Verified <span class="sort-indicator"></span></th>
                     <th class="rotate-header" data-sort="estimated_score"><div><span>Accr. Score</span></div> <span class="sort-indicator"></span></th>
                     <th data-sort="verified_by">Verified By <span class="sort-indicator"></span></th>
                     <th class="rotate-header status-header" data-sort="user_comment_state"><span class="sort-indicator"></span><div><span>Commented</span></div></th>
-                    <th class="rotate-header"><div>Details</div></th> <!-- must be 50px due to 'collapse' button text -->
+                    <th class="rotate-header"><div>Details</div></th> 
                 </tr>
         </thead>
-        <!-- tbody and tfoot come from the papers_table template-->
-        {{ papers_table_static_export | safe }}        
-        
+        {{ papers_table_static_export | safe }}
         {% include 'papers_table_tfoot.html' %}
-        <!-- Use the rendered table content passed from the server --> 
     </table>
 </div>
-<!-- Stats Modal -->
+
 <div id="statsModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <!-- <p> Data in <strong>all lists</strong> below is dynamically calculated based on <strong>currently visible</strong> papers:</p> -->
         <div class="stats-lists">
             <div class="stats-section">
                 <h3>Repeating <strong>Journal/Conferences</strong><span style="font-size:0.6em"> — Scroll down on each list for more ↓</span></h3> </span></h3>  
@@ -201,15 +186,12 @@
             <div class="stats-section">
                 <h3>Mentioned <strong>other detected features</strong></h3> 
                 <ul id="otherDetectedFeaturesStatsList" class="stats-list-multicolumn-2"></ul>
-                <!-- show every non-blank instance of paper.features.other here-->
             </div>
             <div class="stats-section">
                 <h3>Mentioned <strong>Model Names</strong></h3> 
                 <ul id="modelNamesStatsList" class="stats-list-multicolumn-short"></ul>
-                <!-- show every non-blank instance of paper.technique.model here-->
             </div>
         </div>
-                
         <div class="stats-charts">
             <div class="stats-section">
                 <h3><strong>Techniques</strong> Distribution</h3>

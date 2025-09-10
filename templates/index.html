@@ -110,10 +110,12 @@
                             <button class="action-btn" id="apply-serverside-filters" style="opacity:0; pointer-events: none;"><span>Apply</span></button>
                         </div>
                     </th>
-                    <th class="inferred-header" id="inferred-header-title" colspan="26"><div>
-                        <span>Inferred data </span>
-                        <input type="checkbox" title="Enable to only show misclassification suspects" id="hide-approved-checkbox"></th>
-                    </div><!--NLP--->
+                    <th class="inferred-header" id="inferred-header-title" colspan="26">
+                        <div>
+                            <span>Inferred data </span>
+                            <input type="checkbox" title="Enable to only show misclassification suspects" id="hide-approved-checkbox">
+                        </div><!--NLP--->
+                    </th>
                     <th class="ontop-header" colspan="7" rowspan="2" >
                         <!-- <input type="search" id="search-input" placeholder="Type to search all fields..."> -->
                         <input type="search" id="search-input" placeholder="Type to search all fields..." value="{{ search_query_value }}">
@@ -133,7 +135,7 @@
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="1"></th>
                 </tr>
                 <tr>
-                    <th class="rotate-header status-header editable-header" data-sort="type"><div><span>Type</span></div></span><span class="sort-indicator"></span></th>
+                    <th class="rotate-header status-header editable-header" data-sort="type"><div><span>Type</span></div> <span class="sort-indicator"></span></th>
 
                     <th data-sort="title">Title (Click for article) <span class="sort-indicator"></span></th>
                     <!-- <th data-sort="authors">Authors <span class="sort-indicator"></span></th> -->
