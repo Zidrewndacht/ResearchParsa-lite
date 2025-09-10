@@ -18,6 +18,8 @@ import io
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill # Ensure PatternFill is imported
 from openpyxl.worksheet.table import Table, TableStyleInfo
+import gzip
+import base64
 
 # Import globals, the classification and verification modules
 import globals
@@ -754,6 +756,27 @@ def static_export():
     #     keep_pre=True, # Important if you have <pre> tags that need formatting
     # )
 
+    pako_js_content = ""
+    # Assuming pako.min.js is in your 'static' directory
+    with open(os.path.join(static_dir, 'pako.min.js'), 'r', encoding='utf-8') as f:
+        pako_js_content = f.read()
+        
+    # --- Compress the full HTML content ---
+    # 1. Encode the HTML string to bytes (UTF-8)
+    html_bytes = full_html_content.encode('utf-8')
+    # 2. Compress the bytes
+    compressed_bytes = gzip.compress(html_bytes)
+    # 3. Encode the compressed bytes to Base64 for embedding in JS
+    compressed_base64 = base64.b64encode(compressed_bytes).decode('ascii')
+
+    # --- Render the LOADER template, passing the compressed data ---
+    loader_html_content = render_template(
+        'loader.html',
+        compressed_html_data=compressed_base64,
+        pako_js_content=Markup(pako_js_content) # Use Markup if passing raw JS
+        # ... other variables ...
+    )
+
     # --- Create a filename based on filters ---
     filename_parts = ["PCBPapers"]
     if year_from_value == year_to_value:
@@ -770,10 +793,11 @@ def static_export():
             if safe_search:
                 filename_parts.append(f"search_{safe_search[:20]}") # Limit length
     filename = "_".join(filename_parts) + ".html"
-    # --- Return as a downloadable attachment ---
+
+    # --- Return the LOADER HTML as a downloadable attachment ---
     from flask import Response
     return Response(
-        full_html_content, # This is now the minified HTML string
+        loader_html_content, # Send the small loader with embedded compressed data
         mimetype="text/html",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
