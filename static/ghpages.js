@@ -1130,24 +1130,22 @@ document.addEventListener('DOMContentLoaded', function () {
     scheduleFilterUpdate();
 
     setTimeout(() => {
+        document.documentElement.classList.add('busyCursor');
         const commentedHeader = document.querySelector('th[data-sort="user_comment_state"]');
-        if (commentedHeader) {
-            // Set the initial sort state so the UI indicator is correct
-            currentClientSort = { column: "user_comment_state", direction: 'DESC' }; // Or 'ASC' if preferred
+        // Set the initial sort state so the UI indicator is correct
+        currentClientSort = { column: "user_comment_state", direction: 'DESC' }; // Or 'ASC' if preferred
 
-            // Call sortTable with the correct 'this' context (the header element)
-            // We need to bind 'this' or call it directly on the element
-            sortTable.call(commentedHeader);
+        // Call sortTable with the correct 'this' context (the header element)
+        // We need to bind 'this' or call it directly on the element
+        sortTable.call(commentedHeader);
 
-            // Update the sort indicator visually
-            // Clear previous indicators
-            document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
-            // Set the indicator on the target header
-            const indicator = commentedHeader.querySelector('.sort-indicator');
-            if (indicator) {
-                // Use '▼' for DESC, '▲' for ASC based on your sortTable logic
-                indicator.textContent = currentClientSort.direction === 'ASC' ? '▲' : '▼';
-            }
-        }
+        // Update the sort indicator visually
+        // Clear previous indicators
+        document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
+        // Set the indicator on the target header
+        const indicator = commentedHeader.querySelector('.sort-indicator');
+        // Use '▼' for DESC, '▲' for ASC based on your sortTable logic
+        indicator.textContent = currentClientSort.direction === 'ASC' ? '▲' : '▼';
+        document.documentElement.classList.remove('busyCursor');
     }, 0); // Ensures it runs after applyLocalFilters' timeout finishes
 });
