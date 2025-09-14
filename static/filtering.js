@@ -25,6 +25,101 @@ const SYMBOL_SORT_WEIGHTS = {
     '❔': 0  // Unknown
 };
 
+function updateCounts() {   //used by stats, comms and filtering
+    const counts = {};
+    const yearlySurveyImpl = {}; // { year: { surveys: count, impl: count } }
+    const yearlyTechniques = {}; // { year: { technique_field: count, ... } }
+    const yearlyFeatures =   {}; // { year: { feature_field: count, ... } }
+
+    COUNT_FIELDS.forEach(field => counts[field] = 0);
+
+    // Select only VISIBLE main rows for counting '✔️' and calculating visible count
+    const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
+    const visiblePaperCount = visibleRows.length;
+
+    //count on each update since server-side async can change this:
+    const allRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
+    const loadedPaperCount = allRows.length;
+
+    // Count symbols in visible rows and collect yearly data
+    visibleRows.forEach(row => {
+        COUNT_FIELDS.forEach(field => {
+            const cell = row.querySelector(`[data-field="${field}"]`);
+            const cellText = cell.textContent.trim();
+            if (field === 'changed_by' || field === 'verified_by') {
+                if (cellText === '👤') {
+                    counts[field]++;
+                }
+            } else {
+                if (cellText === '✔️') {
+                    counts[field]++;
+                }
+            }
+        });
+
+        const yearCell = row.cells[yearCellIndex]; // Assuming Year is the 3rd column (index 2)
+        const yearText = yearCell ? yearCell.textContent.trim() : '';
+        const year = yearText ? parseInt(yearText, 10) : null;
+
+        if (year && !isNaN(year)) {
+            // Initialize yearly data objects for the year if they don't exist
+            if (!yearlySurveyImpl[year]) {
+                yearlySurveyImpl[year] = { surveys: 0, impl: 0 };
+            }
+            if (!yearlyTechniques[year]) {
+                yearlyTechniques[year] = {};
+                TECHNIQUE_FIELDS_FOR_YEARLY.forEach(f => yearlyTechniques[year][f] = 0);
+            }
+            if (!yearlyFeatures[year]) {
+                yearlyFeatures[year] = {};
+                FEATURE_FIELDS_FOR_YEARLY.forEach(f => yearlyFeatures[year][f] = 0);
+            }
+
+            // Update Survey/Impl counts
+            const isSurveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
+            const isSurvey = isSurveyCell && isSurveyCell.textContent.trim() === '✔️';
+            if (isSurvey) {
+                yearlySurveyImpl[year].surveys++;
+            } else {
+                yearlySurveyImpl[year].impl++;
+            }
+
+            // Update Technique counts
+            TECHNIQUE_FIELDS_FOR_YEARLY.forEach(field => {
+                const techCell = row.querySelector(`.editable-status[data-field="${field}"]`);
+                if (techCell && techCell.textContent.trim() === '✔️') {
+                    yearlyTechniques[year][field]++;
+                }
+            });
+
+            // Update Feature counts
+            FEATURE_FIELDS_FOR_YEARLY.forEach(field => {
+                // const featCell = row.querySelector(`.editable-status[data-field="${field}"]`); //breaks "other" counts in chart, as it's a calculated, non-editable cell!
+                const featCell = row.querySelector(`[data-field="${field}"]`);
+                if (featCell && featCell.textContent.trim() === '✔️') {
+                    yearlyFeatures[year][field]++;
+                }
+            });
+        }
+    });
+    // Make counts available outside this function
+    latestCounts = counts; 
+    latestYearlyData = {
+        surveyImpl: yearlySurveyImpl,
+        techniques: yearlyTechniques,
+        features: yearlyFeatures
+    };
+
+    loadedPapersCountCell.textContent = loadedPaperCount;
+    visiblePapersCountCell.textContent = visiblePaperCount;
+    COUNT_FIELDS.forEach(field => {
+        const countCell = document.getElementById(`count-${field}`);
+        if (countCell) {
+            countCell.textContent = counts[field];
+        }
+    });
+}
+
 function toggleDetails(element) {
     const row = element.closest('tr');
     const detailRow = row.nextElementSibling;
@@ -237,8 +332,8 @@ function applyLocalFilters() {
         applyAlternatingShading();
         applyJournalShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
         updateCounts();
-        document.getElementById('apply-serverside-filters').style.opacity = '0';
-        document.getElementById('apply-serverside-filters').style.pointerEvents = 'none';
+        applyButton.style.opacity = '0';
+        applyButton.style.pointerEvents = 'none';
         setTimeout(() => {
             document.documentElement.classList.remove('busyCursor');
         }, 150); // doesn't really work since the contents are completely replaced eliminating the animation. Not worth fixing.
@@ -333,103 +428,6 @@ function sortTable(){
 
 function showApplyButton(){  applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; }
 
-
-function updateCounts() {   //used by stats, comms and filtering
-    const counts = {};
-    const yearlySurveyImpl = {}; // { year: { surveys: count, impl: count } }
-    const yearlyTechniques = {}; // { year: { technique_field: count, ... } }
-    const yearlyFeatures = {};   // { year: { feature_field: count, ... } }
-
-    COUNT_FIELDS.forEach(field => counts[field] = 0);
-
-    // Select only VISIBLE main rows for counting '✔️' and calculating visible count
-    const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
-    const visiblePaperCount = visibleRows.length;
-
-    //count on each update since server-side async can change this:
-    const allRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
-    const loadedPaperCount = allRows.length;
-
-    // Count symbols in visible rows and collect yearly data
-    visibleRows.forEach(row => {
-        COUNT_FIELDS.forEach(field => {
-            const cell = row.querySelector(`[data-field="${field}"]`);
-            const cellText = cell.textContent.trim();
-            if (field === 'changed_by' || field === 'verified_by') {
-                if (cellText === '👤') {
-                    counts[field]++;
-                }
-            } else {
-                if (cellText === '✔️') {
-                    counts[field]++;
-                }
-            }
-        });
-
-        const yearCell = row.cells[yearCellIndex]; // Assuming Year is the 3rd column (index 2)
-        const yearText = yearCell ? yearCell.textContent.trim() : '';
-        const year = yearText ? parseInt(yearText, 10) : null;
-
-        if (year && !isNaN(year)) {
-            // Initialize yearly data objects for the year if they don't exist
-            if (!yearlySurveyImpl[year]) {
-                yearlySurveyImpl[year] = { surveys: 0, impl: 0 };
-            }
-            if (!yearlyTechniques[year]) {
-                yearlyTechniques[year] = {};
-                TECHNIQUE_FIELDS_FOR_YEARLY.forEach(f => yearlyTechniques[year][f] = 0);
-            }
-            if (!yearlyFeatures[year]) {
-                yearlyFeatures[year] = {};
-                FEATURE_FIELDS_FOR_YEARLY.forEach(f => yearlyFeatures[year][f] = 0);
-            }
-
-            // Update Survey/Impl counts
-            const isSurveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
-            const isSurvey = isSurveyCell && isSurveyCell.textContent.trim() === '✔️';
-            if (isSurvey) {
-                yearlySurveyImpl[year].surveys++;
-            } else {
-                yearlySurveyImpl[year].impl++;
-            }
-
-            // Update Technique counts
-            TECHNIQUE_FIELDS_FOR_YEARLY.forEach(field => {
-                const techCell = row.querySelector(`.editable-status[data-field="${field}"]`);
-                if (techCell && techCell.textContent.trim() === '✔️') {
-                    yearlyTechniques[year][field]++;
-                }
-            });
-
-            // Update Feature counts
-            FEATURE_FIELDS_FOR_YEARLY.forEach(field => {
-                // const featCell = row.querySelector(`.editable-status[data-field="${field}"]`); //breaks "other" counts in chart, as it's a calculated, non-editable cell!
-                const featCell = row.querySelector(`[data-field="${field}"]`);
-                if (featCell && featCell.textContent.trim() === '✔️') {
-                    yearlyFeatures[year][field]++;
-                }
-            });
-        }
-    });
-    // Make counts available outside this function
-    latestCounts = counts; 
-    latestYearlyData = {
-        surveyImpl: yearlySurveyImpl,
-        techniques: yearlyTechniques,
-        features: yearlyFeatures
-    };
-
-    loadedPapersCountCell.textContent = loadedPaperCount;
-    visiblePapersCountCell.textContent = visiblePaperCount;
-    COUNT_FIELDS.forEach(field => {
-        const countCell = document.getElementById(`count-${field}`);
-        if (countCell) {
-            countCell.textContent = counts[field];
-        }
-    });
-}
-
-
 document.addEventListener('DOMContentLoaded', function () {
     hideOfftopicCheckbox.addEventListener('change', applyServerSideFilters);
     hideXrayCheckbox.addEventListener('change', applyLocalFilters);
@@ -440,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function () {
     yearToInput.addEventListener('change', showApplyButton);
     minPageCountInput.addEventListener('change', showApplyButton);
 
-    document.getElementById('apply-serverside-filters').addEventListener('click', applyServerSideFilters);
+    applyButton.addEventListener('click', applyServerSideFilters);
 
     document.getElementById('search-input').addEventListener('input', function () {
         clearTimeout(filterTimeoutId);

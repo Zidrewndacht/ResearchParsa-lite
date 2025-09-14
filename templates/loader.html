@@ -41,20 +41,13 @@
         document.getElementById('previewMessage').style.display = 'none';
         document.getElementById('splash-spinner').style.display = 'block';
 
-        // The compressed HTML data passed from Flask
-        const compressedDataBase64 = "{{ compressed_html_data | safe }}";
+        const compressedDataBase64 = "{{ compressed_html_data | safe }}";         // The compressed HTML data passed from Flask
 
-        // Function to decompress and load the content
         function loadContent() {
             try {
-                // 1. Decode Base64 to get compressed bytes (as Uint8Array)
-                const compressedBytes = Uint8Array.from(atob(compressedDataBase64), c => c.charCodeAt(0));
-
-                // 2. Decompress using Pako (inflate)
-                const decompressedBytes = pako.inflate(compressedBytes);
-
-                // 3. Decode bytes back to string (assuming UTF-8)
-                const decompressedHtmlString = new TextDecoder("utf-8").decode(decompressedBytes);
+                const compressedBytes = Uint8Array.from(atob(compressedDataBase64), c => c.charCodeAt(0));  // 1. Decode Base64 to get compressed bytes (as Uint8Array)
+                const decompressedBytes = pako.inflate(compressedBytes);                                    // 2. Decompress using Pako (inflate)                
+                const decompressedHtmlString = new TextDecoder("utf-8").decode(decompressedBytes);          // 3. Decode bytes back to string (assuming UTF-8)
 
                 // 4. Write the full HTML content to the document, replacing this loader
                 // Using document.write after the page loads replaces the entire document

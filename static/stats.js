@@ -18,8 +18,11 @@ const COUNT_FIELDS = [
 ];
 
 const statsBtn = document.getElementById('stats-btn');
+const aboutBtn = document.getElementById('about-btn');
 const modal = document.getElementById('statsModal');
+const modalSmall = document.getElementById('aboutModal');
 const spanClose = document.querySelector('#statsModal .close'); // Specific close button
+const smallClose = document.querySelector('#aboutModal .close'); // Specific close button
 
 // --- Define Consistent Colors for Techniques ---
 // Define the fixed color order used in the Techniques Distribution chart (sorted)
@@ -602,22 +605,31 @@ function displayStats() {
         }, 700); 
     }, 20);
 }
+function displayAbout(){
+    setTimeout(() => {
+        modalSmall.offsetHeight;
+        modalSmall.classList.add('modal-active');
+
+    }, 20);
+}
 
 function closeModal() { modal.classList.remove('modal-active'); }
-
+function closeSmallModal() { modalSmall.classList.remove('modal-active'); }
 
 
 document.addEventListener('DOMContentLoaded', function () {
     // Event Listeners for Stats Modal
     statsBtn.addEventListener('click', displayStats);
+    aboutBtn.addEventListener('click', displayAbout);
 
     // --- Close Modal
     spanClose.addEventListener('click', closeModal);
+    smallClose.addEventListener('click', closeSmallModal);
     document.addEventListener('keydown', function (event) {
         // Check if the pressed key is 'Escape' and if the modal is currently active
-        if (event.key === 'Escape' && modal.classList.contains('modal-active')) { closeModal(); }
+        if (event.key === 'Escape') { closeModal(); closeSmallModal(); }
     });
     window.addEventListener('click', function (event) {
-        if (event.target === modal) { closeModal(); }
+        if (event.target === modal || event.target === modalSmall) { closeModal(); closeSmallModal(); }
     });
 });

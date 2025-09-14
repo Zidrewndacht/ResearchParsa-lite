@@ -1,7 +1,5 @@
 // static/comms.js
-/** For functionality that communicates with the server (DB updates, etc).
- * Any purely client-side functionality goes to filtering.js instead.
- */
+/** For detail row retrieval and functionality that writes to the server (DB updates, etc). */
 // --- New Global Variables for Batch Status ---
 let isBatchRunning = false; // Simple flag to prevent multiple simultaneous batches
 

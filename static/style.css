@@ -1,5 +1,12 @@
-/* static/style.css */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg)
+    }
 
+    to {
+        transform: rotate(360deg)
+    }
+}
 
 :root {
     --text-color: #393939;
@@ -7,22 +14,16 @@
     --table-row-even: #00000006;
     --table-row-odd: #0000;
     --highlighted-col-background: #bbccbb22;
-    /* --primary-ui-color: #2d6770; */
-    /* --inferred-ui-color: hsl(170, 25%, 40%); */
-    /* --inferred-gradient-end-color: rgb(77, 128, 92); */
-    /* --primary-ui-color: #1f606a; */
-    /* --primary-ui-color: #18616d; */
-    /* --primary-ui-color-darker: #1f606a; */
-    --primary-ui-color: hsl(188, 36%, 30%);
-    --primary-ui-color-darker: hsl(188, 38%, 28%);
+    --primary-ui-color: hsl(188, 31%, 29%);
+    --primary-ui-color-darker: hsl(188, 34%, 27%);
     --inferred-ui-color: hsl(154.6, 35.8%, 32.4%);
     --inferred-gradient-end-color: rgb(57, 106, 53);
-    --stats-primary-ui-color:#1f606a;
+    --stats-primary-ui-color: var(--primary-ui-color-darker);
     --modal-wrapper-background: #eee6;
-    --classify-btn-color:hsl(246, 29%, 40%);
-    --verify-btn-color:hsl(309, 29%, 40%);
+    --classify-btn-color: hsl(246, 29%, 40%);
+    --verify-btn-color: hsl(276, 29%, 40%);
     --save-btn-color: #27ae60;
-    --export-html-btn-color: rgb(54, 77, 145);
+    --export-html-btn-color: rgb(54, 90, 145);
     --export-xlsx-btn-color: rgb(58, 136, 47);
     --light-colored-btn-color: rgb(185, 209, 209);
     --light-colored-btn-text: #0a5662;
@@ -30,50 +31,18 @@
     --light-shadow: 1px 0 5px #fff6;
     --th-border-color: #0000003b;
     --link-color: rgb(0, 45, 115);
-    --detail-button-background: linear-gradient(180deg, hsl(210, 20%, 83%) 0%, hsl(210, 25%, 92%) 100%);
+    --detail-button-background: linear-gradient(180deg, hsl(210, 20%, 83%) 0%, hsl(210, 25%, 92%) 100%)
 }
-
-/* desaturated ver. */
-/* :root {
-    --text-color: #393939;
-    --background-color: #f5f7fa;
-    --table-row-even: #00000006;
-    --table-row-odd: #0000;
-    --highlighted-col-background: #bbccbb22;
-    --primary-ui-color: #444E4A;
-    --primary-ui-color-darker: #404A46;
-    --inferred-ui-color: hsl(154.6, 25.8%, 32.4%);
-    --inferred-gradient-end-color: rgb(66, 99, 63);
-    --stats-primary-ui-color:#444E4A;
-    --modal-wrapper-background: #eee6;
-    --classify-btn-color:hsl(154.6, 35.8%, 32.4%);
-    --verify-btn-color:rgb(57, 106, 53);
-    --save-btn-color: #2f6546;
-    --export-html-btn-color: rgb(57, 106, 53);
-    --export-xlsx-btn-color: rgb(57, 106, 53);
-    --light-colored-btn-color: rgb(185, 209, 209);
-    --light-colored-btn-text: #0a5662;
-    --dark-shadow: 1px 0 5px #0006;
-    --light-shadow: 1px 0 5px #fff6;
-    --th-border-color: #0000003b;
-    --link-color: rgb(0, 45, 115);
-    --detail-button-background: linear-gradient(180deg, hsl(180, 16%, 82.9%) 0%, hsl(210, 15%, 92%) 100%);
-} */
 
 body {
-    font-family: "Inter Tight", Arial, sans-serif;
+    font-family: "Inter Tight",Arial,sans-serif;
     margin: 8px;
-    background-color: var(--background-color); 
-    color: var(--text-color);
+    background-color: var(--background-color);
+    color: var(--text-color)
 }
 
-html.busyCursor,
-html.busyCursor * {
-    cursor: wait !important;
-}
-
-.table-container {
-    position: relative;
+html.busyCursor body,html.busyCursor body * {
+    cursor: wait
 }
 
 .loading-overlay {
@@ -90,18 +59,16 @@ html.busyCursor * {
     align-items: center;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s ease;
-    /* z-index: 1000; */
-    transition-delay: 0.33s;  /*return transition*/
+    transition: opacity .3s ease;
+    transition-delay: .33s;
     border-radius: 8px;
-    background: var(--modal-wrapper-background);
+    background: var(--modal-wrapper-background)
 }
 
-/* Only show spinner during filtering */
 html.busyCursor .loading-overlay {
     opacity: 1;
     pointer-events: all;
-    transition-delay: 0.33s; /*Start transition*/
+    transition-delay: .33s
 }
 
 .loading-spinner {
@@ -110,23 +77,22 @@ html.busyCursor .loading-overlay {
     border: 12px solid var(--primary-ui-color);
     border-top: 12px solid transparent;
     border-radius: 50%;
-    animation: spin 0.75s linear infinite;
+    animation: spin .75s linear infinite
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-
-/* Ensure the table container allows internal scrolling for the sticky footer */
- .table-container { 
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+.table-container {
+    box-shadow: 0 2px 8px rgba(0,0,0,.35);
     border: 1px solid var(--primary-ui-color);
-    overflow-y: auto; /* Allow vertical scrolling if needed */
-    max-height: calc(100vh - 18px); 
-    position: relative; /* Needed for sticky positioning within */
-    border-radius: 8px;
+    overflow-y: auto;
+    max-height: calc(100vh - 18px);
+    position: relative;
+    border-radius: 8px
+}
+
+h3,th {
+    position: sticky;
+    top: 0;
+    text-shadow: var(--dark-shadow)
 }
 
 h3 {
@@ -136,84 +102,79 @@ h3 {
     color: #fefefe;
     display: inline-block;
     font-weight: 400;
-    position: sticky;
-    top: 0;
     width: calc(100% - 10px);
-    text-shadow: var(--dark-shadow);
-    background: linear-gradient(180deg, var(--primary-ui-color) 50%, var(--primary-ui-color-darker) 100%);
+    background: linear-gradient(180deg,var(--primary-ui-color) 50%,var(--primary-ui-color-darker) 100%)
 }
+
 table {
     border-collapse: collapse;
     width: 100%;
     background-color: #fff;
     min-width: 1580px;
-    border-radius: 6px;
+    border-radius: 6px
 }
 
 td {
-    padding: 9px 6px; 
+    padding: 9px 6px
 }
 
 th.rotate-header {
     white-space: nowrap;
-    padding: 0; 
+    padding: 0
 }
-th.rotate-header > div {
-    transform: rotate(-90deg) translateX(-40px); 
-    width: 32px; 
-    margin: 55px 0; 
+
+th.rotate-header>div {
+    transform: rotate(-90deg) translateX(-40px);
+    width: 32px;
+    margin: 55px 0
 }
-th.rotate-header > div > span {
+
+th.rotate-header>div>span {
     display: block;
     text-align: left;
-    max-height: 100px;
+    max-height: 100px
 }
 
 th {
-    vertical-align: bottom; 
-    background-color: var(--primary-ui-color); 
-    color: white;
-    position: sticky;
-    top:0;
-    font-weight: bold;
-    box-shadow: inset 0 -0px 0px 0.75px var(--th-border-color);
+    vertical-align: bottom;
+    background-color: var(--primary-ui-color);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: inset 0 0 0 .75px var(--th-border-color);
     padding: 6px;
     text-align: left;
     z-index: 10;
-    font-size: 8.5pt;
-    text-shadow: var(--dark-shadow);
-/*     background: linear-gradient(180deg, var(--primary-ui-color), #1a545d); */
+    font-size: 8.5pt
 }
 
 tr:nth-child(4) th:not(.inferred-header) {
-    background: linear-gradient(180deg,var(--primary-ui-color) 50%, var(--primary-ui-color-darker) 100%);
+    background: linear-gradient(180deg,var(--primary-ui-color) 50%,var(--primary-ui-color-darker) 100%)
 }
 
-th[data-sort]:hover {    
-    filter: contrast(1.25) brightness(0.9); 
-    cursor: pointer; 
+th[data-sort]:hover {
+    filter: contrast(1.25) brightness(.9);
+    cursor: pointer
 }
 
 td.highlight-status {
-    background: var(--highlighted-col-background);
-}
-/* Add new classes for dynamic alternating shades */
-.alt-shade-1, li:nth-child(even)  {
-    background-color: var(--table-row-even); 
+    background: var(--highlighted-col-background)
 }
 
-.alt-shade-2, li:nth-child(odd)  {
-    background-color: var(--table-row-odd); 
+.alt-shade-1,li:nth-child(even) {
+    background-color: var(--table-row-even)
+}
+
+.alt-shade-2,li:nth-child(odd) {
+    background-color: var(--table-row-odd)
 }
 
 .secondary-text-cell {
     font-size: 10pt;
-    font-family: "Arial Narrow";
-    /*! text-align: justify; */
+    font-family: "Arial Narrow"
 }
+
 .detail-content {
-    /*! margin: 10px auto; */
-    text-align: justify;
+    text-align: justify
 }
 
 .toggle-btn {
@@ -221,18 +182,15 @@ td.highlight-status {
     text-decoration: none;
     color: #000b;
     background: var(--detail-button-background);
-    /*! border: 1px solid #0004; */
     font-size: 9.5pt;
     font-weight: 400;
-    /*! border-top: 0; */
-    transition: 0.33s all ease-in-out;
+    transition: filter .3s ease-in-out;
     text-align: center;
-    box-shadow: inset 0 -0px 0px 0.5px #0006;
+    box-shadow: inset 0 0 0 .5px #0006
 }
 
 .toggle-btn:hover {
-    transition: 0.5s all ease-in-out; /* Teal on hover */
-    filter: saturate(200%) contrast(110% );
+    filter: saturate(200%) contrast(110%)
 }
 
 .sort-indicator {
@@ -240,274 +198,251 @@ td.highlight-status {
     right: 8px;
     top: 36px;
     transform: translateY(-50%);
-    font-size: 0.9em;
+    font-size: .9em
 }
 
-/* .editable {
-    padding: 4px;
-    border-radius: 3px;
-    transition: border-color 0.3s, box-shadow 0.3s;
-} 
-
-.editable:focus {
-    border: 1px solid #3498db;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}*/
-
-input[type="search"] {
+input[type=search] {
     width: calc(100% - 4px);
     box-sizing: border-box;
     padding: 8px;
     border: 1px solid #0008;
-    font-family: inherit; 
+    font-family: inherit;
     height: 42px;
     font-size: 11pt;
     font-style: italic;
     margin: 2px;
-    color: white; /* Ensure color is explicitly set */
-    background: #0000002A; /* Ensure background is explicitly set */
-    /* Add these vendor-prefixed properties to override Chromium defaults */
-    -webkit-text-fill-color: white; /* Ensures text color inside the input */
-    -webkit-opacity: 1; /* Override any potential opacity issues */
-    opacity: 0.66;
+    color: #fff;
+    background: #0000002a;
+    -webkit-text-fill-color: #fff;
+    -webkit-opacity: 1;
+    opacity: .66;
     border-radius: 6px;
-    transition: 0.25s all ease;
-}
-input[type="search"]:hover, input[type="search"]:focus  {
-    opacity: 1;
-    transition: 0.25s all ease;
+    transition: .25s all ease
 }
 
-/* Remove default Chromium search styling */
-input[type="search"]::-webkit-search-decoration,
-input[type="search"]::-webkit-search-cancel-button,
-input[type="search"]::-webkit-search-results-button,
-input[type="search"]::-webkit-search-results-decoration {
-    -webkit-appearance: none; /* Removes default icons/buttons */
+input[type=search]:focus,input[type=search]:hover {
+    opacity: 1;
+    transition: .25s all ease
 }
 
-/* Ensure placeholder text is also styled correctly */
-input[type="search"]::placeholder {
-    color: rgba(255, 255, 255, 0.7); /* Adjust opacity as needed */
-    opacity: 1; /* Override default opacity */
+input[type=search]::-webkit-search-cancel-button,input[type=search]::-webkit-search-decoration,input[type=search]::-webkit-search-results-button,input[type=search]::-webkit-search-results-decoration {
+    -webkit-appearance: none
 }
-input[type="search"]::-webkit-input-placeholder { /* For older Webkit */
-    color: rgba(255, 255, 255, 0.7);
-    opacity: 1;
+
+input[type=search]::placeholder {
+    color: rgba(255,255,255,.7);
+    opacity: 1
 }
-.filter-item input[type="number"] {
+
+input[type=search]::-webkit-input-placeholder {
+    color: rgba(255,255,255,.7);
+    opacity: 1
+}
+
+.filter-item input[type=number] {
     height: 28px;
     width: 55px;
-    background: transparent;
+    background: 0 0;
     color: #eee;
     font-size: 10.5pt;
-    border: none;
+    border: 0;
     padding: 3px 4px;
-    margin: 0px -18px 0 0;
-    transition: 0.25s all ease;
+    margin: 0-18px 0 0;
+    transition: .25s all ease;
     -moz-appearance: textfield;
     appearance: textfield;
-    font-weight: bold;
+    font-weight: 700
 }
 
-
-.filter-item input[type="number"]:hover {
+.filter-item input[type=number]:hover {
     background: #0002;
-    /*! border: 1px solid #ccc; */ /* Add border */
-    border-radius: 3px; /* Rounded corners */
-    transition: 0.25s all ease;
+    border-radius: 3px;
+    transition: .25s all ease;
     -moz-appearance: unset;
     appearance: unset;
-    z-index:9999;
+    z-index: 9999
 }
 
 .action-btn {
     margin: 0 2px;
     padding: 10px 20px;
-    background-color: var(--primary-ui-color); 
-    color: white;
+    background-color: var(--primary-ui-color);
+    color: #fff;
     border-radius: 4px;
     cursor: pointer;
     font-size: 11pt;
-    transition: all 0.1s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    transition: all .33s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,.15);
     min-width: 155px;
     height: 40px;
     text-shadow: var(--dark-shadow);
-    border: 1px solid #0002;
+    border: 1px solid #0002
 }
 
 .action-btn:hover {
     filter: contrast(1.2) brightness(1.2);
-    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.15);
-    transition: all 0.3s ease;
+    box-shadow: 0 3px 5px rgba(0,0,0,.15)
 }
 
 .action-btn:active {
-    transform: translateY(1px); 
-    filter: contrast(1.2) brightness(0.8);
-    transition: all 0.1s ease;
+    transform: translateY(1px);
+    filter: contrast(1.2) brightness(.8);
+    transition: all .1s ease
 }
 
 .action-btn:disabled {
-    opacity: 0.5;
+    opacity: .5
 }
 
 .action-btn:disabled:hover {
     filter: unset;
-    transform: unset;
+    transform: unset
 }
 
 .action-btn:disabled:active {
-    filter: unset;
+    filter: unset
 }
+
 .edit-section {
     margin-top: 15px;
-    padding-top: 15px;
+    padding-top: 15px
 }
+
 form label {
     display: block;
-    /*! margin-bottom: 5px; */
-    font-weight: bold;
-    line-height: 2em;
-}
-form input[type="text"] {
-    margin-bottom: 10px;
+    font-weight: 700;
+    line-height: 2em
 }
 
-.changed-cell, .changed-by-cell {
-    font-size: 9.5pt; 
-    color: #7f8c8d; 
+form input[type=text] {
+    margin-bottom: 10px
 }
 
-.status-cell{
+.changed-by-cell,.changed-cell {
+    font-size: 9.5pt;
+    color: #7f8c8d
+}
+
+.status-cell {
     text-align: center;
     font-size: 1.35em;
-    padding: 1px;    
-    font-family: "Segoe UI Emoji Windows 11";
+    padding: 1px;
+    font-family: "Segoe UI Emoji Windows 11"
 }
 
-
-.editable-status, .editable-verify {
-    cursor: pointer; 
-    transition: background-color 0.2s, transform 0.1s; 
-    border-radius: 3px; 
-    box-shadow: 0 1px 2px rgba(64, 64, 64, 0.1);
-    -webkit-user-select: none; /* Prevent text selection */
+.editable-status,.editable-verify {
+    cursor: pointer;
+    transition: background-color .2s,transform .1s;
+    border-radius: 3px;
+    box-shadow: 0 1px 2px rgba(64,64,64,.1);
+    -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
-    user-select: none;
+    user-select: none
 }
-.editable-status:hover, .editable-verify:hover  {
-    background-color: var(--light-colored-btn-color); 
+
+.editable-status:hover,.editable-verify:hover {
+    background-color: var(--light-colored-btn-color);
     transform: scale(1.1);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,.1)
 }
-.editable-status:active, .editable-verify:active  {
-    transform: scale(0.95); 
-    background-color: var(--light-colored-btn-color); 
+
+.editable-status:active,.editable-verify:active {
+    transform: scale(.95);
+    background-color: var(--light-colored-btn-color)
 }
+
 .detail-flex-container {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.25s ease-in-out, opacity 0.3s ease-in-out;
-    
+    transition: max-height .25s ease-in-out,opacity .3s ease-in-out;
     display: grid;
     grid-template-columns: 1fr 1fr 530px;
-    grid-template-rows: auto; 
-    
-    gap: 9px; 
+    grid-template-rows: auto;
+    gap: 9px;
     box-sizing: border-box;
     width: 100%;
     padding: 0 0 0 10px;
-    margin: 0;
+    margin: 0
 }
 
 .detail-row.expanded .detail-flex-container {
-    max-height: 3000px; 
+    max-height: 3000px;
     opacity: 1;
-    transition: max-height 0.5s ease-in-out, opacity 0.4s ease-in-out;
-    border-bottom: 1px solid #e0e0e0; 
+    transition: max-height .5s ease-in-out,opacity .4s ease-in-out;
+    border-bottom: 1px solid #e0e0e0
 }
 
-.detail-content, .detail-edit {
-    min-width: 0; 
-    /*! padding: 10px; */
-    box-sizing: border-box;
-}
-
-.detail-content p, .detail-edit p{
-    text-align: justify; 
-    white-space: normal;
-    margin-bottom: 0.5em; 
-}
-.detail-row > td {
-    padding: 0;
-}
-
-.detail-content, .detail-edit {
+.detail-content {
     min-width: 0;
     box-sizing: border-box;
-    padding: 4px;
+    padding: 4px
 }
 
-.detail-edit{
+.detail-edit {
+    min-width: 0;
     grid-column: 3/4;
-    grid-row: 1/3;
+    grid-row: 1/3
 }
-.detail-content p, .detail-edit p {
+
+.detail-content p,.detail-edit p {
     text-align: justify;
     white-space: normal;
-    margin-bottom: 0.5em;
-    line-height: 1.3em;
+    margin-bottom: .5em;
+    line-height: 1.3em
 }
 
-.detail-edit input[type="text"] {
-    width: 100%;
-    /*! min-width: 150px; */
-    box-sizing: border-box;
+.detail-row>td {
+    padding: 0
+}
+
+.detail-edit input[type=text] {
     padding: 6px;
     border: 1px solid #dadada;
     border-radius: 5px;
     font-family: inherit;
     font-size: 1em;
-    background: #ffffffa0;
+    background: #ffffffa0
 }
+
 .save-btn {
     background-color: var(--save-btn-color);
     width: 170px;
-    font-weight: bold;
+    font-weight: 700
 }
 
-#classify-remaining-btn, #classify-all-btn, .classify-btn {
-    background: var(--classify-btn-color);
+#classify-all-btn,#classify-remaining-btn,.classify-btn {
+    background: var(--classify-btn-color)
 }
 
-#verify-all-btn, #verify-remaining-btn, .verify-btn {
-    background: var(--verify-btn-color);
+#verify-all-btn,#verify-remaining-btn,.verify-btn {
+    background: var(--verify-btn-color)
 }
 
-#verify-all-btn strong, #classify-all-btn strong {
-    text-decoration: underline;
+#classify-all-btn strong,#verify-all-btn strong {
+    text-decoration: underline
 }
 
-#import-bibtex-btn, #export-html-btn{
-    min-width: 150px;
+#export-html-btn,#import-bibtex-btn {
+    min-width: 150px
 }
-#export-html-btn{
-    background: var(--export-html-btn-color);
+
+#export-html-btn {
+    background: var(--export-html-btn-color)
 }
-#export-xlsx-btn{
-    background: var(--export-xlsx-btn-color);
+
+#export-xlsx-btn {
+    background: var(--export-xlsx-btn-color)
 }
+
 #stats-btn {
     width: 130px;
     max-width: 130px;
     min-width: 130px;
-    background:var(--stats-primary-ui-color);
+    background: var(--stats-primary-ui-color)
 }
-#apply-serverside-filters, #static-stats-btn{
+
+#apply-serverside-filters,#static-stats-btn {
     background: var(--light-colored-btn-color);
     width: 120px;
     max-width: 120px;
@@ -515,124 +450,104 @@ form input[type="text"] {
     color: var(--light-colored-btn-text);
     font-size: 10.5pt;
     text-shadow: var(--light-shadow);
-    transition: 0.2s all ease-in-out;
+    transition: .2s all ease-in-out
 }
+
 #fullscreen-btn {
-    background: transparent;
+    background: 0 0;
     width: 28px;
     max-width: 28px;
     min-width: 28px;
     height: 36px;
     padding: 0;
     box-shadow: none;
-    display: none;
+    display: none
 }
-#about-btn{
+
+#about-btn {
     width: 30px;
     min-width: 30px;
-    padding: 0;
-    background-color: #7a8081;
+    padding: 0
 }
+
 a {
     text-decoration: none;
     color: var(--link-color);
-    font-weight: 400;
+    font-weight: 400
 }
-
 
 th.inferred-header {
-    background: var(--inferred-ui-color);
-    box-shadow: inset 0 -0px 0px 0.75px var(--th-border-color);
-}
-th.inferred-header-2 {
-    filter: contrast(1.1) saturate(0.95) hue-rotate(-16deg);
-}th.inferred-header-3 {
-    filter: contrast(1.15) saturate(0.95) hue-rotate(-36deg);
+    background: var(--inferred-ui-color)
 }
 
-#inferred-header-title{
-    background: linear-gradient(90deg, var(--inferred-ui-color), var(--inferred-gradient-end-color));
+th.inferred-header-2 {
+    filter: contrast(1.1) saturate(.95) hue-rotate(-16deg)
 }
-#inferred-header-title div{
+
+th.inferred-header-3 {
+    filter: contrast(1.15) saturate(.95) hue-rotate(-36deg)
+}
+
+#inferred-header-title {
+    background: linear-gradient(90deg,var(--inferred-ui-color),var(--inferred-gradient-end-color))
+}
+
+#inferred-header-title div {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     padding: 0 6px
 }
-/* --- Filter Item Styles --- */
 
 .filter-item {
-    display: inline-flex; /* Use flexbox for better alignment control */
-    align-items: center;  /* Align items vertically in the center */
-    white-space: nowrap;  /* Prevent wrapping within a single filter item */
-    /* Add padding if needed for internal spacing */
-    padding: 5px;
-    font-size: 11pt;
+    white-space: nowrap
 }
 
-input[type="checkbox"] {
+input[type=checkbox] {
     height: 12px;
     width: 12px;
     margin: 0;
-    transform: scale(2,2) translate(1.5px,-0.5px);
+    transform: scale(2,2) translate(1.5px,-.5px);
     border-radius: 0;
-    opacity: 0.5;
+    opacity: .5
 }
-input[type="checkbox"]:checked {
+
+input[type=checkbox]:checked {
     opacity: 1;
-/*! filter: invert() hue-rotate(135deg); */
-    filter: hue-rotate(-50deg) brightness(1.3);
-    /* border: 2px solid white; */
-    /*! border-radius: 2px; */
+    filter: hue-rotate(-50deg) brightness(1.3)
 }
 
-/* Optional: Adjust label alignment if needed */
 .filter-item label {
-    margin-bottom: 0; /* Override any default margin-bottom on labels */
-    /* line-height can help align text with the checkbox if needed */
-    /*! line-height: 1.5; */
+    margin-bottom: 0
 }
 
-
-/* --- Add this rule for filtering --- */
 tr.filter-hidden {
-    display: none;
+    display: none
 }
-/* --- End of new rule --- */
 
-
-/* --- Sticky Footer Styles --- */
 #counts-footer {
     position: sticky;
     bottom: 0;
-    z-index: 998; /* Below header */
-    border-radius: 6px;
+    z-index: 998;
+    border-radius: 6px
 }
 
 #counts-footer tr {
-    background-color: var(--primary-ui-color); /* Match header background */
-    color: white;
-    font-weight: bold;
+    background-color: var(--primary-ui-color);
+    color: #fff;
+    font-weight: 700
 }
 
 #counts-footer td {
-    text-align: center; /* Center the counts */
-    /*! box-shadow: inset 0 -0px 0px 0.75px #0a5662; */ /* Match header border */
+    text-align: center;
     font-size: 9pt;
-     /* Match header min-width */
-    padding: 9px 0px;
+    padding: 9px 0
 }
 
-
-/* --- Styles for Reasoning Traces --- */
-
-/* Container for the trace content within the detail row */
 .trace-content {
-    /* Preserves whitespace and line breaks like <pre> */
     white-space: pre-wrap;
-    /* Allows long lines to wrap within the container */
-    word-wrap: break-word; /* For older browser support, though word-break is often sufficient now */
-    word-break: break-word; /* Breaks long words if necessary to fit container width */
+    word-wrap: break-word;
+    word-break: break-word;
     padding: 8px 12px;
     border: 1px solid #dadada;
     background-color: #aaaaaa0b;
@@ -640,314 +555,237 @@ tr.filter-hidden {
     height: 300px;
     overflow-y: auto;
     overflow-x: hidden;
-    margin: 6px 0 10px 0;
-    font-size: 10.5pt;
+    margin: 6px 0 10px;
+    font-size: 10.5pt
 }
 
-/* Ensures the trace container gets enough space in the flex/grid layout */
-.detail-evaluator-trace,
-.detail-verifier-trace {
-    /* You might adjust flex-basis or width if needed, e.g., flex-basis: 100%; */
-    /* For grid, you might need grid-column: span X; depending on your grid setup */
-    /* Let's assume the parent flex container handles wrapping adequately for now */
-    /* If traces need more specific sizing, add it here */
-    flex-basis: 100%; /* Forces full width on new line(s) within flex container, adjust if needed */
-    min-width: 100%; /* Allows the content to shrink below its intrinsic width if necessary */
+.detail-evaluator-trace,.detail-verifier-trace {
+    flex-basis: 100%;
+    min-width: 100%
 }
-#main-header-wrapper{
-    padding: 0;
+
+#main-header-wrapper {
+    padding: 0
 }
+
 .main-header {
-    /*! width: calc(100% - 30px); */
     display: grid;
-    grid-template-columns: auto auto 1fr auto auto auto; /* Title, Filters, Controls */
-    grid-template-rows: auto; /* Single row */
-    gap: 4px; /* Space between items */
-    align-items: center; /* Align items vertically */
-    /*! padding: 0px 15px; */
-    background-color: #e0e6ed; /* Example background */
-    /* border: 1px solid #c0cacc; Example border */
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    grid-template-columns: auto auto 1fr auto auto auto;
+    grid-template-rows: auto;
+    gap: 4px;
+    align-items: center;
+    background-color: #e0e6ed;
+    box-shadow: 0 1px 3px rgba(0,0,0,.1);
     min-width: 1580px;
     height: 48px;
     background: var(--detail-button-background);
-    border-radius: 8px 8px 0 0;
+    border-radius: 8px 8px 0 0
 }
 
 .header-title h2 {
-    margin: 0; /* Remove default margin */
-    color: #2c3e50; /* Example text color */
-    font-size: 1.5em; /* Adjust title size if needed */
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.5em
 }
 
 .header-filters {
     display: flex;
-    flex-wrap: wrap; /* Allow items to wrap if needed */
-    gap: 15px; /* Space between filter items */
-    align-items: center; /* Align items vertically */
-    /* Optional: justify-content: center; or space-between; */
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
     color: #eee;
-    font-weight: 400;  
-    justify-content: space-between;
+    font-weight: 400;
+    justify-content: space-between
 }
 
 .filter-item {
-    display: inline-flex; /* Keep flex for alignment */
-    align-items: center;  /* Align items vertically */
-    /*! white-space: nowrap; */  /* Prevent wrapping within a single filter item */
-    padding: 5px; /* Keep padding */
-    font-size: 10.5pt; /* Keep font size */
-    /* background: #f0f0f0; */ /* Optional background for filter items */
-    /* border-radius: 4px; */ /* Optional rounded corners */
+    display: inline-flex;
+    align-items: center;
+    padding: 5px;
+    font-size: 10.5pt
 }
 
 #batch-status-message {
-    font-size: 9.5pt;
+    font-size: 9.5pt
 }
 
-
-
-
-.header-controls{
-    margin: 0 4px;
+.header-controls {
+    margin: 0 4px
 }
 
-
-
-
-
-
-
-/* --- ONLY Modifications within .detail-edit using Grid --- */
-
-/* Ensure the edit section itself can participate in layout correctly */
-/* It's already positioned by the parent grid, so focus on internal layout */
 .detail-edit {
-    /* Make .detail-edit itself a grid container for its direct children (form) */
-    /* Or, make the form the grid container. Let's do that for cleaner structure. */
-    /* Ensure it takes the height allocated by the parent grid */
-    display: grid; /* Make it a grid if needed, but content dictates size */
-    height: 100%; /* Take full height of its grid cell */
+    display: grid;
+    height: 100%;
     padding: 0 12px 12px 0;
-    box-sizing: border-box;
+    box-sizing: border-box
 }
 
-/* --- Make the form the Grid Container --- */
 .detail-edit form {
     display: grid;
-    /* Define explicit columns for the inputs/areas */
-    /* Two columns for the first row (Research Area, Model Name) */
-    /* One column for the full-width items below (Other, Page Count, Comments) */
-    /* One row for the top inputs, one for the expanding comments, one for buttons */
-    grid-template-columns: 1fr 1fr 1fr 90px; /* Two equal flexible columns */
-    grid-template-rows: auto auto 1fr auto; /* Rows: labels, labels, textarea, buttons */
-    gap: 10px; /* Consistent gap between grid items */
-    height: calc(100% - 16px); /* Fill the .detail-edit area */
+    grid-template-columns: 1fr 1fr 1fr 90px;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 10px;
+    height: calc(100% - 16px)
 }
 
-/* --- Place Research Area and Model Name on the first grid line --- */
-/* Target the first two labels directly */
-.detail-edit form > label:nth-of-type(1) { /* Research Area */
-    grid-column: 1 / 3;
-    grid-row: 1 / 2;
-}
-.detail-edit form > label:nth-of-type(2) { /* Model Name */
-    grid-column: 3 / 5;
-    grid-row: 1 / 2;
+.detail-edit form>label:nth-of-type(1) {
+    grid-column: 1/3;
+    grid-row: 1/2
 }
 
-/* --- Ensure inputs within these labels expand to fill their grid cells --- */
-.detail-edit form > label:nth-of-type(1) > input[type="text"],
-.detail-edit form > label:nth-of-type(2) > input[type="text"] {
-    width: 100%; /* Expand to fill the label container */
-    box-sizing: border-box;
+.detail-edit form>label:nth-of-type(2) {
+    grid-column: 3/5;
+    grid-row: 1/2
 }
 
-/* --- Place Other Defects and Page Count on the second grid line --- */
-.detail-edit form > label:nth-of-type(3) { /* Other Defects */
-    grid-column: 1 / 3;
-    grid-row: 2 / 3;
+.detail-edit form>label:nth-of-type(3) {
+    grid-column: 1/3;
+    grid-row: 2/3
 }
-.detail-edit form > label:nth-of-type(4) { /* Page Count */
-    grid-column: 3 / 4;
-    grid-row: 2 / 3;
+
+.detail-edit form>label:nth-of-type(4) {
+    grid-column: 3/4;
+    grid-row: 2/3
 }
-.detail-edit form > label:nth-of-type(5) { /* Relevance */
-    grid-column: 4 / 5;
-    grid-row: 2 / 3;
+
+.detail-edit form>label:nth-of-type(5) {
+    grid-column: 4/5;
+    grid-row: 2/3
 }
-/* Ensure inputs for these expand */
-.detail-edit form > label:nth-of-type(3) > input[type="text"],
-.detail-edit form > label:nth-of-type(4) > input[type="text"] {
+
+.detail-edit input[type=text] {
     width: 100%;
-    box-sizing: border-box;
+    box-sizing: border-box
 }
 
-
-/* --- Make User Comments Textarea Expand --- */
-/* Target the label containing the textarea */
-.detail-edit form > label:nth-of-type(6) { 
-    /* Span both columns */
-    grid-column: 1 / -1; /* From column 1 to the end */
-    /* Place it in the row designed for the expanding content */
-    grid-row: 3 / 4;
-    /* Make this label itself a flex column to manage the textarea inside */
+.detail-edit form>label:nth-of-type(6) {
+    grid-column: 1/-1;
+    grid-row: 3/4;
     display: flex;
-    flex-direction: column;
+    flex-direction: column
 }
-/* Make the textarea itself expand to fill the label's grid cell */
+
 .detail-edit form textarea.editable {
-    /* flex-grow: 1; /* Expand within the flex label */
     width: 100%;
     min-width: 100%;
-    /* Make the textarea fill the label's grid cell */
-    height: 100%; /* Use 100% height managed by grid/flex parent */
+    height: 100%;
     box-sizing: border-box;
-    /* Remove any fixed height from global styles if conflicting */
-    /* height: auto; /* Let grid handle height */
-    min-height: 150px; /* Optional: Set a minimum height */
+    min-height: 150px;
     border-radius: 5px;
     display: block;
     resize: none;
-    background: #ffffffa0; /* /* Allow user to resize vertically if needed */
-    border: 1px solid #dadada;
+    background: #ffffffa0;
+    border: 1px solid #dadada
 }
 
-.detail-edit form > .row-actions {
-    /* Span both columns */
-    grid-column: 1 / -1;
-    /* Place it in the last row */
-    grid-row: 4 / 5;
-    /* Optional: Align buttons */
-    text-align: left; /* Or use flexbox/grid inside .row-actions for button layout */
+.detail-edit form>.row-actions {
+    grid-column: 1/-1;
+    grid-row: 4/5;
+    text-align: left;
     display: flex;
     align-content: space-around;
-    justify-content: space-between;
+    justify-content: space-between
 }
 
 .number-cell {
-    text-align: center;
+    text-align: center
 }
-
 
 .ontop-header {
     z-index: 100
 }
 
-.modal-content {
-    background: linear-gradient(180deg, var(--stats-primary-ui-color) 0%, var(--stats-primary-ui-color) 20px, #f5f7fad9 20px);
-     /* 5vh top/bottom margin */
+.modal-content,.modal-small-content {
+    background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px,#f5f7fad9 20px);
     border: 2px solid var(--stats-primary-ui-color);
-    width: calc(100vw - 180px);
-    min-width: 1600px;
-    height: calc(100vh - 20px); /* Limit height */
     border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
     position: relative;
-    box-sizing: border-box; /* Include padding/border in width/height */
+    box-sizing: border-box;
     overflow: hidden;
-    /*! transform: scale(95%) translateY(-20px); */
-    
-    transform: scale3d(0.94, 0.94, 1) rotate3d(2, 1, 0, 2.5deg) translateY(-20px);
-    transition: transform 0.3s ease-out; /* Animate transform */
-    display: grid;
-    grid-template-columns: 540px 305px 1fr;
+    transform: scale3d(.94,.94,1) rotate3d(2,1,0,2.5deg) translateY(-20px);
+    transition: transform .3s ease-out;
+    display: grid
 }
 
+.modal-content {
+    width: calc(100vw - 180px);
+    min-width: 1600px;
+    height: calc(100vh - 20px);
+    grid-template-columns: 540px 305px 1fr
+}
+
+.modal-small-content {
+    width: 1200px;
+    grid-template-columns: 3fr 1fr
+}
+
+.modal-small-section h4,.modal-small-section p,.modal-small-section ul {
+    padding: 0 16px
+}
 
 .close {
     color: #eee;
     float: right;
     font-size: 28px;
-    font-weight: bold;
+    font-weight: 700;
     position: absolute;
     right: 16px;
     top: 4px;
     cursor: pointer;
-    z-index: 1001; /* Above content */
-    text-shadow: var(--dark-shadow);
+    z-index: 1001;
+    text-shadow: var(--dark-shadow)
 }
 
-.close:hover,
-.close:focus {
-    color: white;
-    text-decoration: none;
+.close:focus,.close:hover {
+    color: #fff;
+    text-decoration: none
 }
-
 
 .stats-section ul {
     list-style-type: none;
     padding-left: 0;
     margin: 0;
-    overflow: hidden;
+    overflow: hidden
 }
 
 .stats-section li {
     padding: 4px 0;
-    font-size: 9.5pt;
-    /*! display: flex; */
-    /*! justify-content: ; */ /* Align count to the right */
-    /*! flex-direction: row; */
-    /*! flex-wrap: wrap; */
-    /*! text-align: right; */
+    font-size: 9.5pt
 }
 
 .stats-section li span.count {
-    font-weight: bold;
-    min-width: 40px; /* Ensure consistent spacing for counts */
+    font-weight: 700;
+    min-width: 40px;
     display: inline-block;
-    text-align: center;
+    text-align: center
 }
+
 .stats-section p {
     padding: 0 10px;
-    /*! text-align: right; */
-    /*! width: calc(100% - 350px); */
-    /*! color: #eee; */
-    font-size: 10.5pt;
+    font-size: 10.5pt
 }
 
-/* Add this rule inside static/style.css */
-
-/* --- Styles for Multi-Column Stats List --- */
 .stats-list-multicolumn-short {
-    /* Use CSS Columns */
     column-count: 2;
-    column-gap: 0px; /* Adjust gap between columns as needed */
-    /* Ensure list items don't break across columns awkwardly */
-    break-inside: avoid-column;
-    /* Optional: Add a small padding if the columns feel too close to the edge */
-    padding: 0 10px;
+    padding: 0 10px
 }
 
-/* --- Styles for Multi-Column Stats List --- */
-.stats-list-multicolumn-2 {
-    /* Use CSS Columns */
-    /*! column-count: 1; */
-    column-gap: 0px; /* Adjust gap between columns as needed */
-    /* Ensure list items don't break across columns awkwardly */
-    break-inside: avoid-column;
-    /* Optional: Add a small padding if the columns feel too close to the edge */
-    /*! padding: 0 10px; */
+.stats-list-multicolumn-2,.stats-list-multicolumn-short {
+    column-gap: 0;
+    break-inside: avoid-column
 }
-/* Ensure list items behave well within the multi-column layout */
+
 .stats-list-multicolumn li {
-    /* Each <li> should try to stay together */
-    break-inside: avoid;
-    /* Optional: Add a bit of vertical padding if items feel cramped */
-    /* padding: 2px 0; */
+    break-inside: avoid
 }
 
-/* --- Stats Modal Styles --- */
 .modal {
-     /* Hidden by default */
-    z-index: 1000; /* Sit on top */
-    overflow: auto; /* Enable scroll if needed */
-     /* Semi-transparent background */
-     /* Optional: blur background */
-    opacity: 0; /* Start fully transparent */
-    pointer-events: none; /* Ignore mouse events when hidden */
-    transition: opacity 0.3s ease-in-out; /* Animate opacity */
-    transition-delay: 0.15s;
+    z-index: 1000;
+    overflow: auto;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease-in-out;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -958,60 +796,62 @@ tr.filter-hidden {
     height: 100%;
     background: var(--modal-wrapper-background);
     backdrop-filter: blur(12px);
-    perspective: 100vh;
+    perspective: 100vh
 }
 
-/* When the modal is active/shown */
+.modal p {
+    text-align: justify
+}
+
 .modal.modal-active {
-    opacity: 1; /* Fully opaque */
-    pointer-events: auto; /* Enable mouse events */
-    /* Keep the existing backdrop styles */
-    transition-delay: 0.5s;
+    opacity: 1;
+    pointer-events: auto;
+    transition-delay: .5s
+}
+
+.modal.modal-active .modal-content,.modal.modal-active .modal-small-content {
+    transform: none;
+    transition-delay: .5s
 }
 
 .stats-section {
     overflow-y: scroll;
-    overflow-x: hidden;
+    overflow-x: hidden
 }
-/* When the modal is active, move it to its final position */
-.modal.modal-active .modal-content {
-    transform: none; /* Final position */
-    transition-delay: 0.5s;
-}
-/* --- End Stats Modal Animation Styles --- */
 
 .stats-lists {
     display: grid;
     grid-template-rows: 1fr 1.5fr 1fr 90px 1fr 1fr;
     border-right: 2px solid var(--stats-primary-ui-color);
-    flex: 1; /* Take remaining space */
-    min-height: 0; /* Prevent overflow */
+    flex: 1;
+    min-height: 0
 }
 
-@media screen and (max-width: 1880px) {
+@media screen and (max-width:1880px) {
     body {
-        margin: 0px;
+        margin: 0
     }
 
-    .table-container { 
+    .table-container {
         max-height: calc(100vh);
-        border-radius: 0px;
+        border-radius: 0;
         background: var(--primary-ui-color);
-        border: none;
+        border: 0
     }
-        
+
     .loading-overlay {
-        left: 0px;
+        left: 0;
         width: calc(100%);
         height: calc(100%);
-        border-radius: 0px;
+        border-radius: 0
     }
-        
+
     .main-header {
-        border-radius: 0;
+        border-radius: 0
     }
 }
-::-webkit-scrollbar { /* WebKit */
+
+::-webkit-scrollbar {
     width: 0;
-    height: 0;
+    height: 0
 }
