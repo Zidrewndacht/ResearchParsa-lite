@@ -70,13 +70,13 @@
                             <div class="filter-item">
                                 <input type="checkbox" id="hide-short-checkbox"  style="display: none;">
                                 <label for="min-page-count">Min. page count ≥</label>
-                                <input type="number" id="min-page-count" value="{{ min_page_count_value }}" min="{{ min_page_count_value }}" max="9">
+                                <input type="number" id="min-page-count" value="{{ min_page_count_value }}" min="{{ min_page_count_value }}" max="9" title="Exported file contains papers with at least {{ min_page_count_value }} pages">
                             </div>
                             <div class="filter-item">
                                 <label for="year-from">Year:</label>
-                                <input type="number" id="year-from" value="{{ year_from_value }}" min="{{ year_from_value }}" max="{{ year_to_value }}">
+                                <input type="number" id="year-from" value="{{ year_from_value }}" min="{{ year_from_value }}" max="{{ year_to_value }}" title="Exported file contains papers from {{ year_from_value }} to {{ year_to_value }}.">
                                 <label for="year-to">to</label>
-                                <input type="number" id="year-to" value="{{ year_to_value }}" min="{{ year_from_value }}" max="{{ year_to_value }}">
+                                <input type="number" id="year-to" value="{{ year_to_value }}" min="{{ year_from_value }}" max="{{ year_to_value }}" title="Exported file contains papers from {{ year_from_value }} to {{ year_to_value }}.">
                             </div>
                             <div>
                                 <button class="action-btn" id="static-about-btn" title="About / Help" ><span>?</span></button>
@@ -97,7 +97,7 @@
                     </th>
                 </tr>
                 <tr>
-                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" id="hide-offtopic-checkbox" {% if hide_offtopic == true %}checked disabled title="File was exported only with ontopic papers"{% endif %}></th>
+                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" id="hide-offtopic-checkbox" {% if hide_offtopic == true %}checked disabled title="Can't unhide offtopic papers. File was exported only with ontopic papers"{% endif %}></th>
                     <th class="inferred-header ontop-header" colspan="1"></th>
                     <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to only show Surveys" id="only-survey-checkbox"></th>
                     <th class="inferred-header ontop-header" colspan="2"></th>
@@ -106,7 +106,6 @@
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="4">Solder</th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="5">PCBA</th>
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="8">Techniques</th>
-                    
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="1"></th>
                 </tr>
                 <tr>
