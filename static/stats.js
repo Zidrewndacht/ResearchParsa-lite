@@ -609,7 +609,6 @@ function displayAbout(){
     setTimeout(() => {
         modalSmall.offsetHeight;
         modalSmall.classList.add('modal-active');
-
     }, 20);
 }
 

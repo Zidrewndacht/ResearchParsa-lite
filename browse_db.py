@@ -666,6 +666,8 @@ def index():
         total_paper_count=total_paper_count
     )
 
+# ... (other imports and code) ...
+
 @app.route('/static_export', methods=['GET'])
 def static_export():
     """Generate and serve a downloadable HTML snapshot based on current filters."""
@@ -675,6 +677,10 @@ def static_export():
     year_to_param = request.args.get('year_to')
     min_page_count_param = request.args.get('min_page_count')
     search_query_param = request.args.get('search_query') # Include search
+    # --- NEW: Get the 'download' parameter ---
+    download_param = request.args.get('download', default='1') # Default to '1' (download)
+    # --- END NEW ---
+
     # --- Determine filter values, using defaults if not provided or invalid ---
     hide_offtopic = True # Default
     if hide_offtopic_param is not None:
@@ -683,6 +689,7 @@ def static_export():
     year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
     min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
     search_query_value = search_query_param if search_query_param is not None else ""
+
     # --- Fetch papers based on these filters ---
     papers = fetch_papers(
         hide_offtopic=hide_offtopic,
@@ -691,6 +698,7 @@ def static_export():
         min_page_count=min_page_count_value,
         search_query=search_query_value # Pass the search query
     )
+
     # --- Read static file contents ---
     fonts_css_content = ""
     style_css_content = ""
@@ -743,7 +751,6 @@ def static_export():
         chart_js_content=Markup(chart_js_content),
         ghpages_js_content=Markup(ghpages_js_content)
     )
-
     # # --- Minify the final HTML ---
     # # Doesn't really work since it minifies away all newlines from thinking traces even with <!-- htmlmin:ignore -->
     # # htmlmin options can be adjusted. remove_empty_space=True is common.
@@ -755,12 +762,10 @@ def static_export():
     #     remove_comments=False, # Enable if you want to remove HTML comments
     #     keep_pre=True, # Important if you have <pre> tags that need formatting
     # )
-
     pako_js_content = ""
     # Assuming pako.min.js is in your 'static' directory
     with open(os.path.join(static_dir, 'pako.min.js'), 'r', encoding='utf-8') as f:
         pako_js_content = f.read()
-        
     # --- Compress the full HTML content ---
     # 1. Encode the HTML string to bytes (UTF-8)
     html_bytes = full_html_content.encode('utf-8')
@@ -794,13 +799,29 @@ def static_export():
                 filename_parts.append(f"search_{safe_search[:20]}") # Limit length
     filename = "_".join(filename_parts) + ".html"
 
-    # --- Return the LOADER HTML as a downloadable attachment ---
+    # --- Prepare Response Headers ---
     from flask import Response
+    response_headers = {"Content-Type": "text/html"} # Ensure correct content type
+
+    # --- MODIFIED: Determine Content-Disposition based on 'download' parameter ---
+    if download_param == '0':
+        # If download=0, set Content-Disposition to 'inline' to display in browser
+        response_headers["Content-Disposition"] = f"inline; filename={filename}"
+        print(f"Serving static export inline: {filename}") # Optional: Log action
+    else:
+        # Default behavior: prompt for download
+        response_headers["Content-Disposition"] = f"attachment; filename={filename}"
+        print(f"Sending static export as attachment: {filename}") # Optional: Log action
+    # --- END MODIFIED ---
+
+    # --- Return the LOADER HTML with appropriate headers ---
     return Response(
         loader_html_content, # Send the small loader with embedded compressed data
         mimetype="text/html",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers=response_headers # Use the prepared headers
     )
+
+# ... (rest of the file) ...
 
 @app.route('/xlsx_export', methods=['GET'])
 def export_excel():

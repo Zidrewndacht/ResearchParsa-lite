@@ -135,6 +135,6 @@ OK      Refactor filtering.js (too large): separate stats.js
         
 OK      Fix fixed-position JS columns (e.g. verifier score updating wrong column);
 
-        Update commented&other field displays on save;
+        Update commented&other field displays on save.
 
-        Fix sort by date to actually sort by date instead of alphabetic;
+        Add year/page count filters to statistics page?

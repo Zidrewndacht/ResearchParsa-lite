@@ -31,7 +31,8 @@
     --light-shadow: 1px 0 5px #fff6;
     --th-border-color: #0000003b;
     --link-color: rgb(0, 45, 115);
-    --detail-button-background: linear-gradient(180deg, hsl(210, 20%, 83%) 0%, hsl(210, 25%, 92%) 100%)
+    --detail-button-background: linear-gradient(180deg, hsl(210, 24%, 87%) 0%, hsl(210, 32%, 93%) 60%);
+    --min-width: 1620px;
 }
 
 body {
@@ -110,7 +111,7 @@ table {
     border-collapse: collapse;
     width: 100%;
     background-color: #fff;
-    min-width: 1580px;
+    min-width: var(--min-width);
     border-radius: 6px
 }
 
@@ -436,21 +437,30 @@ form input[type=text] {
 }
 
 #stats-btn {
-    width: 130px;
-    max-width: 130px;
-    min-width: 130px;
-    background: var(--stats-primary-ui-color)
+    width: 160px;
+    max-width: 160px;
+    min-width: 160px;
+    background: var(--stats-primary-ui-color);
 }
 
-#apply-serverside-filters,#static-stats-btn {
+#apply-serverside-filters, #static-stats-btn {
     background: var(--light-colored-btn-color);
-    width: 120px;
-    max-width: 120px;
-    min-width: 120px;
+    width: 125px;
+    max-width: 125px;
+    min-width: 125px;
     color: var(--light-colored-btn-text);
-    font-size: 10.5pt;
+    font-size: 10pt;
     text-shadow: var(--light-shadow);
-    transition: .2s all ease-in-out
+    transition: .2s all ease-in-out;
+    padding: 0;
+}
+
+#static-about-btn {
+    background: var(--light-colored-btn-color);
+    color: var(--light-colored-btn-text);
+    width: 30px;
+    min-width: 30px;
+    padding: 0;
 }
 
 #fullscreen-btn {
@@ -576,7 +586,7 @@ tr.filter-hidden {
     align-items: center;
     background-color: #e0e6ed;
     box-shadow: 0 1px 3px rgba(0,0,0,.1);
-    min-width: 1580px;
+    min-width: var(--min-width);
     height: 48px;
     background: var(--detail-button-background);
     border-radius: 8px 8px 0 0
@@ -721,7 +731,7 @@ tr.filter-hidden {
 }
 
 .modal-small-section h4,.modal-small-section p,.modal-small-section ul {
-    padding: 0 16px
+    padding: 0 24px
 }
 
 .close {

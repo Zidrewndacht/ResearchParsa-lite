@@ -383,6 +383,9 @@ function sortTable() {
 const statsBtn = document.getElementById('static-stats-btn');
 const modal = document.getElementById('statsModal');
 const spanClose = document.querySelector('#statsModal .close');
+const aboutBtn = document.getElementById('static-about-btn');
+const modalSmall = document.getElementById('aboutModal');
+const smallClose = document.querySelector('#aboutModal .close');
 
 function calculateStats() {
     const stats = {
@@ -1088,27 +1091,14 @@ function displayStats() {
     modal.classList.add('modal-active');
 }
 
-function closeModal() { modal.classList.remove('modal-active'); }
-
-if (spanClose) { spanClose.addEventListener('click', closeModal); }
-
-window.addEventListener('click', function (event) {
-    if (event.target === modal) { closeModal(); }
-});
-
-document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape' && modal.classList.contains('modal-active')) { closeModal(); }
-});
-
-if (statsBtn) {
-    statsBtn.addEventListener('click', function () {
-        document.documentElement.classList.add('busyCursor');
-        setTimeout(() => {
-            displayStats();
-            document.documentElement.classList.remove('busyCursor');
-        }, 10);
-    });
+function displayAbout(){
+    setTimeout(() => {
+        modalSmall.offsetHeight;
+        modalSmall.classList.add('modal-active');
+    }, 20);
 }
+function closeModal() { modal.classList.remove('modal-active'); }
+function closeSmallModal() { modalSmall.classList.remove('modal-active'); }
 
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -1126,8 +1116,27 @@ document.addEventListener('DOMContentLoaded', function () {
     onlySurveyCheckbox.addEventListener('change', scheduleFilterUpdate);
 
     headers.forEach(header => { header.addEventListener('click', sortTable); });
-
+    statsBtn.addEventListener('click', function () {
+        document.documentElement.classList.add('busyCursor');
+        setTimeout(() => {
+            displayStats();
+            document.documentElement.classList.remove('busyCursor');
+        }, 10);
+    });
+    aboutBtn.addEventListener('click', displayAbout);
+    
     scheduleFilterUpdate();
+
+    // --- Close Modal
+    spanClose.addEventListener('click', closeModal);
+    smallClose.addEventListener('click', closeSmallModal);
+    document.addEventListener('keydown', function (event) {
+        // Check if the pressed key is 'Escape' and if the modal is currently active
+        if (event.key === 'Escape') { closeModal(); closeSmallModal(); }
+    });
+    window.addEventListener('click', function (event) {
+        if (event.target === modal || event.target === modalSmall) { closeModal(); closeSmallModal(); }
+    });
 
     setTimeout(() => {
         document.documentElement.classList.add('busyCursor');
