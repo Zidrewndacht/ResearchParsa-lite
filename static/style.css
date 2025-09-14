@@ -726,8 +726,8 @@ tr.filter-hidden {
 }
 
 .modal-small-content {
-    width: 1200px;
-    grid-template-columns: 3fr 1fr
+    width: 1080px;
+    grid-template-columns: 5fr 2fr;
 }
 
 .modal-small-section h4,.modal-small-section p,.modal-small-section ul {
