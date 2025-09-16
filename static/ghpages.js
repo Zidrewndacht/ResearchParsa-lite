@@ -1115,8 +1115,8 @@ function displayStats() {
         // Generate a distinct color for each type (simple hue rotation)
         // You might want to use a more sophisticated color palette
         const hue = (index * 137.508) % 360; // Golden angle approximation for spread
-        const borderColor = `hsl(${hue}, 50%, 75%)`; // Slightly darker border
-        const backgroundColor = `hsla(${hue}, 70%, 45%, 0.5)`; // Lighter fill
+        const borderColor = `hsl(${hue}, 50%, 50%)`; 
+        const backgroundColor = `hsla(${hue}, 60%, 45%, 0.5)`; 
 
         const data = yearsForPubTypes.map(year => pubTypesYearlyData[year]?.[type] || 0);
         return {
