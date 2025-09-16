@@ -9,6 +9,12 @@
     /* Overrides for static export: Disable editable status hover/active, doing it here because .editable-status is used by JS for sorting, etc.*/        
     .editable-status:active,.editable-status:hover,.editable-verify:active,.editable-verify:hover{transform:unset;background-color:unset;cursor:default}
     .editable-status:hover,.editable-verify:hover{box-shadow:0 1px 2px rgba(0,0,0,.1)}
+    /* fix ? / stats buttons misalingment cross-browser gaslighting: */
+    .header-filters > div:last-child { 
+        display: flex;
+        align-items: center; /* Align items vertically in the center */
+        gap: 4px; /* Control spacing between items */
+    }
     </style>
     <script>
     {{ chart_js_content | safe }}

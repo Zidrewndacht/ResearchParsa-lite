@@ -28,19 +28,16 @@
 <body>
     <!-- Message potentially visible if JS fails or is blocked -->
     <div id="previewMessage">
-        <p>This file requires JavaScript to decompress and load its content.</p>
-        <p>Download and open it in a full web browser to view.</p>
     </div>
 
     <div class="loading" id="splash-spinner" style="display: none;">
         <div class="spinner"></div>
-        <p>Decompressing PCB Inspection Papers data...</p>
+        <p>Trying to decompress and load page...</p>
+        <p>This file requires JavaScript to decompress and load its content.</br>
+        Download and open it in a full web browser to view.</p>
     </div>
 
     <script>
-        document.getElementById('previewMessage').style.display = 'none';
-        document.getElementById('splash-spinner').style.display = 'block';
-
         const compressedDataBase64 = "{{ compressed_html_data | safe }}";         // The compressed HTML data passed from Flask
 
         function loadContent() {
