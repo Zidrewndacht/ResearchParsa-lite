@@ -4,6 +4,11 @@ const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
 const hideXrayCheckbox = document.getElementById('hide-xray-checkbox');
 const hideApprovedCheckbox = document.getElementById('hide-approved-checkbox');
 const onlySurveyCheckbox = document.getElementById('only-survey-checkbox');
+
+const showPCBcheckbox = document.getElementById('show-pcb-checkbox');
+const showSolderCheckbox = document.getElementById('show-solder-checkbox');
+const showPCBAcheckbox = document.getElementById('show-pcba-checkbox');
+
 const minPageCountInput = document.getElementById('min-page-count');
 const yearFromInput = document.getElementById('year-from');
 const yearToInput = document.getElementById('year-to');
@@ -30,6 +35,7 @@ function updateCounts() {   //used by stats, comms and filtering
     const yearlySurveyImpl = {}; // { year: { surveys: count, impl: count } }
     const yearlyTechniques = {}; // { year: { technique_field: count, ... } }
     const yearlyFeatures =   {}; // { year: { feature_field: count, ... } }
+    const yearlyPubTypes = {}; // { year: { pubtype1: count, pubtype2: count, ... } }
 
     COUNT_FIELDS.forEach(field => counts[field] = 0);
 
@@ -75,6 +81,18 @@ function updateCounts() {   //used by stats, comms and filtering
                 FEATURE_FIELDS_FOR_YEARLY.forEach(f => yearlyFeatures[year][f] = 0);
             }
 
+
+            // --- NEW: Update Publication Type counts ---
+            const typeCell = row.cells[typeCellIndex]; // Assuming Type is the 1st column (index 0)
+            const pubTypeText = typeCell ? typeCell.getAttribute('title') || typeCell.textContent.trim() : ''; // Use title for full type if available
+            if (pubTypeText) {
+                if (!yearlyPubTypes[year]) {
+                    yearlyPubTypes[year] = {}; // Initialize object for this year's types
+                }
+                // Increment count for this type in this year
+                yearlyPubTypes[year][pubTypeText] = (yearlyPubTypes[year][pubTypeText] || 0) + 1;
+            }
+
             // Update Survey/Impl counts
             const isSurveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
             const isSurvey = isSurveyCell && isSurveyCell.textContent.trim() === '✔️';
@@ -107,7 +125,8 @@ function updateCounts() {   //used by stats, comms and filtering
     latestYearlyData = {
         surveyImpl: yearlySurveyImpl,
         techniques: yearlyTechniques,
-        features: yearlyFeatures
+        features: yearlyFeatures,
+        pubTypes: yearlyPubTypes // <-- Add this line
     };
 
     loadedPapersCountCell.textContent = loadedPaperCount;
@@ -235,9 +254,8 @@ function applyServerSideFilters() {
     document.documentElement.classList.add('busyCursor');
     const urlParams = new URLSearchParams(window.location.search);
 
-    const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
-    const isChecked = hideOfftopicCheckbox.checked;
-    urlParams.set('hide_offtopic', isChecked ? '1' : '0');
+    const isOfftopicChecked = hideOfftopicCheckbox.checked;
+    urlParams.set('hide_offtopic', isOfftopicChecked ? '1' : '0');
 
     const yearFromValue = document.getElementById('year-from').value.trim();
     if (yearFromValue !== '' && !isNaN(parseInt(yearFromValue))) {
@@ -295,33 +313,82 @@ function applyLocalFilters() {
     filterTimeoutId = setTimeout(() => {// Debounce the actual filtering
         const tbody = document.querySelector('#papersTable tbody');
         if (!tbody) return;
-
         const hideXrayChecked = hideXrayCheckbox.checked;
         const onlySurveyChecked = onlySurveyCheckbox.checked;
         const hideApprovedChecked = hideApprovedCheckbox.checked;
 
+        // --- NEW: Get the state of PCB/Solder/PCBA checkboxes ---
+        const showPCBChecked = showPCBcheckbox.checked;
+        const showSolderChecked = showSolderCheckbox.checked;
+        const showPCBAChecked = showPCBAcheckbox.checked;
+
         const rows = tbody.querySelectorAll('tr[data-paper-id]');
         rows.forEach(row => {
             let showRow = true;
-            let detailRow = null;
+            let detailRow = row.nextElementSibling; // Get the associated detail row
+
+            // Existing filters (X-Ray, Survey, Approved)
             if (showRow && hideXrayChecked) {
-                const offtopicCell = row.querySelector('.editable-status[data-field="is_x_ray"]');
-                if (offtopicCell && offtopicCell.textContent.trim() === '✔️') {
+                const xrayCell = row.querySelector('.editable-status[data-field="is_x_ray"]');
+                if (xrayCell && xrayCell.textContent.trim() === '✔️') {
                     showRow = false;
                 }
             }
             if (showRow && onlySurveyChecked) {
-                const offtopicCell = row.querySelector('.editable-status[data-field="is_survey"]');
-                if (offtopicCell && offtopicCell.textContent.trim() === '❌') {
+                const surveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
+                if (surveyCell && surveyCell.textContent.trim() === '❌') {
                     showRow = false;
                 }
             }
             if (showRow && hideApprovedChecked) {
-                const offtopicCell = row.querySelector('.editable-status[data-field="verified"]');
-                if (offtopicCell && offtopicCell.textContent.trim() === '✔️') {
+                const verifiedCell = row.querySelector('.editable-status[data-field="verified"]');
+                if (verifiedCell && verifiedCell.textContent.trim() === '✔️') {
                     showRow = false;
                 }
             }
+
+            // --- Apply NEW PCB/Solder/PCBA Group Filters (Inclusion Logic) ---
+            // Only apply this filter if at least one group is enabled (checked)
+            if (showRow && (showPCBChecked || showSolderChecked || showPCBAChecked)) {
+
+                // Function to check if a paper has ANY '✔️' in a given list of feature fields
+                const hasAnyFeature = (featureFields) => {
+                    return featureFields.some(fieldName => {
+                        const cell = row.querySelector(`[data-field="${fieldName}"]`);
+                        return cell && cell.textContent.trim() === '✔️';
+                    });
+                };
+
+                // Define feature fields for each group
+                const pcbFeatures = ['features_tracks', 'features_holes'];
+                const solderFeatures = [
+                    'features_solder_insufficient',
+                    'features_solder_excess',
+                    'features_solder_void',
+                    'features_solder_crack'
+                ];
+                const pcbaFeatures = [
+                    'features_orientation',
+                    'features_missing_component',
+                    'features_wrong_component',
+                    'features_cosmetic',
+                    'features_other_state'
+                ];
+
+                // For each *enabled* group, check if the paper has at least one ✔️ in that group.
+                // If it fails ANY enabled group's check, hide the row.
+                if (showPCBChecked && !hasAnyFeature(pcbFeatures)) {
+                    showRow = false;
+                }
+                if (showSolderChecked && !hasAnyFeature(solderFeatures)) {
+                    showRow = false;
+                }
+                if (showPCBAChecked && !hasAnyFeature(pcbaFeatures)) {
+                    showRow = false;
+                }
+            }
+
+
             // Apply the visibility state
             row.classList.toggle('filter-hidden', !showRow);
             if (detailRow) { // Ensure detailRow exists before toggling
@@ -433,6 +500,9 @@ document.addEventListener('DOMContentLoaded', function () {
     hideXrayCheckbox.addEventListener('change', applyLocalFilters);
     hideApprovedCheckbox.addEventListener('change', applyLocalFilters);
     onlySurveyCheckbox.addEventListener('change', applyLocalFilters);
+    showPCBcheckbox.addEventListener('change', applyLocalFilters);
+    showSolderCheckbox.addEventListener('change', applyLocalFilters);
+    showPCBAcheckbox.addEventListener('change', applyLocalFilters);
 
     yearFromInput.addEventListener('change', showApplyButton);
     yearToInput.addEventListener('change', showApplyButton);

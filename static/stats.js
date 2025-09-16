@@ -541,6 +541,108 @@ function displayStats() {
             });
         }
 
+
+        // --- 4. Publication Types per Year ---
+        const pubTypesYearlyData = latestYearlyData.pubTypes || {};
+        const yearsForPubTypes = Object.keys(pubTypesYearlyData).map(Number).sort((a, b) => a - b);
+
+        // --- Aggregate data for the chart ---
+        // Get all unique publication types across all years
+        const allPubTypesSet = new Set();
+        Object.values(pubTypesYearlyData).forEach(yearData => {
+            Object.keys(yearData).forEach(type => allPubTypesSet.add(type));
+        });
+        const allPubTypes = Array.from(allPubTypesSet).sort(); // Sort for consistent legend order
+
+        // Create datasets for the line chart, one for each publication type
+        const pubTypeLineDatasets = allPubTypes.map((type, index) => {
+            // Generate a distinct color for each type (simple hue rotation)
+            // You might want to use a more sophisticated color palette
+            const hue = (index * 137.508) % 360; // Golden angle approximation for spread
+            const borderColor = `hsl(${hue}, 50%, 50%)`;
+            const backgroundColor = `hsla(${hue}, 60%, 45%, 0.5)`; 
+
+            const data = yearsForPubTypes.map(year => pubTypesYearlyData[year]?.[type] || 0);
+            return {
+                label: type, // Use the raw type name as label (or map if needed)
+                data: data,
+                borderColor: borderColor,
+                backgroundColor: backgroundColor,
+                fill: false,
+                tension: 0.25,
+                hidden: false // Start visible
+            };
+        });
+
+        // --- Render the Publication Types per Year Line Chart ---
+        const pubTypesPerYearCtx = document.getElementById('pubTypesPerYearLineChart')?.getContext('2d');
+        if (window.pubTypesPerYearLineChartInstance) {
+            window.pubTypesPerYearLineChartInstance.destroy();
+            delete window.pubTypesPerYearLineChartInstance;
+        }
+
+        if (pubTypesPerYearCtx && pubTypeLineDatasets.length > 0) {
+            window.pubTypesPerYearLineChartInstance = new Chart(pubTypesPerYearCtx, {
+                type: 'line',
+                data: {
+                    labels: yearsForPubTypes, // Use sorted years
+                    datasets: pubTypeLineDatasets // Use datasets prepared above
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        title: { display: false, text: 'Publication Types per Year' },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return `${context.dataset.label}: ${context.raw}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 },
+                            title: {
+                                display: false,
+                                text: 'Count'
+                            }
+                        },
+                        x: {
+                            ticks: { precision: 0 },
+                            title: {
+                                display: false,
+                                text: 'Year'
+                            }
+                        }
+                    }
+                }
+            });
+        } else if (pubTypesPerYearCtx) {
+            // Handle case where there's no data
+            window.pubTypesPerYearLineChartInstance = new Chart(pubTypesPerYearCtx, {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Publication Types per Year (No Data)' }
+                    }
+                }
+            });
+        }
+
         // --- 1. FETCH SERVER STATS  ---
         const urlParams = new URLSearchParams(window.location.search);
         const statsUrl = `/get_stats?${urlParams.toString()}`;
@@ -594,6 +696,8 @@ function displayStats() {
 
             }
         })
+
+
         // Trigger reflow to ensure styles are applied before adding the active class
         // This helps ensure the transition plays correctly on the first open
         modal.offsetHeight;

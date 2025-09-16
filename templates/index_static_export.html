@@ -80,7 +80,7 @@
                             </div>
                             <div>
                                 <button class="action-btn" id="static-about-btn" title="About / Help" ><span>?</span></button>
-                                <button class="action-btn" id="static-stats-btn">Check <strong>Statistics</strong></button>
+                                <button class="action-btn" id="static-stats-btn">View <strong>Statistics</strong></button>
                             </div>
                         </div>
                     </th>
@@ -99,13 +99,33 @@
                 <tr>
                     <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" id="hide-offtopic-checkbox" {% if hide_offtopic == true %}checked disabled title="Can't unhide offtopic papers. File was exported only with ontopic papers"{% endif %}></th>
                     <th class="inferred-header ontop-header" colspan="1"></th>
-                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to only show Surveys" id="only-survey-checkbox"></th>
+                    <th class="inferred-header ontop-header" colspan="1">
+                        <input type="checkbox" title="Enable to only show Surveys" id="only-survey-checkbox">
+                    </th>
                     <th class="inferred-header ontop-header" colspan="2"></th>
-                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to Hide X-Ray" id="hide-xray-checkbox" checked></th>
-                    <th class="inferred-header inferred-header-2 ontop-header" colspan="2">Features:</th>
-                    <th class="inferred-header inferred-header-2 ontop-header" colspan="4">Solder</th>
-                    <th class="inferred-header inferred-header-2 ontop-header" colspan="5">PCBA</th>
+                    <th class="inferred-header ontop-header" colspan="1">
+                        <input type="checkbox" title="Enable to Hide X-Ray" id="hide-xray-checkbox" checked>    <!-- client-side, default enabled -->
+                    </th>
+                    <th class="inferred-header inferred-header-2 ontop-header" colspan="2">
+                        <div>
+                            <span>PCB</span>
+                            <input type="checkbox" title="Enable to include papers about PCB features" id="show-pcb-checkbox">   
+                        </div>
+                    </th>
+                    <th class="inferred-header inferred-header-2 ontop-header" colspan="4">
+                        <div>
+                            <span>Solder</span>
+                            <input type="checkbox" title="Enable to include papers about solder features" id="show-solder-checkbox">
+                        </div>
+                    </th>
+                    <th class="inferred-header inferred-header-2 ontop-header" colspan="5">
+                        <div>
+                            <span>PCBA</span>
+                            <input type="checkbox" title="Enable to include papers about PCBA features" id="show-pcba-checkbox">    
+                        </div>
+                    </th>
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="8">Techniques</th>
+                    <!-- <th class="inferred-header inferred-header-3 ontop-header" colspan="6">DL-based</th> -->
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="1"></th>
                 </tr>
                 <tr>
@@ -197,38 +217,38 @@
         <div class="stats-charts">
             <div class="stats-section">
                 <h3><strong>Techniques</strong> Distribution</h3>
-                <div class="chart-container" style="height:32vh; width:315px; max-width: 315px; margin: auto;">
+                <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto;">
                     <canvas id="techniquesPieChart"></canvas>
                 </div>
             </div>
             <div class="stats-section">
                 <h3><strong>Features</strong> Distribution</h3>
-                <div class="chart-container" style="height:32vh; width:315px; max-width: 315px; margin: auto;">
+                <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto;">
                     <canvas id="featuresPieChart"></canvas>
                 </div>
             </div>
-            <div class="stats-section">
-                <h3>Info / <strong>Other</strong> stats</h3>
-                <p> Data in this page is dynamically calculated based on <strong>currently visible</strong> papers.</p>
+            <div class="stats-section">                
+                <h3><strong>Publication Types</strong> per Year</h3>
+                <div class="chart-container-fullwidth" style="height: calc(80% - 20px); margin: auto;">
+                    <canvas id="pubTypesPerYearLineChart"></canvas>
+                </div>
             </div>
-        </div>
-        <div class="stats-charts">
             <div class="stats-section">
                 <h3><strong>Techniques</strong> per Year <span style="font-size:0.6em"> — Click on a label to show/hide its data and reflow the chart</span></h3>
-                <div class="chart-container-fullwidth" style="height:32vh; margin: auto;">
+                <div class="chart-container-fullwidth" style="height:calc(100% - 43px); margin: auto;">
                     <canvas id="techniquesPerYearLineChart"></canvas>
                 </div>
             </div>
 
             <div class="stats-section">
-                <h3><strong>Features</strong> per Year</h3>
-                <div class="chart-container-fullwidth" style="height:32vh; margin: auto;">
+                <h3><strong>Features</strong> per Year  <span style="font-size:0.6em"> — Data in this page is dynamically calculated based on <strong>currently visible</strong> papers.</span></h3>
+                <div class="chart-container-fullwidth" style="height:calc(100% - 43px); margin: auto;">
                     <canvas id="featuresPerYearLineChart"></canvas>
                 </div>
             </div>
             <div class="stats-section">
                 <h3><strong>Survey</strong> vs <strong>Implementation</strong> Papers per Year</h3>
-                <div class="chart-container-fullwidth" style="height:20vh;  margin: auto;">
+                <div class="chart-container-fullwidth" style="height:calc(80% - 20px);  margin: auto;">
                     <canvas id="surveyVsImplLineChart"></canvas>
                 </div>
             </div>
@@ -253,7 +273,7 @@
                 <p><strong>Toggle Columns:</strong> Use checkboxes like "Hide Offtopic", "Hide X-Ray", or "Only Survey" for quick client-side filtering. As the checkboxes have no permanent labels, hover each checkbox to identify its purpose.</p>
                 <p><strong>Classify/Verify:</strong> Click the "Classify this paper" or "Verify this paper" button in the detail row to run AI on a single paper. Use the top buttons for batch processing.</p>
                 <p><strong>Search:</strong> Type on the search bar for instant search on all relevant fields. User comments are searchable. Classifier/Verifier traces are not (to avoid false-positives/noise)</p>
-                <p><strong>View Statistics:</strong> Click the "Check Statistics" button to see charts and lists of repeating journals, authors, keywords, and mentioned features/models as well as relevant charts. 
+                <p><strong>View Statistics:</strong> Click the "View Statistics" button to see charts and lists of repeating journals, authors, keywords, and mentioned features/models as well as relevant charts. 
                     The stats are calculated based on currently visible filtered data.</p>
                 <p><strong>Import/Export and Edit Data:</strong> These functionalities are unavailable on HTML exports. Use the full Flask application instead.</p> 
 

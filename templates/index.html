@@ -75,7 +75,7 @@
                             <!-- Moved to ontop-header -->
                         </div>
                         <div class="header-controls">
-                            <button class="action-btn" id="stats-btn">Check <strong>Statistics</strong></button>
+                            <button class="action-btn" id="stats-btn">View <strong>Statistics</strong></button>
                         </div>
                         <div class="header-controls">
                             <div class="batch-actions">
@@ -122,14 +122,36 @@
                     </th>
                 </tr>
                 <tr>
-                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to Hide Offtopic papers" id="hide-offtopic-checkbox" {% if hide_offtopic == true %}checked{% endif %}></th>
+                    <th class="inferred-header ontop-header" colspan="1">
+                        <input type="checkbox" title="Enable to Hide Offtopic papers" id="hide-offtopic-checkbox" {% if hide_offtopic == true %}checked{% endif %}>
+                    </th>
                     <th class="inferred-header ontop-header" colspan="1"></th>
-                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to only show Surveys" id="only-survey-checkbox"></th>
+                    <th class="inferred-header ontop-header" colspan="1">
+                        <input type="checkbox" title="Enable to only show Surveys" id="only-survey-checkbox">
+                    </th>
                     <th class="inferred-header ontop-header" colspan="2"></th>
-                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" title="Enable to Hide X-Ray" id="hide-xray-checkbox" checked></th><!-- client-side, default enabled -->
-                    <th class="inferred-header inferred-header-2 ontop-header" colspan="2">Features:</th>
-                    <th class="inferred-header inferred-header-2 ontop-header" colspan="4">Solder</th>
-                    <th class="inferred-header inferred-header-2 ontop-header" colspan="5">PCBA</th>
+                    <th class="inferred-header ontop-header" colspan="1">
+                        <input type="checkbox" title="Enable to Hide X-Ray" id="hide-xray-checkbox" checked>    <!-- client-side, default enabled -->
+                    </th>
+                    <th class="inferred-header inferred-header-2 ontop-header" colspan="2">
+                        <div>
+                            <span>PCB</span>
+                            <input type="checkbox" title="Enable to include papers about PCB features" id="show-pcb-checkbox">
+                        </div>
+                    </th>
+                    <th class="inferred-header inferred-header-2 ontop-header" colspan="4">
+                        <div>
+                            <span>Solder</span>
+                            <input type="checkbox" title="Enable to include papers about solder features" id="show-solder-checkbox">
+                        </div>
+                    </th>
+                    <th class="inferred-header inferred-header-2 ontop-header" colspan="4">
+                        <div>
+                            <span>PCBA</span>
+                            <input type="checkbox" title="Enable to include papers about PCBA features" id="show-pcba-checkbox">    
+                        </div>
+                    </th>
+                    <th class="inferred-header inferred-header-2 ontop-header"></th>
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="8">Techniques</th>
                     <!-- <th class="inferred-header inferred-header-3 ontop-header" colspan="6">DL-based</th> -->
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="1"></th>
@@ -235,38 +257,40 @@
         <div class="stats-charts">
             <div class="stats-section">
                 <h3><strong>Techniques</strong> Distribution</h3>
-                <div class="chart-container" style="height:32vh; width:305px; max-width: 305px; margin: auto;">
+                <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto;">
                     <canvas id="techniquesPieChart"></canvas>
                 </div>
             </div>
             <div class="stats-section">
                 <h3><strong>Features</strong> Distribution</h3>
-                <div class="chart-container" style="height:32vh; width:305px; max-width: 305px; margin: auto;">
+                <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto;">
                     <canvas id="featuresPieChart"></canvas>
                 </div>
             </div>
-            <div class="stats-section">
-                <h3>Info / <strong>Other</strong> stats</h3>
-                <p> Data in this page is dynamically calculated based on <strong>currently visible</strong> papers.</p>
+            <div class="stats-section">                
+                <h3><strong>Publication Types</strong> per Year</h3>
+                <div class="chart-container-fullwidth" style="height: calc(80% - 20px); margin: auto;">
+                    <canvas id="pubTypesPerYearLineChart"></canvas>
+                </div>
             </div>
-        </div>
-        <div class="stats-charts">
+        <!-- </div>
+        <div class="stats-charts"> -->
             <div class="stats-section">
                 <h3><strong>Techniques</strong> per Year <span style="font-size:0.6em"> — Click on a label to show/hide its data and reflow the chart</span></h3>
-                <div class="chart-container-fullwidth" style="height:32vh; margin: auto;">
+                <div class="chart-container-fullwidth" style="height:calc(100% - 43px); margin: auto;">
                     <canvas id="techniquesPerYearLineChart"></canvas>
                 </div>
             </div>
 
             <div class="stats-section">
-                <h3><strong>Features</strong> per Year</h3>
-                <div class="chart-container-fullwidth" style="height:32vh; margin: auto;">
+                <h3><strong>Features</strong> per Year  <span style="font-size:0.6em"> — Data in this page is dynamically calculated based on <strong>currently visible</strong> papers.</span></h3>
+                <div class="chart-container-fullwidth" style="height:calc(100% - 43px); margin: auto;">
                     <canvas id="featuresPerYearLineChart"></canvas>
                 </div>
             </div>
             <div class="stats-section">
                 <h3><strong>Survey</strong> vs <strong>Implementation</strong> Papers per Year</h3>
-                <div class="chart-container-fullwidth" style="height:20vh;  margin: auto;">
+                <div class="chart-container-fullwidth" style="height:calc(80% - 20px);  margin: auto;">
                     <canvas id="surveyVsImplLineChart"></canvas>
                 </div>
             </div>
@@ -292,7 +316,7 @@
                 <p><strong>Edit Data:</strong> Click on any ✔️ / ❌ / ❔ symbol in the main table to cycle its value (this is automatically saved on change). Click 'show' in the details column to edit text fields (like "Model Name" or "Other Defects").
                     These have to be saved manually by clicking on "Save Changes". Editing functionality is unavailable on HTML exports.</p> 
                 <p><strong>Search:</strong> Type on the search bar for instant search on all relevant fields. User comments are searchable. Classifier/Verifier traces are not (to avoid false-positives/noise)</p>
-                <p><strong>View Statistics:</strong> Click the "Check Statistics" button to see charts and lists of repeating journals, authors, keywords, and mentioned features/models as well as relevant charts. 
+                <p><strong>View Statistics:</strong> Click the "View Statistics" button to see charts and lists of repeating journals, authors, keywords, and mentioned features/models as well as relevant charts. 
                     The stats are calculated based on currently visible filtered data.</p>
                 <p><strong>Export Data:</strong> Use the "Export HTML" or "Export XLSX" buttons to download the currently filtered dataset.</p>
                 <p><strong>Import Data:</strong> Use the "Import BibTeX" button to add new papers to the database from a .bib file. Import/Export functionality is unavailable on HTML exports.</p>

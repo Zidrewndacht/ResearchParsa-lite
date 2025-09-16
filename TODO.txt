@@ -138,3 +138,10 @@ OK      Fix fixed-position JS columns (e.g. verifier score updating wrong column
         Update commented&other field displays on save.
 
         Add year/page count filters to statistics page?
+
+OK      Add filter for feature groups (tracks/holes, solder, PCBA), all client-side;
+OK      Add journal vs conference chart;
+
+        Excel export:
+                Count of misclassification suspects;
+                Bubble charts about...?

@@ -4,6 +4,7 @@
 let isBatchRunning = false; // Simple flag to prevent multiple simultaneous batches
 
 //Hardocoded cells - used for both scripts:
+const typeCellIndex = 0;
 const yearCellIndex = 2;
 const journalCellIndex = 3;
 const pageCountCellIndex = 4;

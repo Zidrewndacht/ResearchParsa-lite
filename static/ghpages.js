@@ -4,6 +4,11 @@ const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
 const hideXrayCheckbox = document.getElementById('hide-xray-checkbox');
 const hideApprovedCheckbox = document.getElementById('hide-approved-checkbox');
 const onlySurveyCheckbox = document.getElementById('only-survey-checkbox');
+
+const showPCBcheckbox = document.getElementById('show-pcb-checkbox');
+const showSolderCheckbox = document.getElementById('show-solder-checkbox');
+const showPCBAcheckbox = document.getElementById('show-pcba-checkbox');
+
 const minPageCountInput = document.getElementById('min-page-count');
 const yearFromInput = document.getElementById('year-from');
 const yearToInput = document.getElementById('year-to');
@@ -15,6 +20,13 @@ let filterTimeoutId = null;
 const FILTER_DEBOUNCE_DELAY = 200;
 const headers = document.querySelectorAll('th[data-sort]');
 let currentClientSort = { column: null, direction: 'ASC' };
+
+//Hardocoded cells - to update in this script:
+const typeCellIndex = 0;
+const yearCellIndex = 2;
+const journalCellIndex = 3;
+const pageCountCellIndex = 4;
+const estScoreCellIndex = 34;
 
 const SYMBOL_SORT_WEIGHTS = {
     '✔️': 2,
@@ -40,6 +52,10 @@ function scheduleFilterUpdate() {
             // Get year range values
             const yearFromValue = yearFromInput ? parseInt(yearFromInput.value, 10) || 0 : 0;
             const yearToValue = yearToInput ? parseInt(yearToInput.value, 10) || Infinity : Infinity;
+            // --- NEW: Get the state of PCB/Solder/PCBA checkboxes ---
+            const showPCBChecked = showPCBcheckbox.checked;
+            const showSolderChecked = showSolderCheckbox.checked;
+            const showPCBAChecked = showPCBAcheckbox.checked;
 
             const rows = tbody.querySelectorAll('tr[data-paper-id]');
             rows.forEach(row => {
@@ -130,6 +146,48 @@ function scheduleFilterUpdate() {
                     }
                 }
 
+            // --- Apply NEW PCB/Solder/PCBA Group Filters (Inclusion Logic) ---
+            // Only apply this filter if at least one group is enabled (checked)
+            if (showRow && (showPCBChecked || showSolderChecked || showPCBAChecked)) {
+
+                // Function to check if a paper has ANY '✔️' in a given list of feature fields
+                const hasAnyFeature = (featureFields) => {
+                    return featureFields.some(fieldName => {
+                        const cell = row.querySelector(`[data-field="${fieldName}"]`);
+                        return cell && cell.textContent.trim() === '✔️';
+                    });
+                };
+
+                // Define feature fields for each group
+                const pcbFeatures = ['features_tracks', 'features_holes'];
+                const solderFeatures = [
+                    'features_solder_insufficient',
+                    'features_solder_excess',
+                    'features_solder_void',
+                    'features_solder_crack'
+                ];
+                const pcbaFeatures = [
+                    'features_orientation',
+                    'features_missing_component',
+                    'features_wrong_component',
+                    'features_cosmetic',
+                    'features_other_state'
+                ];
+
+                // For each *enabled* group, check if the paper has at least one ✔️ in that group.
+                // If it fails ANY enabled group's check, hide the row.
+                if (showPCBChecked && !hasAnyFeature(pcbFeatures)) {
+                    showRow = false;
+                }
+                if (showSolderChecked && !hasAnyFeature(solderFeatures)) {
+                    showRow = false;
+                }
+                if (showPCBAChecked && !hasAnyFeature(pcbaFeatures)) {
+                    showRow = false;
+                }
+            }
+
+
                 // Apply the visibility state
                 row.classList.toggle('filter-hidden', !showRow);
                 if (detailRow) { // Ensure detailRow exists before toggling
@@ -191,6 +249,7 @@ function updateCounts() {
     const yearlySurveyImpl = {}; // { year: { surveys: count, impl: count } }
     const yearlyTechniques = {}; // { year: { technique_field: count, ... } }
     const yearlyFeatures = {};   // { year: { feature_field: count, ... } }
+    const yearlyPubTypes = {}; // { year: { pubtype1: count, pubtype2: count, ... } }
 
     // Initialize counts for ALL status fields (including changed_by, verified_by)
     COUNT_FIELDS.forEach(field => counts[field] = 0);
@@ -236,6 +295,16 @@ function updateCounts() {
                 FEATURE_FIELDS_FOR_YEARLY.forEach(f => yearlyFeatures[year][f] = 0);
             }
 
+            const typeCell = row.cells[typeCellIndex]; // Assuming Type is the 1st column (index 0)
+            const pubTypeText = typeCell ? typeCell.getAttribute('title') || typeCell.textContent.trim() : ''; // Use title for full type if available
+            if (pubTypeText) {
+                if (!yearlyPubTypes[year]) {
+                    yearlyPubTypes[year] = {}; // Initialize object for this year's types
+                }
+                // Increment count for this type in this year
+                yearlyPubTypes[year][pubTypeText] = (yearlyPubTypes[year][pubTypeText] || 0) + 1;
+            }
+
             // Update Survey/Impl counts
             const isSurveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
             const isSurvey = isSurveyCell && isSurveyCell.textContent.trim() === '✔️';
@@ -269,7 +338,8 @@ function updateCounts() {
     latestYearlyData = {
         surveyImpl: yearlySurveyImpl,
         techniques: yearlyTechniques,
-        features: yearlyFeatures
+        features: yearlyFeatures,
+        pubTypes: yearlyPubTypes // <-- Add this line
     };
 
     const allRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
@@ -744,6 +814,8 @@ function displayStats() {
         delete window.featuresPerYearLineChartInstance;
     }
 
+
+    
     // --- Get Canvas Contexts for ALL charts ---
     const featuresCtx = document.getElementById('featuresPieChart')?.getContext('2d');
     const techniquesCtx = document.getElementById('techniquesPieChart')?.getContext('2d');
@@ -1026,6 +1098,106 @@ function displayStats() {
         });
     }
 
+    // --- 4. Publication Types per Year ---
+    const pubTypesYearlyData = latestYearlyData.pubTypes || {};
+    const yearsForPubTypes = Object.keys(pubTypesYearlyData).map(Number).sort((a, b) => a - b);
+
+    // --- Aggregate data for the chart ---
+    // Get all unique publication types across all years
+    const allPubTypesSet = new Set();
+    Object.values(pubTypesYearlyData).forEach(yearData => {
+        Object.keys(yearData).forEach(type => allPubTypesSet.add(type));
+    });
+    const allPubTypes = Array.from(allPubTypesSet).sort(); // Sort for consistent legend order
+
+    // Create datasets for the line chart, one for each publication type
+    const pubTypeLineDatasets = allPubTypes.map((type, index) => {
+        // Generate a distinct color for each type (simple hue rotation)
+        // You might want to use a more sophisticated color palette
+        const hue = (index * 137.508) % 360; // Golden angle approximation for spread
+        const borderColor = `hsl(${hue}, 50%, 75%)`; // Slightly darker border
+        const backgroundColor = `hsla(${hue}, 70%, 45%, 0.5)`; // Lighter fill
+
+        const data = yearsForPubTypes.map(year => pubTypesYearlyData[year]?.[type] || 0);
+        return {
+            label: type, // Use the raw type name as label (or map if needed)
+            data: data,
+            borderColor: borderColor,
+            backgroundColor: backgroundColor,
+            fill: false,
+            tension: 0.25,
+            hidden: false // Start visible
+        };
+    });
+
+    // --- Render the Publication Types per Year Line Chart ---
+    const pubTypesPerYearCtx = document.getElementById('pubTypesPerYearLineChart')?.getContext('2d');
+    if (window.pubTypesPerYearLineChartInstance) {
+        window.pubTypesPerYearLineChartInstance.destroy();
+        delete window.pubTypesPerYearLineChartInstance;
+    }
+
+    if (pubTypesPerYearCtx && pubTypeLineDatasets.length > 0) {
+        window.pubTypesPerYearLineChartInstance = new Chart(pubTypesPerYearCtx, {
+            type: 'line',
+            data: {
+                labels: yearsForPubTypes, // Use sorted years
+                datasets: pubTypeLineDatasets // Use datasets prepared above
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    title: { display: false, text: 'Publication Types per Year' },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return `${context.dataset.label}: ${context.raw}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 },
+                        title: {
+                            display: true,
+                            text: 'Count'
+                        }
+                    },
+                    x: {
+                        ticks: { precision: 0 },
+                        title: {
+                            display: false,
+                            text: 'Year'
+                        }
+                    }
+                }
+            }
+        });
+    } else if (pubTypesPerYearCtx) {
+        // Handle case where there's no data
+        window.pubTypesPerYearLineChartInstance = new Chart(pubTypesPerYearCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: true, text: 'Publication Types per Year (No Data)' }
+                }
+            }
+        });
+    }
     const stats = calculateStats();
 
     // --- New Function Call to Populate Lists ---
@@ -1114,6 +1286,10 @@ document.addEventListener('DOMContentLoaded', function () {
     hideXrayCheckbox.addEventListener('change', scheduleFilterUpdate);
     hideApprovedCheckbox.addEventListener('change', scheduleFilterUpdate);
     onlySurveyCheckbox.addEventListener('change', scheduleFilterUpdate);
+    
+    showPCBcheckbox.addEventListener('change', scheduleFilterUpdate);
+    showSolderCheckbox.addEventListener('change', scheduleFilterUpdate);
+    showPCBAcheckbox.addEventListener('change', scheduleFilterUpdate);
 
     headers.forEach(header => { header.addEventListener('click', sortTable); });
     statsBtn.addEventListener('click', function () {
@@ -1142,8 +1318,8 @@ document.addEventListener('DOMContentLoaded', function () {
         document.documentElement.classList.add('busyCursor');
         const commentedHeader = document.querySelector('th[data-sort="user_comment_state"]');
         // Set the initial sort state so the UI indicator is correct
-        currentClientSort = { column: "user_comment_state", direction: 'DESC' }; // Or 'ASC' if preferred
-
+        currentClientSort = { column: "user_comment_state", direction: 'DESC' };
+        
         // Call sortTable with the correct 'this' context (the header element)
         // We need to bind 'this' or call it directly on the element
         sortTable.call(commentedHeader);
@@ -1156,5 +1332,5 @@ document.addEventListener('DOMContentLoaded', function () {
         // Use '▼' for DESC, '▲' for ASC based on your sortTable logic
         indicator.textContent = currentClientSort.direction === 'ASC' ? '▲' : '▼';
         document.documentElement.classList.remove('busyCursor');
-    }, 0); // Ensures it runs after applyLocalFilters' timeout finishes
+    }, 20); // Ensures it runs after applyLocalFilters' timeout finishes
 });
