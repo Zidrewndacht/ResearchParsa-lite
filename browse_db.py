@@ -1452,9 +1452,9 @@ def upload_bibtex():
 # --- Jinja2-like filters ---
 def render_status(value):
     """Render status value as emoji/symbol"""
-    if value == 1 or value is True:
+    if value == 1 or value == "true" or value is True:
         return '✔️' # Checkmark for True
-    elif value == 0 or value is False:
+    elif value == 0  or value == "false" or value is False:
         return '❌' # Cross for False
     else: # None or unknown
         return '❔' # Question mark for Unknown/Null

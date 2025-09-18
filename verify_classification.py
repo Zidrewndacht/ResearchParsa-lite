@@ -290,8 +290,8 @@ def run_verification(mode='remaining', paper_id=None, db_file=None, grammar_file
                 SELECT id 
                 FROM papers 
                 WHERE (changed_by IS NOT NULL AND changed_by != '') 
-                AND (verified_by IS NULL OR verified_by = '')
-            """)
+                AND (verified_by IS NULL OR verified_by = '' OR verified = 'unknown' OR verified = '')
+            """) #added  OR verified_by = 'unknown' to verify to manually set to ?
             
         paper_ids = [row[0] for row in cursor.fetchall()]
         conn.close()

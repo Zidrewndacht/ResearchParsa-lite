@@ -249,7 +249,7 @@ def run_classification(mode='remaining', paper_id=None, db_file=None, grammar_fi
             cursor.execute("SELECT id FROM papers WHERE id = ?", (paper_id,))
         else: # Default to 'remaining'
             print("Fetching unprocessed papers (changed_by IS NULL or blank)...")
-            cursor.execute("SELECT id FROM papers WHERE changed_by IS NULL OR changed_by = ''")
+            cursor.execute("SELECT id FROM papers WHERE changed_by IS NULL OR changed_by = '' OR is_offtopic = '' OR is_offtopic IS NULL ") #set to reclassify when manually removing offtopic status
             
         paper_ids = [row[0] for row in cursor.fetchall()]
         conn.close()
