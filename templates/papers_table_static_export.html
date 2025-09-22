@@ -58,7 +58,7 @@
         <td colspan="38">
             <div class="detail-flex-container">
                 <div class="detail-content detail-abstract">
-                    <p><strong>Abstract:</strong> {{ paper.abstract }}</p>
+                    <p><strong>Abstract:</strong> {{ paper.abstract or 'No abstract available.' }}</p>
                 </div>
                 <div class="detail-content detail-metadata">
                     <p><strong>Keywords:</strong> {{ paper.keywords }}</p>

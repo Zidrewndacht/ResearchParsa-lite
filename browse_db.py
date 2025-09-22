@@ -666,7 +666,6 @@ def index():
         total_paper_count=total_paper_count
     )
 
-# ... (other imports and code) ...
 
 @app.route('/static_export', methods=['GET'])
 def static_export():
@@ -677,6 +676,12 @@ def static_export():
     year_to_param = request.args.get('year_to')
     min_page_count_param = request.args.get('min_page_count')
     search_query_param = request.args.get('search_query') # Include search
+
+    # --- NEW: Get the 'lite' parameter ---
+    lite_param = request.args.get('lite', default='0') # Default to '0' (full content)
+    is_lite_export = lite_param.lower() in ['1', 'true', 'yes']
+    # --- END NEW ---
+
     # --- NEW: Get the 'download' parameter ---
     download_param = request.args.get('download', default='1') # Default to '1' (download)
     # --- END NEW ---
@@ -689,7 +694,6 @@ def static_export():
     year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
     min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
     search_query_value = search_query_param if search_query_param is not None else ""
-
     # --- Fetch papers based on these filters ---
     papers = fetch_papers(
         hide_offtopic=hide_offtopic,
@@ -698,6 +702,27 @@ def static_export():
         min_page_count=min_page_count_value,
         search_query=search_query_value # Pass the search query
     )
+
+    # --- NEW: Blank 'fat text' fields if requested ---
+    if is_lite_export:
+        for paper in papers:
+            # Blank the specified 'fat text' fields
+            # Ensure features/technique are dicts for consistency if accessed later in template
+            paper['abstract'] = '' # Blank Abstract
+            paper['reasoning_trace'] = '' # Blank Classifier Trace
+            paper['verifier_trace'] = '' # Blank Verifier Trace
+            # Keep user_trace as is
+            # Ensure features and technique are dictionaries (they should be already from fetch_papers)
+            # But blanking their text content might be needed depending on template usage.
+            # If the template directly accesses features['other'] or technique['model'],
+            # blanking the *paper* dict keys might not be sufficient.
+            # However, if the template iterates over features/technique keys, blanking
+            # the text content within the JSON is better.
+            # Let's blank the top-level text fields as requested.
+            # If template access patterns require blanking within the JSON dict,
+            # that logic would go here, but blanking the top-level fields is usually sufficient
+            # for HTML rendering if the template just outputs {{ paper.abstract }} etc.
+    # --- END NEW ---
 
     # --- Read static file contents ---
     fonts_css_content = ""
@@ -715,18 +740,16 @@ def static_export():
         chart_js_content = f.read()
     with open(os.path.join(static_dir, 'ghpages.js'), 'r', encoding='utf-8') as f:
         ghpages_js_content = f.read()
-
     # --- Minify static content ---
     fonts_css_content = rcssmin.cssmin(fonts_css_content)
     style_css_content = rcssmin.cssmin(style_css_content)
     chart_js_content = rjsmin.jsmin(chart_js_content)
     ghpages_js_content = rjsmin.jsmin(ghpages_js_content)
-
     # --- Render the static export template ---
     # Pass the (potentially minified) static content to the papers table template
     papers_table_static_export = render_template(
         'papers_table_static_export.html',
-        papers=papers,
+        papers=papers, # Pass the potentially modified papers list
         type_emojis=globals.TYPE_EMOJIS,
         default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
         hide_offtopic=hide_offtopic,
@@ -773,7 +796,6 @@ def static_export():
     compressed_bytes = gzip.compress(html_bytes)
     # 3. Encode the compressed bytes to Base64 for embedding in JS
     compressed_base64 = base64.b64encode(compressed_bytes).decode('ascii')
-
     # --- Render the LOADER template, passing the compressed data ---
     loader_html_content = render_template(
         'loader.html',
@@ -781,7 +803,6 @@ def static_export():
         pako_js_content=Markup(pako_js_content) # Use Markup if passing raw JS
         # ... other variables ...
     )
-
     # --- Create a filename based on filters ---
     filename_parts = ["PCBPapers"]
     if year_from_value == year_to_value:
@@ -797,12 +818,16 @@ def static_export():
             safe_search = "".join(c for c in search_query_value if c.isalnum() or c in (' ', '-', '_')).rstrip()
             if safe_search:
                 filename_parts.append(f"search_{safe_search[:20]}") # Limit length
-    filename = "_".join(filename_parts) + ".html"
 
+    # --- NEW: Append 'lite' to filename if applicable ---
+    if is_lite_export:
+        filename_parts.append("lite")
+    # --- END NEW ---
+
+    filename = "_".join(filename_parts) + ".html"
     # --- Prepare Response Headers ---
     from flask import Response
     response_headers = {"Content-Type": "text/html"} # Ensure correct content type
-
     # --- MODIFIED: Determine Content-Disposition based on 'download' parameter ---
     if download_param == '0':
         # If download=0, set Content-Disposition to 'inline' to display in browser
@@ -813,15 +838,12 @@ def static_export():
         response_headers["Content-Disposition"] = f"attachment; filename={filename}"
         print(f"Sending static export as attachment: {filename}") # Optional: Log action
     # --- END MODIFIED ---
-
     # --- Return the LOADER HTML with appropriate headers ---
     return Response(
         loader_html_content, # Send the small loader with embedded compressed data
         mimetype="text/html",
         headers=response_headers # Use the prepared headers
     )
-
-# ... (rest of the file) ...
 
 @app.route('/xlsx_export', methods=['GET'])
 def export_excel():
@@ -1447,6 +1469,120 @@ def upload_bibtex():
     else:
         return jsonify({'status': 'error', 'message': 'Invalid file type. Please upload a .bib file.'}), 400
 
+
+import textwrap # Import at the top of your file if not already present
+
+# --- Add this new route function ---
+
+@app.route('/citation_export', methods=['GET'])
+def export_citations():
+    """Generate and serve a downloadable text file of citations based on current filters."""
+    # --- 1. Get filter parameters (same as other exports) ---
+    hide_offtopic_param = request.args.get('hide_offtopic')
+    year_from_param = request.args.get('year_from')
+    year_to_param = request.args.get('year_to')
+    min_page_count_param = request.args.get('min_page_count')
+    search_query_param = request.args.get('search_query')
+
+    # --- 2. Apply default values and parse filters (same as other exports) ---
+    hide_offtopic = True
+    if hide_offtopic_param is not None:
+        hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
+    year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
+    year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
+    min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
+    search_query_value = search_query_param if search_query_param is not None else ""
+
+    # --- 3. Fetch papers based on filters ---
+    papers = fetch_papers(
+        hide_offtopic=hide_offtopic,
+        year_from=year_from_value,
+        year_to=year_to_value,
+        min_page_count=min_page_count_value,
+        search_query=search_query_value
+    )
+
+    # --- 4. Format citations ---
+    citation_lines = []
+    for paper in papers:
+        # Example: Simple APA-like text format (Adapt as needed)
+        # Format: Authors (Year). Title. Journal, Volume, Pages. DOI
+        try:
+            authors = paper.get('authors', '').strip()
+            if not authors:
+                 authors_list = ["(Unknown Author)"]
+            else:
+                 # Basic cleanup, consider more robust parsing if needed
+                 authors_list = [author.strip() for author in authors.split(';') if author.strip()]
+            
+            # Truncate author list for display if very long, or handle "et al." if already present
+            if len(authors_list) > 5: # Example truncation
+                formatted_authors = ", ".join(authors_list[:3]) + " et al."
+            else:
+                formatted_authors = ", ".join(authors_list[:-1]) + " & " + authors_list[-1] if len(authors_list) > 1 else authors_list[0]
+
+            title = paper.get('title', 'N.p.').strip()
+            year = paper.get('year', 'N.d.')
+            journal = paper.get('journal', 'N.p.').strip() # N.p. = No publisher/part
+            volume = paper.get('volume', '').strip()
+            pages = paper.get('pages', '').strip()
+            doi = paper.get('doi', '').strip()
+
+            # Build citation string
+            citation_parts = [f"{formatted_authors} ({year})."]
+            if title:
+                citation_parts.append(f"{title}.")
+            if journal:
+                vol_page_info = journal
+                if volume:
+                    vol_page_info += f", {volume}"
+                if pages:
+                    vol_page_info += f", {pages}"
+                citation_parts.append(f"{vol_page_info}.")
+            if doi:
+                citation_parts.append(f"DOI: {doi}")
+
+            # Join parts and handle potential line wrapping for long titles/etc.
+            full_citation = " ".join(citation_parts)
+            # Optional: wrap long lines (e.g., at 80 chars)
+            # wrapped_citation = "\n".join(textwrap.wrap(full_citation, width=80))
+            citation_lines.append(full_citation) # Use wrapped_citation if you uncommented the line above
+            citation_lines.append("") # Add an empty line between citations
+
+        except Exception as e:
+            # Handle potential errors in formatting a specific paper
+            print(f"Warning: Error formatting citation for paper ID {paper.get('id', 'Unknown')}: {e}")
+            # citation_lines.append(f"Error formatting citation for paper ID {paper.get('id', 'Unknown')}")
+            citation_lines.append("")
+
+    # Join all citations into one string
+    citations_text = "\n".join(citation_lines)
+
+    # --- 5. Prepare filename based on filters (same as other exports) ---
+    filename_parts = ["PCBPapers_Citations"]
+    if year_from_value == year_to_value:
+        filename_parts.append(str(year_from_value))
+    else:
+        filename_parts.append(f"{year_from_value}-{year_to_value}")
+    if min_page_count_value > 0:
+        filename_parts.append(f"min{min_page_count_value}pg")
+    if hide_offtopic:
+        filename_parts.append("noOfftopic")
+    if search_query_value:
+        safe_search = "".join(c for c in search_query_value if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        if safe_search:
+            filename_parts.append(f"search_{safe_search[:20]}")
+    filename = "_".join(filename_parts) + ".txt"
+
+    # --- 6. Return as downloadable file ---
+    from flask import Response
+    return Response(
+        citations_text,
+        mimetype="text/plain", # Or "application/x-bibtex" if exporting BibTeX
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+# --- End of new route function 
 
 
 # --- Jinja2-like filters ---
