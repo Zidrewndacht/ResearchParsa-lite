@@ -1,4 +1,4 @@
-# bibtex-custom-parser
+# ResearchParça
 LLM-based analysis of abstracts from a BibTeX file. Tailor-made for PCB inspection papers, but may be used for other purposes with (fairly substantial) adaptation.
 
 This was made to help research on PCB inspection. It allows for searching, filtering, statistics and, mainly, automatic, traceable classification and verification through natural language processing using large language models.

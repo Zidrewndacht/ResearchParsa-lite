@@ -124,6 +124,17 @@ th.rotate-header {
     padding: 0
 }
 
+
+.header-branding{
+    font-size: 24pt;
+    justify-self: center;
+    font-family: "Arial Narrow";
+    font-weight: 400;
+    color: var(--save-btn-color);
+    text-shadow: var(--light-shadow);
+}
+
+
 th.rotate-header>div {
     transform: rotate(-90deg) translateX(-40px);
     width: 32px;
@@ -507,6 +518,7 @@ th.inferred-header-3 {
     flex-direction: row;
     justify-content: space-between;
     padding: 0 6px 0 0px;
+    align-items: center;
 }
 
 .filter-item {
