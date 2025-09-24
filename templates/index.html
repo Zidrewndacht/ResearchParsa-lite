@@ -76,14 +76,9 @@
                             <button class="action-btn" id="stats-btn">View <strong>Statistics</strong></button>
                         </div>
                         <div class="header-controls">
-                            <div class="batch-actions">
-                                <span id="batch-status-message"></span> <!-- For feedback -->
-                                <button class="action-btn" id="classify-remaining-btn">Classify <strong>Remaining</strong></button>
-                                <button class="action-btn" id="classify-all-btn">Re-Classify <strong>All</strong></button>
-                                <button class="action-btn" id="verify-remaining-btn">Verify <strong>Remaining</strong></button>
-                                <button class="action-btn" id="verify-all-btn">Re-Verify <strong>All</strong></button>
-                                <!-- <button class="action-btn" id="fullscreen-btn" title="Fullscreen"><span>⇲</span></button> -->
-                            </div>
+                            <button class="action-btn" id="parça-tools-btn" style="background: linear-gradient(90deg, var(--classify-btn-color), var(--verify-btn-color));">
+                                <div style="scale: 1.25; font-family: 'Arial Narrow'; font-weight: 400; text-shadow: var(--light-shadow);"><span style="font-weight: 600; opacity:0.9">Parça</span><span style=" opacity: 0.7">Tools</span></div>
+                            </button>
                         </div>
                         <div class="header-controls">
                             <button class="action-btn" id="about-btn" title="About / Help" ><span>?</span></button>
@@ -217,7 +212,20 @@
                 <!-- Use the rendered table content passed from the server --> 
         </table>
     </div>
+
+<div id="batchModal" class="modal">
+<div id="batch-actions">
+        <div style="scale: 1; font-family: 'Arial Narrow'; font-weight: 400; text-shadow: var(--light-shadow);font-size: 16pt;padding-bottom: 8px;"><span style="font-weight: 600; opacity:0.9">Parça</span><span style=" opacity: 0.7">Tools</span></div>
+        
+        <button class="action-btn" id="classify-remaining-btn">Classify <strong>Remaining</strong></button>
+        <button class="action-btn" id="classify-all-btn">Re-Classify <strong>All</strong></button>
+        <button class="action-btn" id="verify-remaining-btn">Verify <strong>Remaining</strong></button>
+        <button class="action-btn" id="verify-all-btn">Re-Verify <strong>All</strong></button>
+        <span id="batch-status-message" style="display:none"></span> <!-- obsolete, kept for JS -->
+    </div>
 </div>
+
+
 <!-- Stats Modal -->
 <div id="statsModal" class="modal">
     <div class="modal-content">

@@ -1,6 +1,7 @@
 // static/comms.js
 /** For detail row retrieval and functionality that writes to the server (DB updates, etc). */
 // --- New Global Variables for Batch Status ---
+const batchModal = document.getElementById("batchModal");
 let isBatchRunning = false; // Simple flag to prevent multiple simultaneous batches
 
 //Hardocoded cells - used for both scripts:
@@ -85,6 +86,11 @@ function renderChangedBy(value) {
     }
 }
 
+function showBatchActions(){
+    batchModal.offsetHeight;
+    batchModal.classList.add('modal-active');
+}
+function closeBatchModal() { batchModal.classList.remove('modal-active'); }
 
 document.addEventListener('DOMContentLoaded', function () {
         
@@ -191,6 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // --- Batch Action Button Event Listeners ---
+    const parçaToolsBtn = document.getElementById('parça-tools-btn');
     const classifyAllBtn = document.getElementById('classify-all-btn');
     const classifyRemainingBtn = document.getElementById('classify-remaining-btn');
     const verifyAllBtn = document.getElementById('verify-all-btn');
@@ -265,6 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    parçaToolsBtn.addEventListener('click', showBatchActions);
     classifyAllBtn.addEventListener('click', () => runBatchAction('all', 'classify'));
     classifyRemainingBtn.addEventListener('click', () => runBatchAction('remaining', 'classify'));
     verifyAllBtn.addEventListener('click', () => runBatchAction('all', 'verify'));
