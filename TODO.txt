@@ -142,3 +142,7 @@ OK      Add journal vs conference chart;
         Excel export:
                 Count of misclassification suspects;
                 Bubble charts about...?
+
+        Add integrated favicon
+
+        Add multiuser capabilities (DB merge script, named users)
