@@ -54,7 +54,7 @@ html.busyCursor body,html.busyCursor body * {
     padding: 0;
     width: calc(100% - 18px);
     height: calc(100% - 67px);
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(12px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -63,7 +63,9 @@ html.busyCursor body,html.busyCursor body * {
     transition: opacity .3s ease;
     transition-delay: .33s;
     border-radius: 8px;
-    background: var(--modal-wrapper-background)
+    background: var(--modal-wrapper-background);
+    flex-direction: column;
+    gap: 40px;
 }
 
 html.busyCursor .loading-overlay {
@@ -130,7 +132,7 @@ th.rotate-header {
     justify-self: center;
     font-family: "Arial Narrow";
     font-weight: 400;
-    color: var(--save-btn-color);
+    color: #3f8d82;
     text-shadow: var(--light-shadow);
 }
 
@@ -739,11 +741,11 @@ tr.filter-hidden {
 
 .modal-small-content {
     width: 1080px;
-    grid-template-columns: 5fr 2fr;
+    grid-template-columns: 4fr 2fr;
 }
 
 .modal-small-section h4,.modal-small-section p,.modal-small-section ul {
-    padding: 0 24px
+    padding: 0 18px
 }
 
 .close {
