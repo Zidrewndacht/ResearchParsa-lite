@@ -73,9 +73,7 @@
                         </div>
                         <div class="header-branding"><span>Research</span><span style="font-weight: 600; color: var(--primary-ui-color);">Parça</span></div>
                         <div class="header-controls">
-                            <button class="action-btn" id="parça-tools-btn" style="background: linear-gradient(90deg, var(--classify-btn-color), var(--verify-btn-color)); text-shadow: var(--dark-shadow);">
-                                <div style="scale: 1.25; font-family: 'Arial Narrow'; font-weight: 400; "><span style="font-weight: 600; opacity:0.9">Parça</span><span style=" opacity: 0.7">Tools</span></div>
-                            </button>
+                            <button class="action-btn" id="parça-tools-btn" ><strong>Batch</strong> Tasks</button>
                         </div>
                         <div class="header-controls">
                             <button class="action-btn" id="stats-btn">View <strong>Statistics</strong></button>
@@ -215,9 +213,10 @@
 
 <div id="batchModal" class="modal">
 <div id="batch-actions">
-        <div style="font-weight: 400; text-shadow: var(--dark-shadow); padding-bottom: 12px;color: #eee;">
+        <!-- <div style="font-weight: 400; text-shadow: var(--dark-shadow); padding-bottom: 12px;color: #eee;">
             <span style="font-size: 18pt;font-family: 'Arial Narrow'; font-weight: 600; opacity:0.9">Parça</span><span style="font-size: 18pt;font-family: 'Arial Narrow'; opacity: 0.7">Tools</span>  
-            <span style="font-size: 10pt">—  Batch operations</span></div>
+            <span style="font-size: 10pt">—  Batch operations</span>
+        </div> -->
         <div>
             <button class="action-btn" id="classify-remaining-btn">Classify <strong>Remaining</strong> </button>
             <button class="action-btn" id="classify-all-btn">Re-Classify <strong>All</strong></button>
@@ -226,7 +225,7 @@
             <button class="action-btn" id="verify-remaining-btn">Verify <strong>Remaining</strong></button>
             <button class="action-btn" id="verify-all-btn">Re-Verify <strong>All</strong></button>
         </div>
-        <span id="batch-status-message">These tools stay running in background after being called. <br>Reload the webpage (not the server) after a while to see<br> updated results.<br> <br> For single papers, user the buttons in the corresponding<br> paper's detail pane.</span> <!-- obsolete, kept for JS -->
+        <span id="batch-status-message">These tools stay running in background after being called. Reload the webpage (not the server) after a while to see updated results.<br><br> For actions on single papers, user the buttons in the corresponding paper's detail pane instead.</span> <!-- obsolete, kept for JS -->
     </div>
 </div>
 

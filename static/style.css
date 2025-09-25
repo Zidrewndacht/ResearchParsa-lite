@@ -454,7 +454,14 @@ form input[type=text] {
     min-width: 160px;
     background: var(--stats-primary-ui-color);
 }
+#parça-tools-btn{
+    background: var(--classify-btn-color);
+}
 
+#batchModal{
+    backdrop-filter: unset;
+    background: unset;
+}
 #apply-serverside-filters, #static-stats-btn {
     background: var(--light-colored-btn-color);
     width: 125px;
@@ -629,7 +636,8 @@ tr.filter-hidden {
 }
 
 #batch-status-message {
-    font-size: 9.5pt
+    font-size: 10pt;
+    padding: 4px;
 }
 
 #batch-actions{
@@ -641,8 +649,8 @@ tr.filter-hidden {
     justify-content: center;
     align-items: center;
     position: fixed;
-    top: 13px;
-    right: 236px;
+    top: 56px;
+    right: 220px;
     background: var(--modal-wrapper-background);
     backdrop-filter: blur(16px);
     perspective: 100vh;
@@ -652,11 +660,13 @@ tr.filter-hidden {
     border-radius: 8px;
     background: #f5f7fad9;
     border: 1.5px solid var(--classify-btn-color);
-    box-shadow: 0 16px 96px -0px rgba(0,0,0,.66);
+    box-shadow: 0 48px 96px 32px rgba(64,64,64, 0.5);
     box-sizing: border-box;
-    transform: scale3d(.75,.66,1) translateY(-66px) translateX(60px);
+    transform: scale3d(.75,.66,1) translateY(-66px) translateX(40px);
     transition: opacity .3s ease-in-out, transform .3s ease-out;
-    background: linear-gradient(180deg,var(--classify-btn-color) 0%,var(--verify-btn-color) 48px,#f5f7fad9 20px);
+    /*! background: linear-gradient(180deg,var(--classify-btn-color) 0%,var(--verify-btn-color) 48px,#f5f7fad9 20px); */
+    width: 354px;
+    text-align: justify;
 }
 
 .header-controls {
@@ -939,8 +949,8 @@ tr.filter-hidden {
         border-radius: 0
     }
     #batch-actions{
-        top: 4px;
-        right: 228px;
+        top: 48px;
+        right: 216px;
     }
 }
 
