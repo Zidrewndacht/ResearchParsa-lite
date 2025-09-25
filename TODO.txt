@@ -143,6 +143,6 @@ OK      Add journal vs conference chart;
                 Count of misclassification suspects;
                 Bubble charts about...?
 
-        Add integrated favicon
+        Add APA/ABNT? citation to detail pane
 
-        Add multiuser capabilities (DB merge script, named users)
+        Optimize FTS Search

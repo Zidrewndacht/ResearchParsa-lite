@@ -347,11 +347,14 @@ function applyLocalFilters() {
                 }
             }
 
-            // --- Apply NEW PCB/Solder/PCBA Group Filters (Inclusion Logic) ---
+            // --- Apply NEW PCB/Solder/PCBA Group Filters (Inclusion via OR Logic) ---
             // Only apply this filter if at least one group is enabled (checked)
             if (showRow && (showPCBChecked || showSolderChecked || showPCBAChecked)) {
+                let hasPCBFeature = false;
+                let hasSolderFeature = false;
+                let hasPCBAFeature = false;
 
-                // Function to check if a paper has ANY '✔️' in a given list of feature fields
+                // Helper function to check if a paper has ANY '✔️' in a given list of feature fields
                 const hasAnyFeature = (featureFields) => {
                     return featureFields.some(fieldName => {
                         const cell = row.querySelector(`[data-field="${fieldName}"]`);
@@ -375,20 +378,24 @@ function applyLocalFilters() {
                     'features_other_state'
                 ];
 
-                // For each *enabled* group, check if the paper has at least one ✔️ in that group.
-                // If it fails ANY enabled group's check, hide the row.
-                if (showPCBChecked && !hasAnyFeature(pcbFeatures)) {
-                    showRow = false;
+                // Check which groups the paper belongs to (has at least one ✔️)
+                if (showPCBChecked) {
+                    hasPCBFeature = hasAnyFeature(pcbFeatures);
                 }
-                if (showSolderChecked && !hasAnyFeature(solderFeatures)) {
-                    showRow = false;
+                if (showSolderChecked) {
+                    hasSolderFeature = hasAnyFeature(solderFeatures);
                 }
-                if (showPCBAChecked && !hasAnyFeature(pcbaFeatures)) {
+                if (showPCBAChecked) {
+                    hasPCBAFeature = hasAnyFeature(pcbaFeatures);
+                }
+
+                // The core OR logic:
+                // Hide the row ONLY if it does NOT belong to ANY of the enabled groups.
+                // In other words, show the row if it belongs to at least one enabled group.
+                if (!(hasPCBFeature || hasSolderFeature || hasPCBAFeature)) {
                     showRow = false;
                 }
             }
-
-
             // Apply the visibility state
             row.classList.toggle('filter-hidden', !showRow);
             if (detailRow) { // Ensure detailRow exists before toggling

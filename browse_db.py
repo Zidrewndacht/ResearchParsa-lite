@@ -804,7 +804,7 @@ def static_export():
         # ... other variables ...
     )
     # --- Create a filename based on filters ---
-    filename_parts = ["PCBPapers"]
+    filename_parts = ["ResearchParça"]
     if year_from_value == year_to_value:
             filename_parts.append(str(year_from_value))
     else:
@@ -1100,7 +1100,7 @@ def export_excel():
     output.seek(0)
 
     # --- Create a filename based on filters ---
-    filename_parts = ["PCBPapers"]
+    filename_parts = ["ResearchParça"]
     if year_from_value == year_to_value:
             filename_parts.append(str(year_from_value))
     else:
@@ -1559,7 +1559,7 @@ def export_citations():
     citations_text = "\n".join(citation_lines)
 
     # --- 5. Prepare filename based on filters (same as other exports) ---
-    filename_parts = ["PCBPapers_Citations"]
+    filename_parts = ["ResearchParça_Citations"]
     if year_from_value == year_to_value:
         filename_parts.append(str(year_from_value))
     else:

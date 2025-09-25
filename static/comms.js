@@ -430,7 +430,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- BibTeX Import Logic ---
     const importBibtexBtn = document.getElementById('import-bibtex-btn');
     const bibtexFileInput = document.getElementById('bibtex-file-input');
-    // const batchStatusMessage = document.getElementById('batch-status-message'); // Reuse existing status element
 
     if (importBibtexBtn && bibtexFileInput) {
         // Clicking the button triggers the hidden file input

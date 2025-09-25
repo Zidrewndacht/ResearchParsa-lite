@@ -146,46 +146,55 @@ function scheduleFilterUpdate() {
                     }
                 }
 
-            // --- Apply NEW PCB/Solder/PCBA Group Filters (Inclusion Logic) ---
-            // Only apply this filter if at least one group is enabled (checked)
-            if (showRow && (showPCBChecked || showSolderChecked || showPCBAChecked)) {
+                // --- Apply NEW PCB/Solder/PCBA Group Filters (Inclusion via OR Logic) ---
+                // Only apply this filter if at least one group is enabled (checked)
+                if (showRow && (showPCBChecked || showSolderChecked || showPCBAChecked)) {
+                    let hasPCBFeature = false;
+                    let hasSolderFeature = false;
+                    let hasPCBAFeature = false;
 
-                // Function to check if a paper has ANY '✔️' in a given list of feature fields
-                const hasAnyFeature = (featureFields) => {
-                    return featureFields.some(fieldName => {
-                        const cell = row.querySelector(`[data-field="${fieldName}"]`);
-                        return cell && cell.textContent.trim() === '✔️';
-                    });
-                };
+                    // Helper function to check if a paper has ANY '✔️' in a given list of feature fields
+                    const hasAnyFeature = (featureFields) => {
+                        return featureFields.some(fieldName => {
+                            const cell = row.querySelector(`[data-field="${fieldName}"]`);
+                            return cell && cell.textContent.trim() === '✔️';
+                        });
+                    };
 
-                // Define feature fields for each group
-                const pcbFeatures = ['features_tracks', 'features_holes'];
-                const solderFeatures = [
-                    'features_solder_insufficient',
-                    'features_solder_excess',
-                    'features_solder_void',
-                    'features_solder_crack'
-                ];
-                const pcbaFeatures = [
-                    'features_orientation',
-                    'features_missing_component',
-                    'features_wrong_component',
-                    'features_cosmetic',
-                    'features_other_state'
-                ];
+                    // Define feature fields for each group
+                    const pcbFeatures = ['features_tracks', 'features_holes'];
+                    const solderFeatures = [
+                        'features_solder_insufficient',
+                        'features_solder_excess',
+                        'features_solder_void',
+                        'features_solder_crack'
+                    ];
+                    const pcbaFeatures = [
+                        'features_orientation',
+                        'features_missing_component',
+                        'features_wrong_component',
+                        'features_cosmetic',
+                        'features_other_state'
+                    ];
 
-                // For each *enabled* group, check if the paper has at least one ✔️ in that group.
-                // If it fails ANY enabled group's check, hide the row.
-                if (showPCBChecked && !hasAnyFeature(pcbFeatures)) {
-                    showRow = false;
+                    // Check which groups the paper belongs to (has at least one ✔️)
+                    if (showPCBChecked) {
+                        hasPCBFeature = hasAnyFeature(pcbFeatures);
+                    }
+                    if (showSolderChecked) {
+                        hasSolderFeature = hasAnyFeature(solderFeatures);
+                    }
+                    if (showPCBAChecked) {
+                        hasPCBAFeature = hasAnyFeature(pcbaFeatures);
+                    }
+
+                    // The core OR logic:
+                    // Hide the row ONLY if it does NOT belong to ANY of the enabled groups.
+                    // In other words, show the row if it belongs to at least one enabled group.
+                    if (!(hasPCBFeature || hasSolderFeature || hasPCBAFeature)) {
+                        showRow = false;
+                    }
                 }
-                if (showSolderChecked && !hasAnyFeature(solderFeatures)) {
-                    showRow = false;
-                }
-                if (showPCBAChecked && !hasAnyFeature(pcbaFeatures)) {
-                    showRow = false;
-                }
-            }
 
 
                 // Apply the visibility state
