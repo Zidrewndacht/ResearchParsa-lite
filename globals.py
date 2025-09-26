@@ -10,12 +10,16 @@ import threading
 import os
 
 LLM_SERVER_URL = "http://localhost:8080"
-
 MAX_CONCURRENT_WORKERS = 8 # Match your server slots
-DATABASE_FILE = "new.sqlite"
 GRAMMAR_FILE = "" #"output.gbnf" # obsolete, disabled for reasoning models.
 PROMPT_TEMPLATE = "prompt_template.txt"
 VERIFIER_TEMPLATE = "verifier_template.txt"
+
+DATABASE_FILE = os.path.join(os.getcwd(), 'data', 'new.sqlite')
+os.makedirs(os.path.dirname(DATABASE_FILE), exist_ok=True)  # Ensure the directory exists
+
+PDF_STORAGE_DIR = os.path.join(os.getcwd(), 'data', 'pdf')
+os.makedirs(PDF_STORAGE_DIR, exist_ok=True) # Ensure the directory exists
 
 # Define default JSON structures for features and technique
 DEFAULT_FEATURES = {
@@ -59,6 +63,12 @@ TYPE_EMOJIS = {
 }
 # Default emoji for unknown types
 DEFAULT_TYPE_EMOJI = '📄' # Using article as default
+
+PDF_EMOJIS = {
+    'PDF': '📕',        
+    'annotated': '📗',
+    'none': '❔'
+}
 
 # --- Global Shutdown Flag for Instant Shutdown (using Lock for atomicity) ---
 # This provides a common mechanism for scripts to handle Ctrl+C gracefully.

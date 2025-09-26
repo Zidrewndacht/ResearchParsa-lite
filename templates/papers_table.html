@@ -12,19 +12,28 @@
 </tr>
 {% for paper in papers %}
     <tr data-paper-id="{{ paper.id }}" >
-        <!-- Use the emoji mapping passed from Python -->
-        <td class="status-cell" title="{{ paper.type }}">{{ type_emojis.get(paper.type, default_type_emoji) }} 
+        <td class="status-cell pdf-status">
+            {% if paper.pdf_filename %}
+                <a href="{{ url_for('serve_pdf', filename=paper.pdf_filename) }}" target="_blank" title="Open PDF: {{ paper.pdf_filename }}">{{ pdf_emojis.get(paper.pdf_state) }}</a>
+            {% else %}
+                <a href="#" class="pdf-upload-link" data-paper-id="{{ paper.id }}" title="No PDF stored yet. Click to upload PDF for this article">{{ pdf_emojis.get('none') }}</a>
+            {% endif %}
+        </td>
+
         </td><td class="title-cell">
             {% if paper.doi %}
                 <a href="https://doi.org/{{ paper.doi }}" target="_blank">{{ paper.title }}</a>
             {% else %}
                 <span style="font-weight: 300;">{{paper.title}}</span> 
             {% endif %}
-            
         </td>
-        <td class="secondary-text-cell number-cell" style="width:28px; min-width:28px; max-width:28px">{{ paper.year or '' }}</td>
-        <td class="secondary-text-cell">{{ paper.journal }}</td>        
+
+        <td class="secondary-text-cell number-cell">{{ paper.year or '' }}</td>
         <td class="secondary-text-cell number-cell">{{ paper.page_count or '' }}</td>
+        <td class="secondary-text-cell">{{ paper.journal }}</td>        
+        <td class="status-cell" title="{{ paper.type }}">{{ type_emojis.get(paper.type, default_type_emoji) }} <!-- Use the emoji mapping passed from Python -->
+        
+        
 
         <td class="status-cell editable-status" data-field="is_offtopic">{{ paper.is_offtopic | render_status }}</td>
         <td class="secondary-text-cell number-cell">{{ paper.relevance or '' }}</td>        <!-- NEW DATA CELL: Relevance -->
@@ -35,10 +44,10 @@
 
         <td class="status-cell editable-status highlight-status" data-field="features_tracks">{{ paper.features.tracks | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_holes">{{ paper.features.holes | render_status }}</td>
-        <td class="status-cell editable-status"  data-field="features_solder_insufficient">{{ paper.features.solder_insufficient | render_status }}</td>
-        <td class="status-cell editable-status"  data-field="features_solder_excess">{{ paper.features.solder_excess | render_status }}</td>
-        <td class="status-cell editable-status"  data-field="features_solder_void">{{ paper.features.solder_void | render_status }}</td>
-        <td class="status-cell editable-status"  data-field="features_solder_crack">{{ paper.features.solder_crack | render_status }}</td>
+        <td class="status-cell editable-status" data-field="features_solder_insufficient">{{ paper.features.solder_insufficient | render_status }}</td>
+        <td class="status-cell editable-status" data-field="features_solder_excess">{{ paper.features.solder_excess | render_status }}</td>
+        <td class="status-cell editable-status" data-field="features_solder_void">{{ paper.features.solder_void | render_status }}</td>
+        <td class="status-cell editable-status" data-field="features_solder_crack">{{ paper.features.solder_crack | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_missing_component">{{ paper.features.missing_component | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_wrong_component">{{ paper.features.wrong_component | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_orientation">{{ paper.features.orientation | render_status }}</td>
@@ -64,9 +73,8 @@
         <td class="toggle-btn" onclick="toggleDetails(this)"><span>Show</span></td>
     </tr>
     <tr class="detail-row">
-        <td colspan="38">
+        <td colspan="39">
             <div class="detail-content-placeholder"> 
-                <!-- Content will be loaded dynamically -->
             </div>
         </td>
     </tr>

@@ -2,10 +2,16 @@
 <tfoot id="counts-footer">
     <tr>
         <!-- Empty cells to align with non-count columns -->
-        <td></td> <!-- Type -->
-        <td style="font-weight: 400;" id="visible-count-cell">Filtered: <span style="font-weight: bold;" id="visible-papers-count"></span>, Loaded: <span style="font-weight: bold;" id="loaded-papers-count"></span>, Total: <span style="font-weight: bold;" id="total-papers-count">{{ total_paper_count | safe }}</span></td> <!-- Title -->
+        <td id="count-pdf_present" title="PDFs: 0, Annotated: 0">0</td> <!-- Combined PDF/Annotated Count Cell -->
+        <td style="font-weight: 400;" id="visible-count-cell">
+            Filtered: <span style="font-weight: bold;" id="visible-papers-count"></span>, 
+            Loaded: <span style="font-weight: bold;" id="loaded-papers-count"></span>, 
+            Total: <span style="font-weight: bold;" id="total-papers-count">{{ total_paper_count | safe }}</span>, <!-- Title -->
+            Duplicate: <span style="font-weight: bold;" id="duplicate-papers-count"></span>
+        </td>
         <!-- <td></td> Authors -->
         <td></td> <!-- Year -->
+        <td></td> <!-- Type -->
         <td></td> <!-- Journal -->
         <td></td> <!-- Page Count -->
         <!-- Classification Counts -->

@@ -30,6 +30,12 @@ const SYMBOL_SORT_WEIGHTS = {
     '❔': 0  // Unknown
 };
 
+const SYMBOL_PDF_WEIGHTS = {
+    '📗': 2, // Annotated
+    '📕': 1, // PDF
+    '❔': 0  // None
+};
+
 function updateCounts() {   //used by stats, comms and filtering
     const counts = {};
     const yearlySurveyImpl = {}; // { year: { surveys: count, impl: count } }
@@ -37,6 +43,7 @@ function updateCounts() {   //used by stats, comms and filtering
     const yearlyFeatures =   {}; // { year: { feature_field: count, ... } }
     const yearlyPubTypes = {}; // { year: { pubtype1: count, pubtype2: count, ... } }
 
+    // Initialize counts for all defined fields
     COUNT_FIELDS.forEach(field => counts[field] = 0);
 
     // Select only VISIBLE main rows for counting '✔️' and calculating visible count
@@ -49,9 +56,29 @@ function updateCounts() {   //used by stats, comms and filtering
 
     // Count symbols in visible rows and collect yearly data
     visibleRows.forEach(row => {
+        // --- NEW: Count PDF status ---
+        const pdfCell = row.cells[pdfCellIndex];
+        if (pdfCell) {
+            const pdfContent = pdfCell.textContent.trim();
+            // Increment counts based on the emoji in the PDF cell
+            if (pdfContent === '📕') { // PDF present
+                counts['pdf_present'] = (counts['pdf_present'] || 0) + 1;
+            } else if (pdfContent === '📗') { // Annotated PDF present
+                counts['pdf_annotated'] = (counts['pdf_annotated'] || 0) + 1;
+                // Also count annotated as a PDF present
+                counts['pdf_present'] = (counts['pdf_present'] || 0) + 1;
+            }
+            // '❔' means no PDF, so no increment needed for this state
+        }
+
+        // --- Existing Count Logic for other fields ---
         COUNT_FIELDS.forEach(field => {
+            // Skip the newly added PDF fields as they are handled separately above
+            if (field === 'pdf_present' || field === 'pdf_annotated') {
+                 return; // Skip to the next field
+            }
             const cell = row.querySelector(`[data-field="${field}"]`);
-            const cellText = cell.textContent.trim();
+            const cellText = cell ? cell.textContent.trim() : '';
             if (field === 'changed_by' || field === 'verified_by') {
                 if (cellText === '👤') {
                     counts[field]++;
@@ -63,6 +90,7 @@ function updateCounts() {   //used by stats, comms and filtering
             }
         });
 
+        // ... (rest of the yearly data collection logic remains the same) ...
         const yearCell = row.cells[yearCellIndex]; // Assuming Year is the 3rd column (index 2)
         const yearText = yearCell ? yearCell.textContent.trim() : '';
         const year = yearText ? parseInt(yearText, 10) : null;
@@ -121,7 +149,7 @@ function updateCounts() {   //used by stats, comms and filtering
         }
     });
     // Make counts available outside this function
-    latestCounts = counts; 
+    latestCounts = counts;
     latestYearlyData = {
         surveyImpl: yearlySurveyImpl,
         techniques: yearlyTechniques,
@@ -131,13 +159,41 @@ function updateCounts() {   //used by stats, comms and filtering
 
     loadedPapersCountCell.textContent = loadedPaperCount;
     visiblePapersCountCell.textContent = visiblePaperCount;
+
+    // --- Update Footer Counts ---
     COUNT_FIELDS.forEach(field => {
+        // Skip the 'pdf_annotated' field for direct footer update, as it's part of the combined PDF cell
+        if (field === 'pdf_annotated') {
+             return; // Skip updating the individual annotated count cell directly
+        }
+
         const countCell = document.getElementById(`count-${field}`);
         if (countCell) {
-            countCell.textContent = counts[field];
+            // For 'pdf_present', set the text content to the total count
+            // and add a tooltip showing both counts
+            if (field === 'pdf_present') {
+                countCell.textContent = counts['pdf_present'];
+                countCell.title = `Stored PDFs: ${counts['pdf_present']}, Annotated PDFs: ${counts['pdf_annotated']}`; // Set tooltip
+            } else {
+                // For all other fields, set the text content normally
+                countCell.textContent = counts[field];
+            }
         }
     });
+
+    // Ensure the 'pdf_annotated' count cell is cleared or hidden if it exists,
+    // as its value is now part of the 'pdf_present' cell's tooltip.
+    // This is just for cleanliness if the HTML still references it.
+    const annotatedCountCell = document.getElementById('count-pdf_annotated');
+    if (annotatedCountCell) {
+        // Option 1: Hide it if it exists
+        // annotatedCountCell.style.display = 'none';
+        // Option 2: Clear its content (more common if layout is fixed)
+        annotatedCountCell.textContent = '';
+        annotatedCountCell.title = ''; // Clear any existing title
+    }
 }
+
 
 function toggleDetails(element) {
     const row = element.closest('tr');
@@ -201,55 +257,92 @@ function applyAlternatingShading() {
     });
 }
 
-function applyJournalShading(rows) {
+function applyDuplicateShading(rows) {
     const journalCounts = new Map();
+    const titleCounts = new Map();
 
-    rows.forEach(row => {        // Only count visible rows (not hidden by filters)
+    // Count occurrences for both journal names and titles
+    rows.forEach(row => {
         if (!row.classList.contains('filter-hidden')) {
-            const journalCell = row.cells[journalCellIndex]; //see comms.js
+            const journalCell = row.cells[journalCellIndex];
+            const titleCell = row.cells[titleCellIndex];
+            
             const journalName = journalCell.textContent.trim();
+            const title = titleCell.textContent.trim();
+            
             journalCounts.set(journalName, (journalCounts.get(journalName) || 0) + 1);
+            titleCounts.set(title, (titleCounts.get(title) || 0) + 1);
         }
     });
-    // Determine the maximum count for scaling
+
+    // Count duplicate titles (only titles with 2 or more occurrences)
+    let duplicateTitleCount = 0;
+    for (const [title, count] of titleCounts) {
+        if (title && count >= 2) {
+            duplicateTitleCount++;
+        }
+    }
+    
+    // Update the duplicate papers count in HTML
+    const duplicateCountElement = document.getElementById('duplicate-papers-count');
+    if (duplicateCountElement) {
+        duplicateCountElement.textContent = duplicateTitleCount;
+    }
+
+    // Determine the maximum count for scaling (for journals only)
     let maxCount = 0;
     for (const count of journalCounts.values()) {
         if (count > maxCount) maxCount = count;
     }
 
-    // Define base shade color (light blue/greenish tint)
-    // You can adjust the HSL values for different base colors or intensity
-    const baseHue = 210; // Blueish
+    // Define base shade colors
+    const baseJournalHue = 210; // Blueish
     const baseSaturation = 66;
     const minLightness = 96; // Lightest shade (almost white)
     const maxLightness = 84; // Darkest shade when maxCount is high
+    
+    const baseTitleHue = 0; // Reddish
+    const titleSaturation = 66;
+    const titleLightness = 94; // Consistent light red
 
     rows.forEach(row => {
         const journalCell = row.cells[journalCellIndex];
+        const titleCell = row.cells[titleCellIndex];
+        
+        // Reset background colors
         journalCell.style.backgroundColor = '';
+        titleCell.style.backgroundColor = '';
 
-        // Only apply shading if the row is visible and has a journal name
+        // Only apply shading if the row is visible
         if (!row.classList.contains('filter-hidden')) {
             const journalName = journalCell.textContent.trim();
-            if (journalName) {  //avoids shading blank journals
-                const count = journalCounts.get(journalName) || 0;
-                if (count >= 2) { 
-                    // Scale lightness between maxLightness and minLightness
+            const title = titleCell.textContent.trim();
+            
+            // Apply journal shading (progressive)
+            if (journalName && journalName) {
+                const journalCount = journalCounts.get(journalName) || 0;
+                if (journalCount >= 2) { 
                     let lightness;
                     if (maxCount <= 1) {
-                        lightness = minLightness; // Avoid division by zero or negative
+                        lightness = minLightness;
                     } else {
-                        lightness = maxLightness + (minLightness - maxLightness) * (1 - (count - 1) / (maxCount - 1));
-                        lightness = Math.max(maxLightness, Math.min(minLightness, lightness));         // Ensure lightness stays within bounds
+                        lightness = maxLightness + (minLightness - maxLightness) * (1 - (journalCount - 1) / (maxCount - 1));
+                        lightness = Math.max(maxLightness, Math.min(minLightness, lightness));
                     }
-                    journalCell.style.backgroundColor = `hsl(${baseHue}, ${baseSaturation}%, ${lightness}%)`;
+                    journalCell.style.backgroundColor = `hsl(${baseJournalHue}, ${baseSaturation}%, ${lightness}%)`;
+                }
+            }
+            
+            // Apply title shading (consistent red for duplicates)
+            if (title && title) {
+                const titleCount = titleCounts.get(title) || 0;
+                if (titleCount >= 2) {
+                    titleCell.style.backgroundColor = `hsl(${baseTitleHue}, ${titleSaturation}%, ${titleLightness}%)`;
                 }
             }
         }
     });
 }
-
-
 function applyServerSideFilters() {
     document.documentElement.classList.add('busyCursor');
     const urlParams = new URLSearchParams(window.location.search);
@@ -404,7 +497,7 @@ function applyLocalFilters() {
         });
 
         applyAlternatingShading();
-        applyJournalShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
+        applyDuplicateShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
         updateCounts();
         applyButton.style.opacity = '0';
         applyButton.style.pointerEvents = 'none';
@@ -447,6 +540,12 @@ function sortTable(){
             } else if (['type', 'changed', 'changed_by', 'verified', 'verified_by', 'research_area', 'user_comment_state', 'features_other_state'].includes(sortBy)) {
                 cell = mainRow.cells[headerIndex];
                 cellValue = cell ? cell.textContent.trim() : '';
+            } else if (sortBy === 'pdf-link') { // NEW: Handle PDF link column sorting
+                cell = mainRow.cells[headerIndex]; // PDF cell is the second cell (index 1)
+                cellValue = cell ? cell.textContent.trim() : '';
+
+                // Use the weight, defaulting to 0 if symbol not found
+                cellValue = SYMBOL_PDF_WEIGHTS[cellValue] ?? 0;
             } else { // Status/Feature/Technique columns
                 cell = mainRow.querySelector(`.editable-status[data-field="${sortBy}"]`);
                 // Use SYMBOL_SORT_WEIGHTS for sorting, defaulting to 0 if symbol not found
@@ -481,7 +580,7 @@ function sortTable(){
         requestAnimationFrame(() => {
             applyAlternatingShading();
             const currentVisibleRowsForJournal = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
-            applyJournalShading(currentVisibleRowsForJournal);
+            applyDuplicateShading(currentVisibleRowsForJournal);
             updateCounts();
         });
         currentClientSort = { column: sortBy, direction: newDirection };

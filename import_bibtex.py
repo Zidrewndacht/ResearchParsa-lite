@@ -49,7 +49,9 @@ def create_database(db_path):
         verified_by TEXT,                  -- Identifier of the verifier (e.g., 'user')
         reasoning_trace TEXT,              -- New column to store evaluator reasoning traces
         verifier_trace TEXT,                -- New column to store verifier reasoning traces
-        user_trace TEXT                     -- User comments.
+        user_trace TEXT,                     -- User comments.
+        pdf_filename TEXT DEFAULT NULL,
+        pdf_state TEXT DEFAULT 'none'       -- 'none', 'annotated', 'PDF'
     )
     ''')
     # Enable WAL mode for better concurrency (optional)

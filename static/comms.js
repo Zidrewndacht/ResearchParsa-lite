@@ -5,11 +5,13 @@ const batchModal = document.getElementById("batchModal");
 let isBatchRunning = false; // Simple flag to prevent multiple simultaneous batches
 
 //Hardocoded cells - used for both scripts:
-const typeCellIndex = 0;
+const pdfCellIndex = 0;
+const titleCellIndex = 1;
 const yearCellIndex = 2;
-const journalCellIndex = 3;
-const pageCountCellIndex = 4;
-const estScoreCellIndex = 34;
+const pageCountCellIndex = 3;
+const journalCellIndex = 4;
+const typeCellIndex = 5;
+const estScoreCellIndex = 36;
 
 // --- Status Cycling Logic ---
 const STATUS_CYCLE = {
@@ -809,3 +811,131 @@ function saveChanges(paperId) {
         }
     });
 }
+
+
+// static/comms.js (or within a <script> tag in index.html)
+
+// Add a hidden file input element dynamically if it doesn't exist already
+// (This avoids needing to add it to index.html)
+if (!document.getElementById('pdf-file-input')) {
+    const hiddenFileInput = document.createElement('input');
+    hiddenFileInput.type = 'file';
+    hiddenFileInput.id = 'pdf-file-input';
+    hiddenFileInput.accept = '.pdf'; // Only accept PDF files
+    hiddenFileInput.style.display = 'none';
+    document.body.appendChild(hiddenFileInput);
+}
+
+// Reference the hidden input
+const pdfFileInput = document.getElementById('pdf-file-input');
+
+// Function to handle the actual upload
+function uploadPDFForPaper(paperId) {
+    const file = pdfFileInput.files[0];
+    if (!file) {
+        console.error("No file selected for upload.");
+        alert("No file selected.");
+        return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+         alert("Please select a PDF file.");
+         return;
+    }
+
+    const formData = new FormData();
+    formData.append('pdf_file', file);
+
+    // Show a simple loading indicator or disable interaction temporarily
+    const uploadLink = document.querySelector(`.pdf-upload-link[data-paper-id="${paperId}"]`);
+    if (uploadLink) {
+        uploadLink.textContent = '⏳'; // Change icon to indicate processing
+        uploadLink.style.pointerEvents = 'none'; // Disable clicks temporarily
+    }
+
+    fetch(`/upload_pdf/${encodeURIComponent(paperId)}`, { // Use encodeURIComponent for the string ID
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log("PDF uploaded successfully for paper ID:", paperId);
+            // Update the table row with the new PDF info
+            // Pass the filename and state received from the server
+            updateTableRowWithPDFData(paperId, data.pdf_filename, data.pdf_state);
+        } else {
+            console.error("Upload failed:", data.message);
+            alert(`Upload failed: ${data.message}`);
+            // Re-enable the link if it failed
+             if (uploadLink) {
+                 uploadLink.textContent = '❔';
+                 uploadLink.style.pointerEvents = 'auto';
+             }
+        }
+    })
+    .catch(error => {
+        console.error("Error during upload:", error);
+        alert("An error occurred during upload.");
+        // Re-enable the link if it failed
+        if (uploadLink) {
+            uploadLink.textContent = '❔';
+            uploadLink.style.pointerEvents = 'auto';
+        }
+    });
+}
+
+// Function to update the table row after successful upload
+function updateTableRowWithPDFData(paperId, filename, state) {
+    const row = document.querySelector(`tr[data-paper-id="${paperId}"]`);
+    if (!row) {
+        console.error(`Row for paper ID ${paperId} not found.`);
+        return;
+    }
+
+    const pdfCell = row.cells[pdfCellIndex]; // PDF cell is the second cell (index 1)
+    if (!pdfCell) {
+        console.error(`PDF cell for paper ID ${paperId} not found.`);
+        return;
+    }
+
+    // Create the new link element for the PDF
+    const pdfLink = document.createElement('a');
+    pdfLink.href = `/serve_pdf/${encodeURIComponent(filename)}`; // Use the serve_pdf route
+    pdfLink.target = '_blank';
+    pdfLink.title = `Open PDF: ${filename}`;
+    pdfLink.textContent = '📕'; // PDF emoji
+
+    // Replace the cell content with the new link
+    pdfCell.innerHTML = ''; // Clear existing content (like '⏳')
+    pdfCell.appendChild(pdfLink);
+    pdfCell.title = "PDF Status"; // Set title back
+}
+
+// Event delegation for the PDF upload links
+document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('pdf-upload-link')) {
+        event.preventDefault(); // Prevent default link behavior
+        // Get the paper ID as a string directly
+        const paperId = event.target.getAttribute('data-paper-id');
+        if (!paperId) { // Check if the ID string is empty or null
+            console.error("Invalid or missing paper ID for PDF upload link.");
+            return;
+        }
+
+        console.log("Attempting upload for paper ID:", paperId); // Debug log
+
+        // Reset the file input to allow selecting the same file again
+        pdfFileInput.value = '';
+
+        // Add event listener for when a file is selected
+        pdfFileInput.onchange = function(e) {
+            if (e.target.files.length > 0) {
+                uploadPDFForPaper(paperId);
+            }
+        };
+
+        // Trigger the hidden file input click
+        pdfFileInput.click();
+    }
+});

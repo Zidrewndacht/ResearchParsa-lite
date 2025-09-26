@@ -1,9 +1,10 @@
-    # browse_db.py
+# browse_db.py
 import sqlite3
 import json
 import argparse
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, abort, send_from_directory # Add abort here
+# from werkzeug.utils import secure_filename # Add this import
 from markupsafe import Markup 
 import argparse
 import tempfile
@@ -267,6 +268,9 @@ def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_coun
             paper_dict['technique'] = json.loads(paper_dict['technique'])
         except (json.JSONDecodeError, TypeError):
             paper_dict['technique'] = {}
+
+        paper_dict['pdf_filename'] = paper_dict.get('pdf_filename')     # Could be None or a string
+        paper_dict['pdf_state'] = paper_dict.get('pdf_state', 'none')   # Default state if not present
         paper_dict['changed_formatted'] = format_changed_timestamp(paper_dict.get('changed'))
         paper_dict['authors_truncated'] = truncate_authors(paper_dict.get('authors', ''))
         paper_list.append(paper_dict)
@@ -602,6 +606,7 @@ def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_
             papers=papers,
             type_emojis=globals.TYPE_EMOJIS,
             default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
+            pdf_emojis=globals.PDF_EMOJIS, # Pass the PDF emojis dictionary
             hide_offtopic=hide_offtopic,
             # Pass the *string representations* of the values to the template for input fields
             year_from_value=str(year_from_value),
@@ -666,6 +671,75 @@ def index():
         total_paper_count=total_paper_count
     )
 
+
+@app.route('/upload_pdf/<paper_id>', methods=['POST']) # Removed int: converter
+def upload_pdf(paper_id):
+    """Handles PDF file upload for a specific paper."""
+    print(f"Received upload request for paper ID: {paper_id}") # Debug print
+    if 'pdf_file' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No file part in request'}), 400
+
+    file = request.files['pdf_file']
+    if file.filename == '':
+        return jsonify({'status': 'error', 'message': 'No file selected'}), 400
+
+    if file and file.filename.lower().endswith('.pdf'):
+        # original_filename = secure_filename(file.filename)
+        unique_filename = f"{paper_id}.pdf"
+        filepath = os.path.join(globals.PDF_STORAGE_DIR, unique_filename)
+
+        try:
+            file.save(filepath)
+            # Update the database with the new filename and initial state 'PDF'
+            # Use the string paper_id for the database query
+            update_data = {'pdf_filename': unique_filename, 'pdf_state': 'PDF'}
+            result = update_paper_custom_fields(paper_id, update_data, changed_by="user") # Pass string ID
+
+            if result['status'] == 'success':
+                # Fetch updated paper data including new PDF info
+                # Pass the string ID here too
+                updated_paper_data = fetch_updated_paper_data(paper_id)
+                if updated_paper_data['status'] == 'success':
+                    # Add the PDF specific data to the response
+                    updated_paper_data['pdf_filename'] = unique_filename
+                    updated_paper_data['pdf_state'] = 'PDF'
+                    return jsonify(updated_paper_data)
+                else:
+                     print(f"Failed to fetch updated data for {paper_id} after upload.")
+                     return jsonify({'status': 'error', 'message': 'Failed to fetch updated paper data after upload'}), 500
+            else:
+                print(f"DB update failed for {paper_id} after saving file.")
+                # Rollback: delete the file if DB update failed
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                return jsonify({'status': 'error', 'message': 'Failed to update database after saving file'}), 500
+
+        except Exception as e:
+            print(f"Error saving uploaded PDF for paper {paper_id}: {e}")
+            # Attempt to remove the file if saving failed partway
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                except OSError:
+                    pass # Ignore error if file removal also fails
+            return jsonify({'status': 'error', 'message': 'Failed to save file'}), 500
+    else:
+        print(f"File type not allowed for {paper_id}: {file.filename}")
+        return jsonify({'status': 'error', 'message': 'File type not allowed, only PDFs are accepted'}), 400
+
+@app.route('/serve_pdf/<filename>')
+def serve_pdf(filename):
+    """Serves a PDF file from the data/pdf directory."""
+    # Validate filename to prevent path traversal
+    if '..' in filename or filename.startswith('/'):
+        abort(404) # Or return a 400 error
+    filepath = os.path.join(globals.PDF_STORAGE_DIR, filename)
+    if os.path.exists(filepath) and os.path.isfile(filepath):
+        # Use send_from_directory for security
+        return send_from_directory(globals.PDF_STORAGE_DIR, filename, as_attachment=False) # as_attachment=False opens in browser
+    else:
+        print(f"Requested PDF file not found: {filepath}")
+        abort(404) # File not found
 
 @app.route('/static_export', methods=['GET'])
 def static_export():

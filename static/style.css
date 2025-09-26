@@ -338,12 +338,12 @@ form input[type=text] {
 
 .status-cell {
     text-align: center;
-    font-size: 1.35em;
-    padding: 1px;
-    font-family: "Segoe UI Emoji Windows 11"
+    font-size: 1.3em;
+    padding: 0px;
+    font-family: "Segoe UI Emoji Windows 11";
 }
 
-.editable-status,.editable-verify {
+.editable-status,.editable-verify, .pdf-status {
     cursor: pointer;
     transition: background-color .2s,transform .1s;
     border-radius: 3px;
@@ -354,13 +354,13 @@ form input[type=text] {
     user-select: none
 }
 
-.editable-status:hover,.editable-verify:hover {
+.editable-status:hover,.editable-verify:hover, .pdf-status:hover {
     background-color: var(--light-colored-btn-color);
     transform: scale(1.1);
     box-shadow: 0 2px 4px rgba(0,0,0,.1)
 }
 
-.editable-status:active,.editable-verify:active {
+.editable-status:active,.editable-verify:active, .pdf-status:active {
     transform: scale(.95);
     background-color: var(--light-colored-btn-color)
 }
@@ -429,7 +429,7 @@ form input[type=text] {
 }
 
 #verify-all-btn,#verify-remaining-btn,.verify-btn {
-    background: var(--verify-btn-color)
+    background: var(--verify-btn-color);
 }
 
 #classify-all-btn strong,#verify-all-btn strong {
@@ -586,12 +586,16 @@ tr.filter-hidden {
     overflow-y: auto;
     overflow-x: hidden;
     margin: 6px 0 10px;
-    font-size: 10.5pt
+    font-size: 10.5pt;
+    grid-column: 1/3;
 }
 
 .detail-evaluator-trace,.detail-verifier-trace {
-    flex-basis: 100%;
-    min-width: 100%
+    display: grid;
+    min-width: 100%;
+    grid-template-columns: 1fr 170px;
+    grid-template-rows: max-content max-content;
+    align-items: end;
 }
 
 #main-header-wrapper {

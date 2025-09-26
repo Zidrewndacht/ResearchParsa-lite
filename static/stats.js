@@ -7,14 +7,19 @@ let latestYearlyData = {}; // NEW: Store yearly data for charts
 
 // Define the fields for which we want to count '✔️':
 const COUNT_FIELDS = [
+    'pdf_present', 
+    'pdf_annotated',
+
     'is_offtopic', 'is_survey', 'is_through_hole', 'is_smt', 'is_x_ray', // Classification (Top-level)
     'features_tracks', 'features_holes', 'features_solder_insufficient', 'features_solder_excess',
     'features_solder_void', 'features_solder_crack', 'features_orientation', 'features_wrong_component',
+
     'features_missing_component', 'features_cosmetic', 'features_other_state', // Features (Nested under 'features')
     'technique_classic_cv_based', 'technique_ml_traditional',
     'technique_dl_cnn_classifier', 'technique_dl_cnn_detector', 'technique_dl_rcnn_detector',
     'technique_dl_transformer', 'technique_dl_other', 'technique_hybrid', 'technique_available_dataset', // Techniques (Nested under 'technique')
-    'changed_by', 'verified', 'verified_by', 'user_comment_state' // Add these for user counting (Top-level)
+
+    'changed_by', 'verified', 'verified_by', 'user_comment_state' // user counting (Top-level)
 ];
 
 const statsBtn = document.getElementById('stats-btn');
