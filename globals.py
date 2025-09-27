@@ -21,6 +21,9 @@ os.makedirs(os.path.dirname(DATABASE_FILE), exist_ok=True)  # Ensure the directo
 PDF_STORAGE_DIR = os.path.join(os.getcwd(), 'data', 'pdf')
 os.makedirs(PDF_STORAGE_DIR, exist_ok=True) # Ensure the directory exists
 
+ANNOTATED_PDF_STORAGE_DIR = os.path.join(os.getcwd(), 'data', 'pdf_annotated')
+os.makedirs(ANNOTATED_PDF_STORAGE_DIR, exist_ok=True)
+
 # Define default JSON structures for features and technique
 DEFAULT_FEATURES = {
     "tracks": None,

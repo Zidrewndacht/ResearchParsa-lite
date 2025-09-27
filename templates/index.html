@@ -7,10 +7,10 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
 
     <script src="{{ url_for('static', filename='chart.js') }}"></script>
+    <script src="{{ url_for('static', filename='globals.js') }}" defer></script>
     <script src="{{ url_for('static', filename='comms.js') }}" defer></script>
     <script src="{{ url_for('static', filename='filtering.js') }}" defer></script>
     <script src="{{ url_for('static', filename='stats.js') }}" defer></script>
-    <!-- <script src="{{ url_for('static', filename='ghpages.js') }}" defer></script> -->
 </head>
 <body>
 <input type="file" id="bibtex-file-input" accept=".bib" style="display: none;"> <!-- Hidden file input for BibTeX upload -->

@@ -144,10 +144,10 @@ const FIELD_LABELS = {
 // Define the distinct color groups for the line chart based on original colors
 // The keys are the indices in the original color arrays that represent unique colors
 const featureColorGroups = {
-    0: { label: 'PCB Features', fields: [] },      // Teal
-    2: { label: 'Solder Defects', fields: [] },    // Grey
-    6: { label: 'PCBA Issues', fields: [] },       // Red
-    9: { label: 'Cosmetic', fields: [] },          // Blue
+    0: { label: 'PCB Features', fields: [] },      
+    2: { label: 'Solder Defects', fields: [] },    
+    6: { label: 'PCBA Issues', fields: [] },       
+    9: { label: 'Cosmetic', fields: [] },          
     10: { label: 'Other', fields: [] }
 };
 
@@ -157,20 +157,15 @@ function displayStats() {
     setTimeout(() => {
         updateCounts(); // Run updateCounts to get the latest data for visible rows
 
-        TECHNIQUE_FIELDS_FOR_YEARLY.forEach((field, index) => {
-            TECHNIQUE_FIELD_COLOR_MAP[field] = index; // Map field to its original index
-        });
-
-        FEATURE_FIELDS_FOR_YEARLY.forEach((field, index) => {
-            FEATURE_FIELD_INDEX_MAP[field] = index; // Map field to its original index
-        });
+        TECHNIQUE_FIELDS_FOR_YEARLY.forEach((field, index) => { TECHNIQUE_FIELD_COLOR_MAP[field] = index; });
+        FEATURE_FIELDS_FOR_YEARLY.forEach((field, index) => { FEATURE_FIELD_INDEX_MAP[field] = index; });
 
         // Populate the groups with the actual feature fields
         FEATURE_FIELDS_FOR_YEARLY.forEach(field => {
             const originalIndex = FEATURE_FIELD_INDEX_MAP[field];
             const originalColorHSLA = featuresColorsOriginalOrder[originalIndex];
 
-            // Find the base color index (0, 2, 6, 9) that matches this feature's color
+            // Find the base color index that matches this feature's color:
             let baseColorIndex = null;
             for (let key in featureColorGroups) {
                 const keyIndex = parseInt(key);
@@ -273,68 +268,60 @@ function displayStats() {
         const featuresPerYearCtx = document.getElementById('featuresPerYearLineChart')?.getContext('2d');
 
         // --- Render Features Distribution Bar Chart ---
-        if (featuresCtx) {
-            window.featuresBarChartInstance = new Chart(featuresCtx, {
-                type: 'bar',
-                data: featuresChartData,
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    return `${context.label}: ${context.raw}`;
-                                }
+        window.featuresBarChartInstance = new Chart(featuresCtx, {
+            type: 'bar',
+            data: featuresChartData,
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return `${context.label}: ${context.raw}`;
                             }
                         }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            ticks: { precision: 0 }
-                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
                     }
                 }
-            });
-        } else {
-            console.warn("Canvas context for featuresPieChart not found.");
-        }
+            }
+        });
 
         // --- Render Techniques Distribution Bar Chart (using mapped colors) ---
-        if (techniquesCtx) {
-            window.techniquesBarChartInstance = new Chart(techniquesCtx, {
-                type: 'bar',
-                data: techniquesChartData, // Uses sortedTechniques* with mapped colors
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    return `${context.label}: ${context.raw}`;
-                                }
+        window.techniquesBarChartInstance = new Chart(techniquesCtx, {
+            type: 'bar',
+            data: techniquesChartData, // Uses sortedTechniques* with mapped colors
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return `${context.label}: ${context.raw}`;
                             }
                         }
-                    },
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            ticks: { precision: 0 }
-                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
                     }
                 }
-            });
-        } else {
-            console.warn("Canvas context for techniquesPieChart not found.");
-        }
+            }
+        });
 
         // --- Render Line Charts ---
         // 1. Survey vs Implementation Papers per Year
@@ -343,57 +330,55 @@ function displayStats() {
         const surveyCounts = yearsForSurveyImpl.map(year => surveyImplData[year].surveys || 0);
         const implCounts = yearsForSurveyImpl.map(year => surveyImplData[year].impl || 0);
 
-        if (surveyVsImplCtx) {
-            window.surveyVsImplLineChartInstance = new Chart(surveyVsImplCtx, {
-                type: 'line',
-                data: {
-                    labels: yearsForSurveyImpl,
-                    datasets: [
-                        {
-                            label: 'Survey Papers',
-                            data: surveyCounts,
-                            borderColor: 'hsl(204, 82%, 37%)', // Blue
-                            backgroundColor: 'hsla(204, 82%, 37%, 0.66)',
-                            fill: false,
-                            tension: 0.25
-                        },
-                        {
-                            label: 'Implementation Papers',
-                            data: implCounts,
-                            borderColor: 'hsl(347, 70%, 49%)', // Red
-                            backgroundColor: 'hsla(347, 70%, 49%, 0.66)',
-                            fill: false,
-                            tension: 0.25
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,  // Use the point style
-                                pointStyle: 'circle'  // Specify the circle style
-                            }
-                        },
-                        title: { display: false, text: 'Survey vs Implementation Papers per Year' },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    return `${context.dataset.label}: ${context.raw}`;
-                                }
-                            }
+        window.surveyVsImplLineChartInstance = new Chart(surveyVsImplCtx, {
+            type: 'line',
+            data: {
+                labels: yearsForSurveyImpl,
+                datasets: [
+                    {
+                        label: 'Survey Papers',
+                        data: surveyCounts,
+                        borderColor: 'hsl(204, 82%, 37%)', // Blue
+                        backgroundColor: 'hsla(204, 82%, 37%, 0.66)',
+                        fill: false,
+                        tension: 0.25
+                    },
+                    {
+                        label: 'Implementation Papers',
+                        data: implCounts,
+                        borderColor: 'hsl(347, 70%, 49%)', // Red
+                        backgroundColor: 'hsla(347, 70%, 49%, 0.66)',
+                        fill: false,
+                        tension: 0.25
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,  // Use the point style
+                            pointStyle: 'circle'  // Specify the circle style
                         }
                     },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { precision: 0 } },
-                        x: { ticks: { precision: 0 } }
+                    title: { display: false, text: 'Survey vs Implementation Papers per Year' },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return `${context.dataset.label}: ${context.raw}`;
+                            }
+                        }
                     }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
+                    x: { ticks: { precision: 0 } }
                 }
-            });
-        }
+            }
+        });
 
         // 2. Techniques per Year (Consistent Colors)
         const techniquesYearlyData = latestYearlyData.techniques || {};
@@ -711,18 +696,10 @@ function displayStats() {
 
         setTimeout(() => {
             document.documentElement.classList.remove('busyCursor');
-        }, 700); 
+        }, 500); 
     }, 20);
 }
-function displayAbout(){
-    setTimeout(() => {
-        modalSmall.offsetHeight;
-        modalSmall.classList.add('modal-active');
-    }, 20);
-}
-
 function closeModal() { modal.classList.remove('modal-active'); }
-function closeSmallModal() { modalSmall.classList.remove('modal-active'); }
 
 
 document.addEventListener('DOMContentLoaded', function () {

@@ -1,31 +1,8 @@
 // static/comms.js
 /** For detail row retrieval and functionality that writes to the server (DB updates, etc). */
 // --- New Global Variables for Batch Status ---
-const batchModal = document.getElementById("batchModal");
 let isBatchRunning = false; // Simple flag to prevent multiple simultaneous batches
 
-//Hardocoded cells - used for both scripts:
-const pdfCellIndex = 0;
-const titleCellIndex = 1;
-const yearCellIndex = 2;
-const pageCountCellIndex = 3;
-const journalCellIndex = 4;
-const typeCellIndex = 5;
-const estScoreCellIndex = 36;
-
-// --- Status Cycling Logic ---
-const STATUS_CYCLE = {
-    '❔': { next: '✔️', value: 'true' },
-    '✔️': { next: '❌', value: 'false' },
-    '❌': { next: '❔', value: 'unknown' }
-};
-const VERIFIED_BY_CYCLE = {
-    '👤': { next: '❔', value: 'unknown' }, 
-    '❔': { next: '👤', value: 'user' },   
-    // If user sees Computer (🖥️), next is Unknown (sending 'unknown' triggers server to set DB to NULL)
-    // We assume the user wants to override/review it, not set it to computer.
-    '🖥️': { next: '❔', value: 'unknown' } 
-};
 /**
  * Helper to update a cell's status symbol based on boolean/null value.
  * @param {Element} row - The main table row element.
@@ -87,12 +64,6 @@ function renderChangedBy(value) {
         return `<span title="${escapedModelName}">🖥️</span>`;
     }
 }
-
-function showBatchActions(){
-    batchModal.offsetHeight;
-    batchModal.classList.add('modal-active');
-}
-function closeBatchModal() { batchModal.classList.remove('modal-active'); }
 
 document.addEventListener('DOMContentLoaded', function () {
         
@@ -772,7 +743,7 @@ function saveChanges(paperId) {
                 }
                 // --- NEW: Update displayed relevance if returned ---
                 // Find the relevance cell in the main row (adjust selector if needed)
-                const relevanceCell = row.querySelector('td:nth-child(7)'); // Or better, add a class like .relevance-cell to the <td> and use '.relevance-cell'
+                const relevanceCell = row.cells[relevanceCellIndex]; // Or better, add a class like .relevance-cell to the <td> and use '.relevance-cell'
                 if (relevanceCell) {
                      relevanceCell.textContent = data.relevance !== null && data.relevance !== undefined ? data.relevance : '';
                 }
@@ -884,8 +855,6 @@ function uploadPDFForPaper(paperId) {
         }
     });
 }
-
-// Function to update the table row after successful upload
 function updateTableRowWithPDFData(paperId, filename, state) {
     const row = document.querySelector(`tr[data-paper-id="${paperId}"]`);
     if (!row) {
@@ -899,12 +868,12 @@ function updateTableRowWithPDFData(paperId, filename, state) {
         return;
     }
 
-    // Create the new link element for the PDF
+    // Create the new link element for the PDF.js viewer
     const pdfLink = document.createElement('a');
-    pdfLink.href = `/serve_pdf/${encodeURIComponent(filename)}`; // Use the serve_pdf route
+    pdfLink.href = `/static/pdfjs/web/viewer.html?file=/serve_pdf/${encodeURIComponent(filename)}`; // Use the new viewer URL
     pdfLink.target = '_blank';
-    pdfLink.title = `Open PDF: ${filename}`;
-    pdfLink.textContent = '📕'; // PDF emoji
+    pdfLink.title = `Open PDF.js Annotator for: ${filename}`; // Update title
+    pdfLink.textContent = '📕'; // PDF emoji (or use state emoji if you prefer)
 
     // Replace the cell content with the new link
     pdfCell.innerHTML = ''; // Clear existing content (like '⏳')
