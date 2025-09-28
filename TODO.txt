@@ -107,8 +107,6 @@ OK      Reimplement full-client-side GH Pages export
 
 OK      Fix table layout dynamic widths (colgroups)
 OK      Add loading spinner for table updates
-        Fix ugly hide offtopic checkbox
-        Add favicon
 
 OK      Group features;
 OK      Keep colors consistent across charts;
@@ -122,27 +120,48 @@ OK      Add sanity check filter: offtopic papers verified as wrong classificatio
 OK              Instead, just add a "only wrong classifications" filter then sort by offtopic?
                 Potential max. 177 false offtopics of 11709?
 
-
 OK      Fix server-side search not being capable of searching strings that are JSON keys (as they return all rows because they have the key)?
 OK              Index JSON contents for fast search
 
-        Refactor browse_db.py (too large)?
 OK      Refactor filtering.js (too large): separate stats.js
         Automatically reset 'verified' after 're-classify this paper' or manual changes.
 
-        
-OK      Fix fixed-position JS columns (e.g. verifier score updating wrong column);
-
-        Update commented&other field displays on save.
+OK      Fix fixed-position JS columns (e.g. verifier score updating wrong column on client post-XHR);
 
 OK      Fix chart can grow but can't shrink?
 OK      Add filter for feature groups (tracks/holes, solder, PCBA), all client-side;
 OK      Add journal vs conference chart;
 
-        Excel export:
+OK      Add PDF attachment capability
+OK      Add PDF annotation capability
+OK              Autosave annotations
+OK              Brand annotator interface
+
+OK      Add Excel export:
                 Count of misclassification suspects;
                 Bubble charts about...?
+                
+        Refactor browse_db.py (too large)?
+        Re-factor JS to remove duplicated code from ghpages.js: keep only actual export-specific code
 
-        Add APA/ABNT? citation to detail pane
+        Integrate base64 favicon
+        Add ABNT? citation to detail pane
 
-        Optimize FTS Search
+        Add full zip export (static HTML viewer + database + PDF folders)
+
+        Add multiuser capability (naming users, user-selectable DB)
+                Possibly auth for server hosting? -- low priority
+
+        Fix ugly checkboxes
+                Show negative vs positive checkboxes differently
+
+        Isolate most research-specific logic where possible -- long term, complicated refactor with little usefulness for now:
+                separate fixed from domain-specific HTML templates;
+                add a python file exclusive for the domain-specific details (DB schema, JSON schemas, etc) and change existing scripts to use it accordingly;
+                separate JS for logic that access the domain-specific HTML parts from generic JS
+
+        Optimize FTS Search (use all searchable fields) -- not a priority, works fast enough as is, client-side table re-render is always the bottleneck in any tested hardware?
+        
+        Low relevance XHR limitations/fixes:
+                Update commented&other field displays on save.
+                Update PDF icon on first annotation without manual reload.

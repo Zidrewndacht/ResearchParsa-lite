@@ -1,11 +1,11 @@
 # ResearchParça
-LLM-based analysis of abstracts from a BibTeX file. Tailor-made for PCB inspection papers, but may be used for other purposes with (fairly substantial) adaptation.
+LLM-based analysis of abstracts from a BibTeX file. Very tailor-made for PCB inspection papers, but may be used for other purposes with (fairly substantial) adaptation.
 
 This was made to help research on PCB inspection. It allows for searching, filtering, statistics and, mainly, automatic, traceable classification and verification through natural language processing using large language models.
 
-This is not yet fully-featured. See TODO.txt for more information. 
+This is (mostly) already usable, but not yet fully-featured. See TODO.txt for more information. 
 
-A read-only version for demonstration purposes can be accessed via GitHub Pages [here](https://zidrewndacht.github.io/bibtex-custom-parser). The static demo has full client-side browsing/sarching/filtering/stats functionality. It may not be updated as frequently as the actual server-based implementation.
+A read-only version for demonstration purposes can be accessed via GitHub Pages [here](https://zidrewndacht.github.io/bibtex-custom-parser). The static demo has full client-side browsing/sarching/filtering/stats functionality. It may not be updated as frequently as the actual server-based implementation. PDF attachment viewing doesn't work in GitHub Pages version, but should work fine in a local export with the included /pdf and /annotated_pdf folders
 
 ## Usage:
 
