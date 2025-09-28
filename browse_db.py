@@ -18,9 +18,9 @@ import io
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill 
 from openpyxl.worksheet.table import Table, TableStyleInfo
+from werkzeug.utils import secure_filename # Ensure this is imported
 import gzip
 import base64
-import urllib.parse # Add this import at the top
 
 # Import globals, the classification and verification modules
 import globals
@@ -728,45 +728,114 @@ def upload_pdf(paper_id):
         return jsonify({'status': 'error', 'message': 'File type not allowed, only PDFs are accepted'}), 400
 
 
-
-@app.route('/serve_pdf/<path:filename>') # Use <path:filename> to handle potential dots in filename
-def serve_pdf(filename):
-    """Serves the correct PDF file (annotated or original) for the PDF.js viewer based on the original filename."""
-    # Validate filename to prevent path traversal
-    if '..' in filename or filename.startswith('/'):
+@app.route('/serve_pdf/<paper_id>')
+def serve_pdf(paper_id):
+    """
+    Serves the correct PDF file (annotated or original) for the PDF.js viewer
+    based on the paper_id. Also updates the pdf_state in the database
+    based on the actual existence of the files.
+    """
+    conn = get_db_connection()
+    paper = conn.execute("SELECT pdf_filename, pdf_state FROM papers WHERE id = ?", (paper_id,)).fetchone()
+    
+    if not paper or not paper['pdf_filename']:
+        conn.close()
+        print(f"No PDF filename found in DB for paper_id: {paper_id}")
         abort(404)
 
-    # Derive the base filename (without extension) from the provided original filename
-    base_filename = os.path.splitext(filename)[0] # e.g., "some_paper_v1.pdf" -> "some_paper_v1"
-    original_filename = filename # Use the provided filename directly
-    annotated_filename = f"{base_filename}_annotated.pdf"
+    filename = paper['pdf_filename']
+    current_db_state = paper['pdf_state']
+    
+    # NEW LOGIC: Check for annotated and original files
+    annotated_path = os.path.join(globals.ANNOTATED_PDF_STORAGE_DIR, filename)
+    original_path = os.path.join(globals.PDF_STORAGE_DIR, filename)
 
-    # Check for annotated PDF first in the annotated directory
-    annotated_path = os.path.join(globals.ANNOTATED_PDF_STORAGE_DIR, annotated_filename)
-    original_path = os.path.join(globals.PDF_STORAGE_DIR, original_filename)
-
+    print(f"Serving PDF for paper_id {paper_id} (filename: {filename})") # Debug print
     print(f"Looking for annotated: {annotated_path}") # Debug print
     print(f"Looking for original: {original_path}") # Debug print
 
-    # Determine which file to serve
+    new_state = None
     file_to_serve = None
-    directory_to_serve_from = None
 
     if os.path.exists(annotated_path):
-        file_to_serve = annotated_filename
-        directory_to_serve_from = globals.ANNOTATED_PDF_STORAGE_DIR
-        print(f"Found annotated file: {file_to_serve}")
+        print(f"Found annotated file: {filename}")
+        new_state = 'annotated'
+        file_to_serve = annotated_path
     elif os.path.exists(original_path):
-        file_to_serve = original_filename
-        directory_to_serve_from = globals.PDF_STORAGE_DIR
-        print(f"Found original file: {file_to_serve}")
+        print(f"Found original file: {filename}")
+        new_state = 'PDF' # Reset to 'PDF' if annotated file is missing but original exists
+        file_to_serve = original_path
     else:
-        # Neither file exists
-        print(f"No PDF file found for original filename: {filename} (tried {original_path}, {annotated_path})")
-        abort(404)
+        print(f"No PDF file found for paper_id: {paper_id} (filename: {filename})")
+        # File doesn't exist at all, set state to 'none'
+        new_state = 'none'
+        # Update the database record
+        update_query = "UPDATE papers SET pdf_state = ? WHERE id = ?"
+        conn.execute(update_query, (new_state, paper_id))
+        conn.commit()
+        conn.close()
+        abort(404) # Still abort 404 as no file to serve
 
-    # Use send_from_directory for security
-    return send_from_directory(directory_to_serve_from, file_to_serve, as_attachment=False)
+    # Check if the state in the DB needs updating
+    if current_db_state != new_state:
+        print(f"Updating pdf_state for {paper_id} from '{current_db_state}' to '{new_state}'")
+        update_query = "UPDATE papers SET pdf_state = ? WHERE id = ?"
+        conn.execute(update_query, (new_state, paper_id))
+        conn.commit()
+    else:
+        print(f"pdf_state for {paper_id} is already correct ('{new_state}')")
+
+    conn.close()
+
+    # Serve the determined file
+    # Use os.path.basename to get just the filename from the full path for send_from_directory
+    return send_from_directory(os.path.dirname(file_to_serve), os.path.basename(file_to_serve), as_attachment=False)
+
+
+@app.route('/upload_annotated_pdf/<paper_id>', methods=['POST'])
+def upload_annotated_pdf(paper_id):
+    """
+    Receives an annotated PDF file associated with a paper_id,
+    saves it to the annotated storage directory, and updates the pdf_state.
+    """
+    if 'pdf_file' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No file part in request'}), 400
+
+    file = request.files['pdf_file']
+    if file.filename == '' or not file.filename.lower().endswith('.pdf'):
+        return jsonify({'status': 'error', 'message': 'Invalid or missing file'}), 400
+
+    # Look up filename from paper_id to save it correctly.
+    conn = get_db_connection()
+    paper = conn.execute("SELECT pdf_filename FROM papers WHERE id = ?", (paper_id,)).fetchone()
+    conn.close()
+
+    if not paper or not paper['pdf_filename']:
+        return jsonify({'status': 'error', 'message': f'Paper ID {paper_id} not found in DB'}), 404
+    
+    # Use the filename from the DB. Sanitize for security.
+    filename = secure_filename(paper['pdf_filename'])
+    filepath = os.path.join(globals.ANNOTATED_PDF_STORAGE_DIR, filename) # [2]
+
+    try:
+        file.save(filepath)
+        
+        # Update the database to set the pdf_state to 'annotated'
+        update_data = {'pdf_state': 'annotated'}
+        result = update_paper_custom_fields(paper_id, update_data, changed_by="user") # [10, 11]
+        
+        if result.get('status') != 'success':
+             # If DB update fails, you might want to remove the saved file to avoid inconsistency.
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            return jsonify({'status': 'error', 'message': 'Failed to update paper state in DB'}), 500
+
+        print(f"Saved annotated PDF for paper {paper_id} as {filename}")
+        return jsonify({'status': 'success', 'message': f'File {filename} updated successfully.'})
+    except Exception as e:
+        print(f"Error saving annotated PDF for paper {paper_id}: {e}")
+        return jsonify({'status': 'error', 'message': 'Failed to save file on server.'}), 500
+
 
 
 @app.route('/static_export', methods=['GET'])
@@ -835,6 +904,7 @@ def static_export():
         'papers_table_static_export.html',
         papers=papers, # Pass the potentially modified papers list
         type_emojis=globals.TYPE_EMOJIS,
+        pdf_emojis=globals.PDF_EMOJIS, # Pass the PDF emojis dictionary
         default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
         hide_offtopic=hide_offtopic,
         year_from_value=str(year_from_value),

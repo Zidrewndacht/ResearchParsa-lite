@@ -22,11 +22,15 @@ const headers = document.querySelectorAll('th[data-sort]');
 let currentClientSort = { column: null, direction: 'ASC' };
 
 //Hardocoded cells - to update in this script:
-const typeCellIndex = 0;
+const pdfCellIndex = 0;
+const titleCellIndex = 1;
 const yearCellIndex = 2;
-const journalCellIndex = 3;
-const pageCountCellIndex = 4;
-const estScoreCellIndex = 34;
+const pageCountCellIndex = 3;
+const journalCellIndex = 4;
+const typeCellIndex = 5;
+const relevanceCellIndex = 7;
+const estScoreCellIndex = 36;
+
 
 const SYMBOL_SORT_WEIGHTS = {
     '✔️': 2,
@@ -229,6 +233,9 @@ let latestYearlyData = {}; // NEW: Store yearly data for charts
 
 // Define the fields for which we want to count '✔️'
 const COUNT_FIELDS = [
+    'pdf_present', 
+    'pdf_annotated',
+
     'is_offtopic', 'is_survey', 'is_through_hole', 'is_smt', 'is_x_ray', // Classification (Top-level)
     'features_tracks', 'features_holes', 'features_solder_insufficient', 'features_solder_excess',
     'features_solder_void', 'features_solder_crack', 'features_orientation', 'features_wrong_component',
@@ -254,7 +261,6 @@ const FEATURE_FIELDS_FOR_YEARLY = [
 
 function updateCounts() {
     const counts = {};
-    // NEW: Initialize structures for yearly data
     const yearlySurveyImpl = {}; // { year: { surveys: count, impl: count } }
     const yearlyTechniques = {}; // { year: { technique_field: count, ... } }
     const yearlyFeatures = {};   // { year: { feature_field: count, ... } }
@@ -267,25 +273,42 @@ function updateCounts() {
     const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
     const visiblePaperCount = visibleRows.length;
 
+    // Count symbols in visible rows and collect yearly data
     visibleRows.forEach(row => {
-        // --- Existing Counting Logic ---
+        // --- NEW: Count PDF status ---
+        const pdfCell = row.cells[pdfCellIndex];
+        if (pdfCell) {
+            const pdfContent = pdfCell.textContent.trim();
+            // Increment counts based on the emoji in the PDF cell
+            if (pdfContent === '📕') { // PDF present
+                counts['pdf_present'] = (counts['pdf_present'] || 0) + 1;
+            } else if (pdfContent === '📗') { // Annotated PDF present
+                counts['pdf_annotated'] = (counts['pdf_annotated'] || 0) + 1;
+                // Also count annotated as a PDF present
+                counts['pdf_present'] = (counts['pdf_present'] || 0) + 1;
+            }
+            // '❔' means no PDF, so no increment needed for this state
+        }
+
+        // --- Existing Count Logic for other fields ---
         COUNT_FIELDS.forEach(field => {
+            // Skip the newly added PDF fields as they are handled separately above
+            if (field === 'pdf_present' || field === 'pdf_annotated') {
+                 return; // Skip to the next field
+            }
             const cell = row.querySelector(`[data-field="${field}"]`);
-            if (cell) {
-                const cellText = cell.textContent.trim();
-                if (field === 'changed_by' || field === 'verified_by') {
-                    if (cellText === '👤') {
-                        counts[field]++;
-                    }
-                } else {
-                    if (cellText === '✔️') {
-                        counts[field]++;
-                    }
+            const cellText = cell ? cell.textContent.trim() : '';
+            if (field === 'changed_by' || field === 'verified_by') {
+                if (cellText === '👤') {
+                    counts[field]++;
+                }
+            } else {
+                if (cellText === '✔️') {
+                    counts[field]++;
                 }
             }
         });
 
-        // --- NEW: Collect Yearly Data for Charts ---
         const yearCell = row.cells[2]; // Assuming Year is the 3rd column (index 2)
         const yearText = yearCell ? yearCell.textContent.trim() : '';
         const year = yearText ? parseInt(yearText, 10) : null;
@@ -355,10 +378,25 @@ function updateCounts() {
     const totalPaperCount = allRows.length;
     latestCounts = counts; // Make counts available outside this function
     document.getElementById('visible-count-cell').innerHTML = `<strong>${visiblePaperCount}</strong> paper${visiblePaperCount !== 1 ? 's' : ''} of <strong>${totalPaperCount}</strong>`;
+
+    // --- Update Footer Counts ---
     COUNT_FIELDS.forEach(field => {
+        // Skip the 'pdf_annotated' field for direct footer update, as it's part of the combined PDF cell
+        if (field === 'pdf_annotated') {
+             return; // Skip updating the individual annotated count cell directly
+        }
+
         const countCell = document.getElementById(`count-${field}`);
         if (countCell) {
-            countCell.textContent = counts[field];
+            // For 'pdf_present', set the text content to the total count
+            // and add a tooltip showing both counts
+            if (field === 'pdf_present') {
+                countCell.textContent = counts['pdf_present'];
+                countCell.title = `Stored PDFs: ${counts['pdf_present']}, Annotated PDFs: ${counts['pdf_annotated']}`; // Set tooltip
+            } else {
+                // For all other fields, set the text content normally
+                countCell.textContent = counts[field];
+            }
         }
     });
 }

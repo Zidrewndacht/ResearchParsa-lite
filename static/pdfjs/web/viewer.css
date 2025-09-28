@@ -4959,8 +4959,8 @@
 
 #highlightParamsToolbarContainer{
   gap:16px;
-  padding-inline:10px;
-  padding-block-end:12px;
+  /*! padding-inline:10px; */
+  /*! padding-block-end:12px; */
 }
 
 #highlightParamsToolbarContainer .colorPicker{
@@ -4987,7 +4987,7 @@
         align-items:center;
         background:none;
         flex:0 0 auto;
-        padding:0;
+        padding:4px;
       }
 
 :is(:is(:is(#highlightParamsToolbarContainer .colorPicker) .dropdown) button) .swatch{
@@ -5078,7 +5078,7 @@
       }
 
 #highlightParamsToolbarContainer #editorHighlightVisibility{
-    display:flex;
+    display:none;
     flex-direction:column;
     align-items:flex-start;
     gap:8px;
@@ -5243,7 +5243,7 @@
 
   --viewer-container-height:0;
   --pdfViewer-padding-bottom:0;
-  --page-margin:1px auto -8px;
+  --page-margin:1px auto 12px;
   --page-border:9px solid transparent;
   --spreadHorizontalWrapped-margin-LR:-3.5px;
   --loading-icon-delay:400ms;
@@ -5329,6 +5329,7 @@
     overflow:hidden;
     width:100%;
     height:100%;
+    box-shadow: 0 6px 24px 0px #0008;
   }
 
 :is(.pdfViewer .canvasWrapper) canvas{
@@ -5361,6 +5362,8 @@
   border:var(--page-border);
   background-clip:content-box;
   background-color:var(--page-bg-color, rgb(255 255 255));
+  /*! box-shadow: 0px 2px 8px #0006; */
+  /*! border: 1px solid #0006; */
 }
 
 .pdfViewer .dummyPage{
@@ -5458,13 +5461,13 @@
   --sidebar-transition-duration:200ms;
   --sidebar-transition-timing-function:ease;
 
-  --toolbar-height:32px;
-  --toolbar-horizontal-padding:1px;
-  --toolbar-vertical-padding:2px;
-  --icon-size:16px;
+  --toolbar-height:48px;
+  --toolbar-horizontal-padding:3px;
+  --toolbar-vertical-padding:3px;
+  --icon-size:20px;
 
-  --toolbar-icon-opacity:0.7;
-  --doorhanger-icon-opacity:0.9;
+  --toolbar-icon-opacity:0.66;
+  --doorhanger-icon-opacity:0.66;
   --doorhanger-height:8px;
 
   --csstools-light-dark-toggle--0:var(--csstools-color-scheme--light) rgb(249 249 250);
@@ -5851,7 +5854,7 @@ body.wait::before{
 
 #sidebarContainer{
   position:absolute;
-  inset-block:var(--toolbar-height) 0;
+  inset-block:calc(var(--toolbar-height) + 8px) 0;
   inset-inline-start:calc(-1 * var(--sidebar-width));
   width:var(--sidebar-width);
   visibility:hidden;
@@ -5870,6 +5873,11 @@ body.wait::before{
 
 #outerContainer.sidebarOpen #sidebarContainer{
   inset-inline-start:0;
+  /*! background: var(--detail-button-background); */
+  /*! box-shadow: 0 4px 8px 1px #0004; */
+  /*! border-bottom: var(--toolbar-border-bottom); */
+  /*! border: 1px solid var(--primary-ui-color); */
+  /*! border-radius: 8px; */
 }
 
 #mainContainer{
@@ -5887,7 +5895,7 @@ body.wait::before{
   overflow:auto;
   position:absolute;
   width:100%;
-  box-shadow:inset calc(-1px * var(--dir-factor)) 0 0 rgb(0 0 0 / 0.25);
+  /*! box-shadow:inset calc(-1px * var(--dir-factor)) 0 0 rgb(0 0 0 / 0.25); */
 }
 
 #viewerContainer{
@@ -5924,6 +5932,11 @@ body.wait::before{
   border-bottom:var(--toolbarSidebar-border-bottom);
   padding:var(--toolbar-vertical-padding) var(--toolbar-horizontal-padding);
   justify-content:space-between;
+  background: var(--detail-button-background);
+  box-shadow: 0 4px 8px 1px #0004;
+  border-bottom: var(--toolbar-border-bottom);
+  border: 1px solid var(--primary-ui-color);
+  border-radius: 8px;
 }
 
 #toolbarSidebar #toolbarSidebarLeft{
@@ -5978,16 +5991,18 @@ body.wait::before{
 
 .doorHanger,
 .doorHangerRight{
-  border-radius:2px;
+  border-radius:8px;
   box-shadow:0 1px 5px var(--doorhanger-border-color), 0 0 0 1px var(--doorhanger-border-color);
   border:var(--doorhanger-border-color-whcm);
   background-color:var(--doorhanger-bg-color);
   inset-block-start:calc(100% + var(--doorhanger-height) - 2px);
+  background: var(--background-color);
+  border: 1px solid var(--primary-ui-color);
 }
 
 :is(.doorHanger,.doorHangerRight)::after,:is(.doorHanger,.doorHangerRight)::before{
     bottom:100%;
-    border-style:solid;
+    /*! border-style:solid; */
     border-color:transparent;
     content:"";
     height:0;
@@ -6223,12 +6238,12 @@ body.wait::before{
   }
 
 .toolbarField{
-  padding:4px 7px;
+  padding:10px 8px;
   margin:3px 0;
-  border-radius:2px;
+  border-radius:5px;
   background-color:var(--field-bg-color);
   background-clip:padding-box;
-  border:1px solid var(--field-border-color);
+  border:1px solid var(--primary-ui-color);
   box-shadow:none;
   color:var(--field-color);
   font-size:12px;
@@ -6368,7 +6383,7 @@ a:focus > .thumbnail > .thumbnailImage,
   min-width:calc(100% - 4px);
   height:auto;
   margin-bottom:1px;
-  padding:2px 0 5px;
+  padding:5px;
   padding-inline-start:4px;
   border-radius:2px;
   color:var(--treeitem-color);
@@ -6554,7 +6569,7 @@ dialog :link{
 
 .toolbarButton{
   height:100%;
-  aspect-ratio:1;
+  aspect-ratio:0.8;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -6593,6 +6608,7 @@ dialog :link{
 .toolbarButton.toggled{
     background-color:var(--toggled-btn-bg-color);
     color:var(--toggled-btn-color);
+    border-radius: 6px;
   }
 
 .toolbarButton.toggled::before{
@@ -6601,6 +6617,7 @@ dialog :link{
 
 .toolbarButton.toggled:hover{
       outline:var(--toggled-hover-btn-outline) !important;
+      border-radius: 5px;
     }
 
 .toolbarButton.toggled:hover:active{
@@ -6609,6 +6626,7 @@ dialog :link{
 
 .toolbarButton:is(:hover,:focus-visible){
     background-color:var(--button-hover-color);
+    border-radius: 5px;
   }
 
 .toolbarButton:is(:hover,:focus-visible)::before{
@@ -6670,7 +6688,8 @@ dialog :link{
   }
 
 .toolbarButtonWithContainer .menu{
-    padding-block:5px;
+    /*! padding-block:5px; */
+    padding: 8px 6px;
   }
 
 .toolbarButtonWithContainer .menuContainer{
@@ -6693,9 +6712,12 @@ dialog :link{
     min-width:var(--editor-toolbar-min-width);
     width:-moz-max-content;
     width:max-content;
-    position:absolute;
+    position:fixed;
     z-index:30000;
     cursor:default;
+    box-shadow: 0 4px 8px 1px #0004;
+    right: 12px;
+    top: 60px;
   }
 
 :is(.toolbarButtonWithContainer .editorParamsToolbar) :is(#editorStampAddImage,#editorSignatureAddSignature)::before{
@@ -6771,6 +6793,7 @@ dialog :link{
   cursor:default;
   min-height:26px;
   max-height:calc(var(--viewer-container-height) - 40px);
+  box-shadow: 0 4px 8px 1px #0004;
 }
 
 :is(#secondaryToolbar #secondaryToolbarButtonContainer) #secondaryOpenFile::before{
@@ -6892,6 +6915,8 @@ dialog :link{
   box-sizing:border-box;
   flex-wrap:wrap;
   justify-content:flex-start;
+  box-shadow: 0 4px 8px 1px #0004;
+  left: -300px;
 }
 
 #findbar  > *{
@@ -6914,8 +6939,9 @@ dialog :link{
     }
 
 :is(#findbar #findInputContainer) #findInput{
-      width:200px;
-      padding:5px var(--input-horizontal-padding);
+      width:250px;
+      /*! padding:5px var(--input-horizontal-padding); */
+      border-radius: 4px;
     }
 
 :is(:is(#findbar #findInputContainer) #findInput)::-moz-placeholder{
@@ -7085,7 +7111,7 @@ dialog :link{
   flex-direction:row;
   align-items:center;
   justify-content:space-between;
-  gap:1px;
+  gap:4px;
   box-sizing:border-box;
 }
 
@@ -7100,10 +7126,10 @@ dialog :link{
 
   width:fit-content;
   min-width:140px;
-  padding:0;
-  background-color:var(--dropdown-btn-bg-color);
-  border:var(--dropdown-btn-border);
-  border-radius:2px;
+  padding:5px;
+  background-color:#fffe;
+  border:1px solid var(--primary-ui-color);
+  border-radius:5px;
   color:var(--main-color);
   font-size:12px;
   line-height:14px;
@@ -7116,7 +7142,7 @@ dialog :link{
 }
 
 .dropdownToolbarButton:hover{
-    background-color:var(--button-hover-color);
+    background-color:#eee;
   }
 
 .dropdownToolbarButton  > select{
@@ -7134,7 +7160,7 @@ dialog :link{
     padding-inline:6px 38px;
     border:none;
     outline:none;
-    background-color:var(--dropdown-btn-bg-color);
+    background-color:transparent;
   }
 
 :is(.dropdownToolbarButton > select)  > option{
@@ -7143,7 +7169,6 @@ dialog :link{
     }
 
 :is(.dropdownToolbarButton > select):is(:hover,:focus-visible){
-      background-color:var(--button-hover-color);
       color:var(--toggled-btn-color);
     }
 
@@ -7177,9 +7202,11 @@ dialog :link{
   position:relative;
   box-sizing:border-box;
   font:message-box;
-  background-color:var(--toolbar-bg-color);
-  box-shadow:var(--toolbar-box-shadow);
+  background:var(--detail-button-background);
+  box-shadow:0 4px 8px 1px #0004;
   border-bottom:var(--toolbar-border-bottom);
+  border: 1px solid var(--primary-ui-color);
+  border-radius: 8px;
 }
 
 #toolbarContainer #toolbarViewer{
