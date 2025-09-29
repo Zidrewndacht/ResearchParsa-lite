@@ -1,5 +1,7 @@
 //globals.js
 const batchModal = document.getElementById("batchModal");
+const importModal = document.getElementById("importModal");
+const exportModal = document.getElementById("exportModal");
 
 //Hardocoded cells - used for multiple scripts:
 const pdfCellIndex = 0;
@@ -88,11 +90,22 @@ function showBatchActions(){
 }
 function closeBatchModal() { batchModal.classList.remove('modal-active'); }
 
+function showImportActions(){
+    importModal.offsetHeight;
+    importModal.classList.add('modal-active');
+}
+function closeImportModal() { importModal.classList.remove('modal-active'); }
+
+function showExportActions(){
+    exportModal.offsetHeight;
+    exportModal.classList.add('modal-active');
+}
+function closeExporthModal() { exportModal.classList.remove('modal-active'); }
+
 function displayAbout(){
     modalSmall.offsetHeight;
     modalSmall.classList.add('modal-active');
 }
-
 function closeSmallModal() { modalSmall.classList.remove('modal-active'); }
 
 //used by stats, comms and filtering:

@@ -66,11 +66,11 @@
                     <th id="main-header-wrapper" colspan=39>
                         <div class="main-header">
                             <div class="header-controls">
-                                <button class="action-btn" id="import-bibtex-btn">Import <strong>BibTeX</strong></button>
+                                <button class="action-btn" id="import-btn" style="display:none">Import / Restore</button> <!-- currently unused, kept if a menu is desired later here instead-->
+                                <button class="action-btn" id="import-bibtex-btn">Import <strong>BibTeX</strong></button>                                
                             </div>
                             <div class="header-controls">
-                                <button class="action-btn" id="export-html-btn">Export <strong>HTML</strong></button>
-                                <button class="action-btn" id="export-xlsx-btn">Export <strong>XLSX</strong></button>
+                                <button class="action-btn" id="export-btn">Export & <strong>Backup</strong></button>
                             </div>
                             <div class="header-branding"><span>Research</span><span style="font-weight: 600; color: var(--primary-ui-color);">Parça</span></div>
                             <div class="header-controls">
@@ -182,7 +182,7 @@
 
                     <!-- Techniques Summary Columns (Updated list) -->
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_classic_cv_based"><span class="sort-indicator"></span><div><span>Classic CV</span></div></th>
-                    <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_ml_traditional"><span class="sort-indicator"></span><div><span>ML</span></div></th>
+                    <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_ml_traditional"><span class="sort-indicator"></span><div><span>Traditional ML</span></div></th>
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_dl_cnn_classifier"><span class="sort-indicator"></span><div><span>CNN Classifier</span></div></th>
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_dl_cnn_detector"><span class="sort-indicator"></span><div><span>CNN Detector</span></div></th>
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_dl_rcnn_detector"><span class="sort-indicator"></span><div><span>R-CNN Detector</span></div></th>
@@ -211,11 +211,7 @@
     </div>
 
 <div id="batchModal" class="modal">
-<div id="batch-actions">
-        <!-- <div style="font-weight: 400; text-shadow: var(--dark-shadow); padding-bottom: 12px;color: #eee;">
-            <span style="font-size: 18pt;font-family: 'Arial Narrow'; font-weight: 600; opacity:0.9">Parça</span><span style="font-size: 18pt;font-family: 'Arial Narrow'; opacity: 0.7">Tools</span>  
-            <span style="font-size: 10pt">—  Batch operations</span>
-        </div> -->
+    <div id="batch-actions">
         <div>
             <button class="action-btn" id="classify-remaining-btn">Classify <strong>Remaining</strong> </button>
             <button class="action-btn" id="classify-all-btn">Re-Classify <strong>All</strong></button>
@@ -224,7 +220,27 @@
             <button class="action-btn" id="verify-remaining-btn">Verify <strong>Remaining</strong></button>
             <button class="action-btn" id="verify-all-btn">Re-Verify <strong>All</strong></button>
         </div>
-        <span id="batch-status-message">These tools stay running in background after being called. Reload the webpage (not the server) after a while to see updated results.<br><br> For actions on single papers, user the buttons in the corresponding paper's detail pane instead.</span> <!-- obsolete, kept for JS -->
+        <span class="menu-message">These tools stay running in background after being called. Reload the webpage (not the server) after a while to see updated results.<br><br> For actions on single papers, user the buttons in the corresponding paper's detail pane instead.</span> <!-- obsolete, kept for JS -->
+    </div>
+</div>
+
+<div id="importModal" class="modal">
+    <div id="import-actions">
+        <!-- unused, kept if a menu is desired here later (animations, etc. already done) -->
+    </div>
+</div>
+
+<div id="exportModal" class="modal">
+    <div id="export-actions">
+        <div>
+            <button class="action-btn" id="export-html-btn">Export <strong>HTML</strong></button>
+            <button class="action-btn" id="export-xlsx-btn">Export <strong>XLSX</strong></button>
+        </div>        
+        <div>
+            <button class="action-btn" id="backup-btn" disabled>Create <strong>Backup</strong></button>
+            <button class="action-btn" id="restore-btn" disabled>Restore <strong>Backup</strong></button>
+        </div>
+        <span class="menu-message">Backup/restore not implemented yet. <br><br>Backups include the database, original and annotated PDFs, HTML export and a XLSX spreadsheet.<br><br> Restoring from a backup overwrites all existing data!</span>
     </div>
 </div>
 
@@ -350,11 +366,15 @@
                 <p><strong>Data Visualization:</strong> 
                     <a href="https://www.chartjs.org/" target="_blank" rel="noopener">Chart.js</a>
                 </p>
+                
+                <p><strong>PDF View/Annotation/Autosave:</strong> 
+                    <a href="https://mozilla.github.io/pdf.js/getting_started/" target="_blank" rel="noopener">PDF.js</a>
+                </p>
                 <p><strong>Utilities:</strong> 
                     <a href="https://opensource.perlig.de/rcssmin/" target="_blank" rel="noopener">rcssmin</a>, 
                     <a href="https://opensource.perlig.de/rjsmin/" target="_blank" rel="noopener">rjsmin</a> (minification), 
                     <a href="https://openpyxl.readthedocs.io/" target="_blank" rel="noopener">openpyxl</a> (Excel export), 
-                    <a href="https://nodeca.github.io/pako/" target="_blank" rel="noopener">pako</a> (compressed HTML export)
+                    <a href="https://nodeca.github.io/pako/" target="_blank" rel="noopener">pako</a> (compressed HTML export),
                 </p>
                 <p>Classification and verification was inferenced by Unsloth's Dynamic quants of <strong><a href="https://huggingface.co/unsloth/Qwen3-30B-A3B-Thinking-2507-GGUF" target="_blank" rel="noopener">Qwen3-30B-A3B-Thinking-2507</a></strong> model from <strong><a href="https://www.alibabacloud.com/en/solutions/generative-ai/qwen?_p_lc=1" target="_blank" rel="noopener">Qwen/Alibaba Cloud</a>.</strong></p>
                 <p><strong>Local Inference engine:</strong> <a href="https://github.com/ggerganov/llama.cpp" target="_blank" rel="noopener">llama.cpp</a>.</p>

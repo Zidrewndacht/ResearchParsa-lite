@@ -27,13 +27,60 @@ import globals
 import automate_classification
 import verify_classification
 
-# Define default year range
+# Define default year range - For this app:
 DEFAULT_YEAR_FROM = 2016
 DEFAULT_YEAR_TO = 2025
 DEFAULT_MIN_PAGE_COUNT = 4
 
 app = Flask(__name__)
 DATABASE = None # Will be set from command line argument
+
+def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_param=None, min_page_count_param=None, search_query_param=None):
+    """Fetches papers based on filters and renders the papers_table.html template. 
+       Used for initial render from / and XHR updates."""
+    try:
+        # Determine hide_offtopic state
+        hide_offtopic = True # Default
+        if hide_offtopic_param is not None:
+            hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
+
+        # Determine filter values, using defaults if not provided or invalid
+        year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
+        year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
+        min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
+        # --- NEW: Determine search query value ---
+        search_query_value = search_query_param if search_query_param is not None else ""
+
+        # Fetch papers with ALL the filters applied, including the new search query
+        papers = fetch_papers(
+            hide_offtopic=hide_offtopic,
+            year_from=year_from_value,
+            year_to=year_to_value,
+            min_page_count=min_page_count_value,
+            search_query=search_query_value # Pass the search query
+        )
+
+        # Render the table template fragment, passing the search query value for the input field
+        rendered_table = render_template(
+            'papers_table.html',
+            papers=papers,
+            type_emojis=globals.TYPE_EMOJIS,
+            default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
+            pdf_emojis=globals.PDF_EMOJIS, # Pass the PDF emojis dictionary
+            hide_offtopic=hide_offtopic,
+            # Pass the *string representations* of the values to the template for input fields
+            year_from_value=str(year_from_value),
+            year_to_value=str(year_to_value),
+            min_page_count_value=str(min_page_count_value),
+            # --- NEW: Pass search query value ---
+            search_query_value=search_query_value
+        )
+        return rendered_table
+    except Exception as e:
+        # Log the error or handle it appropriately
+        print(f"Error rendering papers table: {e}")
+        # Return an error fragment or re-raise if preferred for the main route
+        return "<p>Error loading table.</p>" # Basic error display
 
 # DB functions:
 
@@ -117,38 +164,6 @@ def get_db_connection():
         # Depending on requirements, you might want to raise the error or continue
         # raise # Re-raise if FTS is critical
     return conn
-
-def get_total_paper_count():
-    """Get the total number of papers in the database."""
-    conn = get_db_connection()
-    try:
-        count = conn.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
-        return count
-    finally:
-        conn.close()
-
-# --- Helper Functions ---
-
-def format_changed_timestamp(changed_str):
-    """Format the ISO timestamp string to dd/mm/yy hh:mm:ss"""
-    if not changed_str:
-        return ""
-    try:
-        dt = datetime.fromisoformat(changed_str.replace('Z', '+00:00'))
-        return dt.strftime("%d/%m/%y %H:%M:%S")
-    except ValueError:
-        # If parsing fails, return the original string or a placeholder
-        return changed_str
-
-def truncate_authors(authors_str, max_authors=2):
-    """Truncate the authors list for the main table view."""
-    if not authors_str:
-        return ""
-    authors_list = [a.strip() for a in authors_str.split(';')]
-    if len(authors_list) > max_authors:
-        return "; ".join(authors_list[:max_authors]) + " et al."
-    else:
-        return authors_str
 
 def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_count=None, search_query=None):
     """Fetch papers from the database, applying various optional filters."""
@@ -574,53 +589,98 @@ def fetch_updated_paper_data(paper_id):
             return {'status': 'error', 'message': 'Paper not found after update.'}
     finally:
         conn.close()
-  
-def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_param=None, min_page_count_param=None, search_query_param=None):
-    """Fetches papers based on filters and renders the papers_table.html template. 
-       Used for initial render from / and XHR updates."""
+
+#single-use @ /
+def get_total_paper_count():
+    """Get the total number of papers in the database."""
+    conn = get_db_connection()
     try:
-        # Determine hide_offtopic state
-        hide_offtopic = True # Default
-        if hide_offtopic_param is not None:
-            hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
+        count = conn.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
+        return count
+    finally:
+        conn.close()
 
-        # Determine filter values, using defaults if not provided or invalid
-        year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
-        year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
-        min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
-        # --- NEW: Determine search query value ---
-        search_query_value = search_query_param if search_query_param is not None else ""
+# --- DB Helper Functions ---
 
-        # Fetch papers with ALL the filters applied, including the new search query
-        papers = fetch_papers(
-            hide_offtopic=hide_offtopic,
-            year_from=year_from_value,
-            year_to=year_to_value,
-            min_page_count=min_page_count_value,
-            search_query=search_query_value # Pass the search query
-        )
+def format_changed_timestamp(changed_str):
+    """Format the ISO timestamp string to dd/mm/yy hh:mm:ss"""
+    if not changed_str:
+        return ""
+    try:
+        dt = datetime.fromisoformat(changed_str.replace('Z', '+00:00'))
+        return dt.strftime("%d/%m/%y %H:%M:%S")
+    except ValueError:
+        # If parsing fails, return the original string or a placeholder
+        return changed_str
 
-        # Render the table template fragment, passing the search query value for the input field
-        rendered_table = render_template(
-            'papers_table.html',
-            papers=papers,
-            type_emojis=globals.TYPE_EMOJIS,
-            default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
-            pdf_emojis=globals.PDF_EMOJIS, # Pass the PDF emojis dictionary
-            hide_offtopic=hide_offtopic,
-            # Pass the *string representations* of the values to the template for input fields
-            year_from_value=str(year_from_value),
-            year_to_value=str(year_to_value),
-            min_page_count_value=str(min_page_count_value),
-            # --- NEW: Pass search query value ---
-            search_query_value=search_query_value
-        )
-        return rendered_table
-    except Exception as e:
-        # Log the error or handle it appropriately
-        print(f"Error rendering papers table: {e}")
-        # Return an error fragment or re-raise if preferred for the main route
-        return "<p>Error loading table.</p>" # Basic error display
+def truncate_authors(authors_str, max_authors=2):
+    """Truncate the authors list for the main table view."""
+    if not authors_str:
+        return ""
+    authors_list = [a.strip() for a in authors_str.split(';')]
+    if len(authors_list) > max_authors:
+        return "; ".join(authors_list[:max_authors]) + " et al."
+    else:
+        return authors_str
+
+
+
+# --- Jinja2-like filters ---
+def render_status(value):
+    """Render status value as emoji/symbol"""
+    if value == 1 or value == "true" or value is True:
+        return '✔️' # Checkmark for True
+    elif value == 0  or value == "false" or value is False:
+        return '❌' # Cross for False
+    else: # None or unknown
+        return '❔' # Question mark for Unknown/Null
+
+def render_verified_by(value):
+    """
+    Render verified_by value as emoji.
+    Accepts the raw database value.
+    Returns HTML string with emoji and tooltip if needed.
+    """
+    if value == 'user':
+        return f'<span title="User">👤</span>' # Human emoji
+    elif value is None or value == '':
+        return f'<span title="Unverified">❔</span>'
+    else:
+        # For any other string, value is a model name, show computer emoji with tooltip
+        # Escape the model name for HTML attribute safety
+        escaped_model_name = str(value).replace('"', '&quot;').replace("'", "&#39;")
+        return f'<span title="{escaped_model_name}">🖥️</span>'
+
+def render_changed_by(value):
+    """
+    Render changed_by value as emoji.
+    Accepts the raw database value.
+    Returns HTML string with emoji and tooltip if needed.
+    """
+    if value == 'user':
+        return f'<span title="User">👤</span>' # Human emoji
+    elif value is None or value == '':
+        return f'<span title="Unknown">❔</span>' # Question mark for null/empty
+    else:
+        # For any other string, value is a model name, show computer emoji with tooltip
+        escaped_model_name = str(value).replace('"', '&quot;').replace("'", "&#39;")
+        return f'<span title="{escaped_model_name}">🖥️</span>'
+
+@app.template_filter('render_changed_by')
+def render_changed_by_filter(value):
+    # Use Markup to tell Jinja2 that the output is safe HTML
+    return Markup(render_changed_by(value))
+
+@app.template_filter('render_status')
+def render_status_filter(value):
+    return render_status(value)
+
+@app.template_filter('render_verified_by')
+def render_verified_by_filter(value):
+    # Use Markup to tell Jinja2 that the output is safe HTML
+    return Markup(render_verified_by(value)) 
+
+
 
 
 #Routes: 
@@ -671,7 +731,7 @@ def index():
         total_paper_count=total_paper_count
     )
 
-
+# PDF storage/annotation routes
 @app.route('/upload_pdf/<paper_id>', methods=['POST']) # Removed int: converter
 def upload_pdf(paper_id):
     """Handles PDF file upload for a specific paper."""
@@ -726,7 +786,6 @@ def upload_pdf(paper_id):
     else:
         print(f"File type not allowed for {paper_id}: {file.filename}")
         return jsonify({'status': 'error', 'message': 'File type not allowed, only PDFs are accepted'}), 400
-
 
 @app.route('/serve_pdf/<paper_id>')
 def serve_pdf(paper_id):
@@ -791,12 +850,12 @@ def serve_pdf(paper_id):
     # Use os.path.basename to get just the filename from the full path for send_from_directory
     return send_from_directory(os.path.dirname(file_to_serve), os.path.basename(file_to_serve), as_attachment=False)
 
-
 @app.route('/upload_annotated_pdf/<paper_id>', methods=['POST'])
 def upload_annotated_pdf(paper_id):
     """
     Receives an annotated PDF file associated with a paper_id,
     saves it to the annotated storage directory, and updates the pdf_state.
+    API call for annotator autosaving feature
     """
     if 'pdf_file' not in request.files:
         return jsonify({'status': 'error', 'message': 'No file part in request'}), 400
@@ -836,8 +895,7 @@ def upload_annotated_pdf(paper_id):
         print(f"Error saving annotated PDF for paper {paper_id}: {e}")
         return jsonify({'status': 'error', 'message': 'Failed to save file on server.'}), 500
 
-
-
+# Export routes
 @app.route('/static_export', methods=['GET'])
 def static_export():
     """Generate and serve a downloadable HTML snapshot based on current filters."""
@@ -978,6 +1036,7 @@ def static_export():
         headers=response_headers
     )
 
+# this function probably needs some fixes after table layout changes:
 @app.route('/xlsx_export', methods=['GET'])
 def export_excel():
     """Generate and serve a downloadable Excel (.xlsx) file based on current filters."""
@@ -1174,18 +1233,6 @@ def export_excel():
     # Define fills for TRUE and FALSE
     true_fill = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid") # Light Green
     false_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid") # Light Red
-    # Define the columns that contain boolean data (1-based index)
-    # Based on your headers list:
-    # Off-topic(6), Survey(8), THT(9), SMT(10), X-Ray(11),
-    # Tracks(12), Holes(13), Solder Insufficient(14), Solder Excess(15),
-    # Solder Void(16), Solder Crack(17), Missing Comp(18), Wrong Comp(19),
-    # Orientation(20), Cosmetic(21), Other_state(22),
-    # Classic CV(24), ML(25), CNN Classifier(26), CNN Detector(27),
-    # R-CNN Detector(28), Transformers(29), Other(30), Hybrid(31), Datasets(32),
-    # Verified(35), User Comment State(37)
-    # Note: Skipping Relevance(7), Pages(5), Year(3) as they are numbers,
-    # Other defects(23), Model name(33), Last Changed(34), Changed By(35-str),
-    # Accr. Score(36-int), Verified By(37-str), User Comments(38-str)
     boolean_columns = [
         6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
         24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 37 # Added 37 (User Comment State)
@@ -1202,24 +1249,9 @@ def export_excel():
                 cell.fill = false_fill
             # If cell.value is None or "", it remains unformatted (blank cell)
 
-    # --- Optional: Format the data as a table (ensure column ref is correct) ---
+    # --- Optional: Format the data as a table (ensure column ref is correct) - this is probably outdated ---
     try:
         if len(papers) > 0:
-            # Ensure the table reference matches the actual data width (AN = 34th column)
-            # Assuming 34 columns (A-AN) based on headers list count.
-            # If you added conditional formatting, it's still 34 columns.
-            # Let's recount headers list to be sure:
-            # 1. Type, 2. Title, 3. Year, 4. Journal/Conf name, 5. Pages count,
-            # 6. Off-topic, 7. Relevance, 8. Survey, 9. THT, 10. SMT, 11. X-Ray,
-            # 12. Tracks, 13. Holes, 14. Solder Insufficient, 15. Solder Excess,
-            # 16. Solder Void, 17. Solder Crack, 18. Missing Comp, 19. Wrong Comp,
-            # 20. Orientation, 21. Cosmetic, 22. Other_state, 23. Other defects,
-            # 24. Classic CV, 25. ML, 26. CNN Classifier, 27. CNN Detector,
-            # 28. R-CNN Detector, 29. Transformers, 30. Other, 31. Hybrid, 32. Datasets,
-            # 33. Model name, 34. Last Changed, 35. Changed By, 36. Verified, 37. Accr. Score,
-            # 38. Verified By, 39. User Comment State, 40. User Comments
-            # Recount shows 40 columns. Excel columns: A=1, B=2, ..., AN=34, AO=35, AP=36, AQ=37, AR=38, AS=39, AT=40
-            # Correct table reference should be A1:AT{len(papers)+1}
             tab = Table(displayName="PCBPapersTable", ref=f"A1:AT{len(papers) + 1}") # CHANGED TO AT - why?
             style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
                                    showLastColumn=False, showRowStripes=True, showColumnStripes=False)
@@ -1257,6 +1289,7 @@ def export_excel():
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+# Table/stats generation routes (data read)
 @app.route('/get_detail_row', methods=['GET'])
 def get_detail_row():
     """Endpoint to fetch and render the detail row content for a specific paper."""
@@ -1434,6 +1467,7 @@ def get_stats():
         print(f"Error calculating stats: {e}")
         return jsonify({'status': 'error', 'message': 'Failed to calculate statistics'}), 500
 
+# Data import/update routes (writes):
 @app.route('/update_paper', methods=['POST'])
 def update_paper():
     """Endpoint to handle AJAX updates (partial or full)."""
@@ -1602,62 +1636,6 @@ def upload_bibtex():
     else:
         return jsonify({'status': 'error', 'message': 'Invalid file type. Please upload a .bib file.'}), 400
 
-
-
-# --- Jinja2-like filters ---
-def render_status(value):
-    """Render status value as emoji/symbol"""
-    if value == 1 or value == "true" or value is True:
-        return '✔️' # Checkmark for True
-    elif value == 0  or value == "false" or value is False:
-        return '❌' # Cross for False
-    else: # None or unknown
-        return '❔' # Question mark for Unknown/Null
-
-def render_verified_by(value):
-    """
-    Render verified_by value as emoji.
-    Accepts the raw database value.
-    Returns HTML string with emoji and tooltip if needed.
-    """
-    if value == 'user':
-        return f'<span title="User">👤</span>' # Human emoji
-    elif value is None or value == '':
-        return f'<span title="Unverified">❔</span>'
-    else:
-        # For any other string, value is a model name, show computer emoji with tooltip
-        # Escape the model name for HTML attribute safety
-        escaped_model_name = str(value).replace('"', '&quot;').replace("'", "&#39;")
-        return f'<span title="{escaped_model_name}">🖥️</span>'
-
-def render_changed_by(value):
-    """
-    Render changed_by value as emoji.
-    Accepts the raw database value.
-    Returns HTML string with emoji and tooltip if needed.
-    """
-    if value == 'user':
-        return f'<span title="User">👤</span>' # Human emoji
-    elif value is None or value == '':
-        return f'<span title="Unknown">❔</span>' # Question mark for null/empty
-    else:
-        # For any other string, value is a model name, show computer emoji with tooltip
-        escaped_model_name = str(value).replace('"', '&quot;').replace("'", "&#39;")
-        return f'<span title="{escaped_model_name}">🖥️</span>'
-
-@app.template_filter('render_changed_by')
-def render_changed_by_filter(value):
-    # Use Markup to tell Jinja2 that the output is safe HTML
-    return Markup(render_changed_by(value))
-
-@app.template_filter('render_status')
-def render_status_filter(value):
-    return render_status(value)
-
-@app.template_filter('render_verified_by')
-def render_verified_by_filter(value):
-    # Use Markup to tell Jinja2 that the output is safe HTML
-    return Markup(render_verified_by(value)) 
 
 
 

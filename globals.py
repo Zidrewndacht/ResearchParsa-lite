@@ -140,7 +140,6 @@ def load_prompt_template(template_path):
         print(f"Error reading prompt template file '{template_path}': {e}")
         raise
 
-
 def get_paper_by_id(db_path, paper_id):
     """Fetches a single paper's data from the database by its ID."""
     conn = sqlite3.connect(db_path)
@@ -150,7 +149,6 @@ def get_paper_by_id(db_path, paper_id):
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
-
 
 def load_grammar(grammar_path):
     """Loads the GBNF grammar from a file."""

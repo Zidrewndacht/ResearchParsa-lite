@@ -436,10 +436,6 @@ form input[type=text] {
     text-decoration: underline
 }
 
-#export-html-btn,#import-bibtex-btn {
-    min-width: 150px
-}
-
 #export-html-btn {
     background: var(--export-html-btn-color)
 }
@@ -458,7 +454,7 @@ form input[type=text] {
     background: var(--classify-btn-color);
 }
 
-#batchModal{
+#batchModal, #importModal, #exportModal{
     backdrop-filter: unset;
     background: unset;
 }
@@ -639,12 +635,12 @@ tr.filter-hidden {
     font-size: 10.5pt
 }
 
-#batch-status-message {
+.menu-message {
     font-size: 10pt;
     padding: 4px;
 }
 
-#batch-actions{
+#batch-actions, #import-actions, #export-actions{
     z-index: 1000;
     overflow: auto;
     opacity: 1;
@@ -653,8 +649,6 @@ tr.filter-hidden {
     justify-content: center;
     align-items: center;
     position: fixed;
-    top: 56px;
-    right: 220px;
     background: var(--modal-wrapper-background);
     backdrop-filter: blur(16px);
     perspective: 100vh;
@@ -666,12 +660,27 @@ tr.filter-hidden {
     border: 1.5px solid var(--classify-btn-color);
     box-shadow: 0 48px 96px 32px rgba(64,64,64, 0.5);
     box-sizing: border-box;
-    transform: scale3d(.75,.66,1) translateY(-66px) translateX(40px);
     transition: opacity .3s ease-in-out, transform .3s ease-out;
     /*! background: linear-gradient(180deg,var(--classify-btn-color) 0%,var(--verify-btn-color) 48px,#f5f7fad9 20px); */
     width: 354px;
     text-align: justify;
 }
+#batch-actions{
+    top: 56px;
+    right: 220px;
+    transform: scale3d(.75,.66,1) translateY(-66px) translateX(40px);
+}
+#import-actions{
+    top: 56px;
+    left: 10px;
+    transform: scale3d(.75,.66,1) translateY(-66px) translateX(-40px);
+}
+#export-actions{
+    top: 56px;
+    left: 180px;
+    transform: scale3d(.75,.66,1) translateY(-66px) translateX(-40px);
+}
+
 
 .header-controls {
     margin: 0 4px
@@ -867,7 +876,7 @@ tr.filter-hidden {
     text-align: justify
 }
 
-.modal.modal-active, #batch-actions.active {
+.modal.modal-active {
     opacity: 1;
     pointer-events: auto;
     transition-delay: .3s
@@ -875,7 +884,9 @@ tr.filter-hidden {
 
 .modal.modal-active .modal-content,
 .modal.modal-active .modal-small-content,
-.modal.modal-active #batch-actions {
+.modal.modal-active #batch-actions,
+.modal.modal-active #import-actions, 
+.modal.modal-active #export-actions {
     transform: none;
     transition-delay: .2s
 }
@@ -955,6 +966,14 @@ tr.filter-hidden {
     #batch-actions{
         top: 48px;
         right: 216px;
+    }
+    #import-actions{
+        top: 48px;
+        left: 6px;
+    }
+    #export-actions{
+        top: 48px;
+        left: 176px;
     }
 }
 

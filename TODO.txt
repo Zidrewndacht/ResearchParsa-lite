@@ -142,18 +142,22 @@ OK      Add Excel export:
                 Bubble charts about...?
                 
         Refactor browse_db.py (too large)?
+                Moving SQLite logic to a separate file for DB operations cause 
+                        'sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 34640 and this is thread id 16976.'
+                Moving helpers away is fine, but there are only three.
+                
         Re-factor JS to remove duplicated code from ghpages.js: keep only actual export-specific code
 
-        Integrate base64 favicon
+        Fix ugly checkboxes
+                Show negative vs positive checkboxes differently
+
+        Integrate base64 favicon incl. HTML Export
         Add ABNT? citation to detail pane
 
         Add full zip export (static HTML viewer + database + PDF folders)
 
         Add multiuser capability (naming users, user-selectable DB)
                 Possibly auth for server hosting? -- low priority
-
-        Fix ugly checkboxes
-                Show negative vs positive checkboxes differently
 
         Isolate most research-specific logic where possible -- long term, complicated refactor with little usefulness for now:
                 separate fixed from domain-specific HTML templates;

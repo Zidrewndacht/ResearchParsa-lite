@@ -21,42 +21,44 @@
 </head>
 <body>
 <div class="table-container">
+    <div id="papers-table-container">
         <table id="papersTable" style="table-layout: fixed;">
             <colgroup>
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 66%"> 
-                <col style="width: 40px; min-width: 40px; max-width:40px;"> 
-                <col style="width: 34%"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- PDF (Rotated Header) -->
+                <col style="width: 66%"> <!-- Title (Should Expand)-->
+                <col style="width: 40px; min-width: 40px; max-width:40px;"> <!--  Year -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Pages (Rotated Header) -->
+                <col style="width: 34%"> <!-- Journal/Conf (Should Expand) -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Type (Rotated Header) -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Off-topic -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Relevance -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Survey -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- THT -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- SMT -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- X-Ray -->
 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Tracks -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Holes -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Solder Insufficient -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Solder Excess -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Solder Void -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Solder Crack -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Missing Comp -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Wrong Comp -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Orientation -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Cosmetic -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Other -->
 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                <col style="width: 29px; min-width: 29px; max-width: 29px;"> 
-                
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Classic CV -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- ML -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- CNN Classifier -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- CNN Detector -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- R-CNN Detector -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Transformers -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Other -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Hybrid -->
+                <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Datasets  -->
+                <!-- Columns 31-36: Other Data (Mixed Sizes) -->
                 <col style="width: 56px; min-width: 56px; max-width: 56px;"> <!-- Last Changed -->
                 <col style="width: 40px; min-width: 40px; max-width: 40px;"> <!-- Changed By -->
                 <col style="width: 29px; min-width: 29px; max-width: 29px;"> <!-- Verified -->
@@ -70,7 +72,7 @@
                     <th id="main-header-wrapper" colspan=38 style="display: none;"></th> <!-- this must exist for CSS consistency between export and real page (uses nth-child, etc.) -->
                 </tr>
                 <tr>
-                    <th class="ontop-header" colspan="5" rowspan="2"> 
+                    <th class="ontop-header" colspan="6" rowspan="2"> 
                         <div class="header-filters">
                             <div class="filter-item">
                                 <input type="checkbox" id="hide-short-checkbox"  style="display: none;">
@@ -137,15 +139,15 @@
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="1"></th>
                 </tr>
                 <tr>
+                    <th class="rotate-header status-header editable-header" data-sort="pdf-link"><div><span>PDF</span></div> <span class="sort-indicator"></span></th>
+                    <th data-sort="title">Title (Click for article) <span class="sort-indicator"></span></th>
+                    <th data-sort="year">Year <span class="sort-indicator"></span></th>
+                    <th class="rotate-header" data-sort="page_count" ><div><span>Pages</span></div> <span class="sort-indicator"></span></th>
+                    <th data-sort="journal">Journal/Conf <span class="sort-indicator"></span></th>    
                     <th class="rotate-header status-header editable-header" data-sort="type"><div><span>Type</span></div> <span class="sort-indicator"></span></th>
 
-                    <th data-sort="title">Title (Click for article) <span class="sort-indicator"></span></th>
-                    
-                    <th data-sort="year">Year <span class="sort-indicator"></span></th>
-                    <th data-sort="journal">Journal/Conf <span class="sort-indicator"></span></th>    
-                    <th class="rotate-header" data-sort="page_count" ><div><span>Pages</span></div> <span class="sort-indicator"></span></th>
 
-                    
+                    <!-- Classification Summary Columns -->
                     <th class="inferred-header rotate-header status-header editable-header" data-sort="is_offtopic"><span class="sort-indicator"></span><div><span>Off-topic</span></div></th>
                     <th class="inferred-header rotate-header status-header" data-sort="relevance"><span class="sort-indicator"></span><div><span>Relevance</span></div></th>
                     <th class="inferred-header rotate-header status-header editable-header" data-sort="is_survey"><span class="sort-indicator"></span><div><span>Survey</span></div></th>
@@ -153,7 +155,7 @@
                     <th class="inferred-header rotate-header status-header editable-header" data-sort="is_smt"><span class="sort-indicator"></span><div><span>SMT</span></div></th>
                     <th class="inferred-header rotate-header status-header editable-header" data-sort="is_x_ray"><span class="sort-indicator"></span><div><span>X-Ray</span></div></th>
 
-                    
+                    <!-- Features Summary Columns (Updated list) -->
                     <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_tracks"><span class="sort-indicator"></span><div><span>Tracks</span></div></th>
                     <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_holes"><span class="sort-indicator"></span><div><span>Holes / Vias</span></div></th>
 
@@ -168,9 +170,9 @@
                     <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_cosmetic"><span class="sort-indicator"></span><div><span>Cosmetic</span></div></th>
                     <th class="inferred-header inferred-header-2 rotate-header status-header editable-header" data-sort="features_other_state"><span class="sort-indicator"></span><div><span>Other</span></div></th>
 
-                    
+                    <!-- Techniques Summary Columns (Updated list) -->
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_classic_cv_based"><span class="sort-indicator"></span><div><span>Classic CV</span></div></th>
-                    <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_ml_traditional"><span class="sort-indicator"></span><div><span>ML</span></div></th>
+                    <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_ml_traditional"><span class="sort-indicator"></span><div><span>Traditional ML</span></div></th>
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_dl_cnn_classifier"><span class="sort-indicator"></span><div><span>CNN Classifier</span></div></th>
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_dl_cnn_detector"><span class="sort-indicator"></span><div><span>CNN Detector</span></div></th>
                     <th class="inferred-header inferred-header-3 rotate-header status-header editable-header" data-sort="technique_dl_rcnn_detector"><span class="sort-indicator"></span><div><span>R-CNN Detector</span></div></th>

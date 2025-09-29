@@ -177,6 +177,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const verifyRemainingBtn = document.getElementById('verify-remaining-btn');
     const batchStatusMessage = document.getElementById('batch-status-message');
 
+    const importActionsBtn = document.getElementById('import-btn');
+    const exportActionsBtn = document.getElementById('export-btn');
+
     function runBatchAction(mode, actionType) { // actionType: 'classify' or 'verify'
         if (isBatchRunning) {
             alert(`A ${actionType} batch is already running.`);
@@ -250,6 +253,9 @@ document.addEventListener('DOMContentLoaded', function () {
     classifyRemainingBtn.addEventListener('click', () => runBatchAction('remaining', 'classify'));
     verifyAllBtn.addEventListener('click', () => runBatchAction('all', 'verify'));
     verifyRemainingBtn.addEventListener('click', () => runBatchAction('remaining', 'verify'));
+
+    importActionsBtn.addEventListener('click', showImportActions);
+    exportActionsBtn.addEventListener('click', showExportActions);
 
     // --- Per-Row Action Button Event Listeners ---
     document.addEventListener('click', function(event) {

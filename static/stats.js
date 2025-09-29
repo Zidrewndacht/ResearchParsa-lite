@@ -695,9 +695,10 @@ document.addEventListener('DOMContentLoaded', function () {
     smallClose.addEventListener('click', closeSmallModal);
     document.addEventListener('keydown', function (event) {
         // Check if the pressed key is 'Escape' and if the modal is currently active
-        if (event.key === 'Escape') { closeModal(); closeSmallModal(); closeBatchModal() }
+        if (event.key === 'Escape') { closeModal(); closeSmallModal(); closeBatchModal(); closeExporthModal(); closeImportModal() }
     });
     window.addEventListener('click', function (event) {
-        if (event.target === modal || event.target === modalSmall || event.target === batchModal) { closeModal(); closeSmallModal(); closeBatchModal() }
+        if (event.target === modal || event.target === modalSmall || event.target === batchModal || event.target === importModal || event.target === exportModal) 
+            { closeModal(); closeSmallModal(); closeBatchModal(); closeExporthModal(); closeImportModal()  }
     });
 });
