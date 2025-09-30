@@ -141,8 +141,12 @@ OK      Add Excel export:
                 Count of misclassification suspects;
                 Bubble charts about...?
                 
+OK      Add full zip export (static HTML viewer + database + PDF folders)
+OK              Implement full backup/restore
+OK              Add a fallback empty DB to always allow app to open without data (so restores can be done from Web UI)
+
         Refactor browse_db.py (too large)?
-                Moving SQLite logic to a separate file for DB operations cause 
+                Moving SQLite logic to a separate file for DB operations may cause 
                         'sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 34640 and this is thread id 16976.'
                 Moving helpers away is fine, but there are only three.
                 
@@ -154,12 +158,11 @@ OK      Add Excel export:
         Integrate base64 favicon incl. HTML Export
         Add ABNT? citation to detail pane
 
-        Add full zip export (static HTML viewer + database + PDF folders)
 
-        Add multiuser capability (naming users, user-selectable DB)
-                Possibly auth for server hosting? -- low priority
+        Add multiuser capability (naming users, user-selectable DB) -- good for offline "sneakernet" collaboration;
+                Possibly auth for online server hosting? -- low priority
 
-        Isolate most research-specific logic where possible -- long term, complicated refactor with little usefulness for now:
+        Isolate most domain-specific logic where possible -- long term, complicated refactor with little usefulness for now:
                 separate fixed from domain-specific HTML templates;
                 add a python file exclusive for the domain-specific details (DB schema, JSON schemas, etc) and change existing scripts to use it accordingly;
                 separate JS for logic that access the domain-specific HTML parts from generic JS
