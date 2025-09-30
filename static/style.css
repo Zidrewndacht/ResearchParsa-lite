@@ -22,9 +22,11 @@
     --modal-wrapper-background: #eee6;
     --classify-btn-color: hsl(246, 29%, 40%);
     --verify-btn-color: hsl(276, 29%, 40%);
-    --save-btn-color: #27ae60;
+    --save-btn-color: rgb(58, 136, 47);
     --export-html-btn-color: rgb(54, 90, 145);
     --export-xlsx-btn-color: rgb(58, 136, 47);
+    --restore-btn-color: var(--primary-ui-color-darker);
+    --backup-btn-color: var(--primary-ui-color);
     --light-colored-btn-color: rgb(185, 209, 209);
     --light-colored-btn-text: #0a5662;
     --dark-shadow: 1px 0 5px #0006;
@@ -443,7 +445,12 @@ form input[type=text] {
 #export-xlsx-btn {
     background: var(--export-xlsx-btn-color)
 }
-
+#backup-btn{
+    background: var(--backup-btn-color);
+}
+#restore-btn{
+    background: var(--restore-btn-color)
+}
 #stats-btn {
     width: 160px;
     max-width: 160px;
@@ -654,7 +661,7 @@ tr.filter-hidden {
     perspective: 100vh;
     flex-direction: column;
     padding: 10px;
-    gap: 8px;
+    gap: 16px;
     border-radius: 8px;
     background: #f5f7fad9;
     border: 1.5px solid var(--classify-btn-color);

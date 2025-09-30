@@ -65,6 +65,339 @@ function renderChangedBy(value) {
     }
 }
 
+// --- Extracted AJAX logic for reuse ---
+function sendAjaxRequest(cell, dataToSend, currentText, row, paperId, field) {
+    // Use the same endpoint as the form save
+    const saveButton = row.querySelector('.save-btn'); // Find save button in details if needed for disabling
+    const wasSaveButtonDisabled = saveButton ? saveButton.disabled : false;
+    if (saveButton) saveButton.disabled = true; // Optional: disable main save while quick save happens
+
+    fetch('/update_paper', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSend)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(errData => {
+                throw new Error(errData.message || `HTTP error! status: ${response.status}`);
+            }).catch(() => {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            // 4. Update other relevant cells in the row based on the response
+            const mainRow = document.querySelector(`tr[data-paper-id="${paperId}"]`);
+            if (mainRow) {
+                // Update audit fields (using formatted timestamp sent back)
+                if (data.changed_formatted !== undefined) {
+                    mainRow.querySelector('.changed-cell').textContent = data.changed_formatted;
+                }
+                if (data.changed_by !== undefined) {
+                    mainRow.querySelector('.changed-by-cell').innerHTML = renderChangedBy(data.changed_by);
+                }
+                if (data.estimated_score !== undefined) {
+                     const estimatedScoreCell = mainRow.cells[estScoreCellIndex]; 
+                     if (estimatedScoreCell) {
+                         estimatedScoreCell.textContent = data.estimated_score !== null && data.estimated_score !== undefined ? data.estimated_score : ''; // Example formatting
+                     }
+                }
+            }
+            updateCounts();
+            console.log(`Quick save successful for ${paperId} field ${field}`);
+        } else {
+            console.error('Quick save error:', data.message);
+            cell.textContent = currentText; // Revert text
+        }
+    })
+    .catch((error) => {
+        console.error('Quick save error:', error);
+        cell.textContent = currentText; // Revert text
+    })
+    .finally(() => {
+        if (saveButton) saveButton.disabled = wasSaveButtonDisabled;
+    });
+}
+
+function saveChanges(paperId) {
+    const form = document.getElementById(`form-${paperId}`);
+    if (!form) {
+        console.error(`Form not found for paper ID: ${paperId}`);
+        return;
+    }
+    // --- Collect Main Fields ---
+    const researchAreaInput = form.querySelector('input[name="research_area"]');
+    const researchAreaValue = researchAreaInput ? researchAreaInput.value : '';
+    const pageCountInput = form.querySelector('input[name="page_count"]');
+    let pageCountValue = pageCountInput ? pageCountInput.value : '';
+    // Convert empty string or invalid input to NULL for the database
+    if (pageCountValue === '') {
+        pageCountValue = null;
+    } else {
+        const parsedValue = parseInt(pageCountValue, 10);
+        if (isNaN(parsedValue)) {
+            pageCountValue = null; // Or handle error as needed
+        } else {
+            pageCountValue = parsedValue;
+        }
+    }
+
+    // --- NEW: Collect Relevance Field ---
+    const relevanceInput = form.querySelector('input[name="relevance"]');
+    let relevanceValue = relevanceInput ? relevanceInput.value : '';
+    // Convert empty string to NULL for the database consistency (optional but good practice)
+    if (relevanceValue === '') {
+        relevanceValue = null;
+    } else {
+        // If you want to ensure it's a number, uncomment the next lines:
+        const parsedRelevance = parseFloat(relevanceValue); // or parseInt if it's an integer
+        if (isNaN(parsedRelevance)) {
+            relevanceValue = null; // Or handle error
+        } else {
+            relevanceValue = parsedRelevance;
+        }
+    }
+
+
+    // --- Collect Additional Fields ---
+    // Model Name -> technique_model
+    const modelNameInput = form.querySelector('input[name="model_name"]');
+    const modelNameValue = modelNameInput ? modelNameInput.value : '';
+    // Other Defects -> features_other
+    const otherDefectsInput = form.querySelector('input[name="features_other"]');
+    const otherDefectsValue = otherDefectsInput ? otherDefectsInput.value : '';
+    // User Comments -> user_trace (stored in main table column, not features/technique JSON)
+    const userCommentsTextarea = form.querySelector('textarea[name="user_trace"]');
+    const userCommentsValue = userCommentsTextarea ? userCommentsTextarea.value : '';
+
+    // --- Prepare Data Payload ---
+    const data = {
+        id: paperId,
+        research_area: researchAreaValue,
+        page_count: pageCountValue,
+        // --- NEW: Add Relevance Field to Payload ---
+        relevance: relevanceValue,
+        // --- Add Additional Fields to Payload ---
+        // Prefix 'technique_' and 'features_' are handled by the backend
+        technique_model: modelNameValue,
+        features_other: otherDefectsValue,
+        user_trace: userCommentsValue // This one is a direct column update
+    };
+
+    // --- UI Feedback and AJAX Call (Remains Largely the Same) ---
+    const saveButton = form.querySelector('.save-btn');
+    const originalText = saveButton ? saveButton.textContent : 'Save Changes';
+    if (saveButton) {
+        saveButton.textContent = 'Saving...';
+        saveButton.disabled = true;
+    }
+    fetch('/update_paper', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data) // <-- Send the updated data object
+    })
+    .then(response => {
+        if (!response.ok) {
+             return response.json().then(errData => {
+                 throw new Error(errData.message || `HTTP error! status: ${response.status}`);
+             }).catch(() => {
+                 throw new Error(`HTTP error! status: ${response.status}`);
+             });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            const row = document.querySelector(`tr[data-paper-id="${paperId}"]`);
+            if (row) {
+                // Update displayed audit fields if returned
+                if (data.changed_formatted !== undefined) {
+                    row.querySelector('.changed-cell').textContent = data.changed_formatted;
+                }
+                if (data.changed_by !== undefined) {
+                    row.querySelector('.changed-by-cell').innerHTML = renderChangedBy(data.changed_by);
+                }
+                // Update displayed page count if returned
+                const pageCountCell = row.cells[pageCountCellIndex];
+                if (pageCountCell) {
+                     pageCountCell.textContent = data.page_count !== null && data.page_count !== undefined ? data.page_count : '';
+                }
+                // --- NEW: Update displayed relevance if returned ---
+                // Find the relevance cell in the main row (adjust selector if needed)
+                const relevanceCell = row.cells[relevanceCellIndex]; // Or better, add a class like .relevance-cell to the <td> and use '.relevance-cell'
+                if (relevanceCell) {
+                     relevanceCell.textContent = data.relevance !== null && data.relevance !== undefined ? data.relevance : '';
+                }
+                // Note: The UI fields (model_name, features_other, user_trace) are NOT updated here
+                // from the server response because update_paper_custom_fields doesn't return them.
+                // They retain the user-entered value after saving.
+            }
+            // Collapse details row after successful save
+            const toggleBtn = row ? row.querySelector('.toggle-btn') : null;
+            if (toggleBtn && row && row.nextElementSibling && row.nextElementSibling.classList.contains('expanded')) {
+                 toggleDetails(toggleBtn);
+            }
+            if (saveButton) {
+                saveButton.textContent = 'Saved!';
+                setTimeout(() => {
+                    if (saveButton) {
+                        saveButton.textContent = originalText;
+                        saveButton.disabled = false;
+                    }
+                }, 1500);
+            }
+            updateCounts();
+        } else {
+            console.error('Save error:', data.message);
+            if (saveButton) {
+                saveButton.textContent = originalText;
+                saveButton.disabled = false;
+            }
+        }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+        if (saveButton) {
+            saveButton.textContent = originalText;
+            saveButton.disabled = false;
+        }
+    });
+}
+
+
+// static/comms.js (or within a <script> tag in index.html)
+
+// Add a hidden file input element dynamically if it doesn't exist already
+// (This avoids needing to add it to index.html)
+if (!document.getElementById('pdf-file-input')) {
+    const hiddenFileInput = document.createElement('input');
+    hiddenFileInput.type = 'file';
+    hiddenFileInput.id = 'pdf-file-input';
+    hiddenFileInput.accept = '.pdf'; // Only accept PDF files
+    hiddenFileInput.style.display = 'none';
+    document.body.appendChild(hiddenFileInput);
+}
+
+// Reference the hidden input
+const pdfFileInput = document.getElementById('pdf-file-input');
+
+// Function to handle the actual upload
+function uploadPDFForPaper(paperId) {
+    const file = pdfFileInput.files[0];
+    if (!file) {
+        console.error("No file selected for upload.");
+        alert("No file selected.");
+        return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+         alert("Please select a PDF file.");
+         return;
+    }
+
+    const formData = new FormData();
+    formData.append('pdf_file', file);
+
+    // Show a simple loading indicator or disable interaction temporarily
+    const uploadLink = document.querySelector(`.pdf-upload-link[data-paper-id="${paperId}"]`);
+    if (uploadLink) {
+        uploadLink.textContent = '⏳'; // Change icon to indicate processing
+        uploadLink.style.pointerEvents = 'none'; // Disable clicks temporarily
+    }
+
+    fetch(`/upload_pdf/${encodeURIComponent(paperId)}`, { // Use encodeURIComponent for the string ID
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log("PDF uploaded successfully for paper ID:", paperId);
+            // Update the table row with the new PDF info
+            // Pass the filename and state received from the server
+            updateTableRowWithPDFData(paperId, data.pdf_filename, data.pdf_state);
+        } else {
+            console.error("Upload failed:", data.message);
+            alert(`Upload failed: ${data.message}`);
+            // Re-enable the link if it failed
+             if (uploadLink) {
+                 uploadLink.textContent = '❔';
+                 uploadLink.style.pointerEvents = 'auto';
+             }
+        }
+    })
+    .catch(error => {
+        console.error("Error during upload:", error);
+        alert("An error occurred during upload.");
+        // Re-enable the link if it failed
+        if (uploadLink) {
+            uploadLink.textContent = '❔';
+            uploadLink.style.pointerEvents = 'auto';
+        }
+    });
+}
+function updateTableRowWithPDFData(paperId, filename, state) {
+    const row = document.querySelector(`tr[data-paper-id="${paperId}"]`);
+    if (!row) {
+        console.error(`Row for paper ID ${paperId} not found.`);
+        return;
+    }
+
+    const pdfCell = row.cells[pdfCellIndex]; // PDF cell is the second cell (index 1)
+    if (!pdfCell) {
+        console.error(`PDF cell for paper ID ${paperId} not found.`);
+        return;
+    }
+
+    // Create the new link element for the PDF.js viewer
+    const pdfLink = document.createElement('a');
+    pdfLink.href = `/static/pdfjs/web/viewer.html?file=/serve_pdf/${encodeURIComponent(filename)}`; // Use the new viewer URL
+    pdfLink.target = '_blank';
+    pdfLink.title = `Open PDF.js Annotator for: ${filename}`; // Update title
+    pdfLink.textContent = '📕'; // PDF emoji (or use state emoji if you prefer)
+
+    // Replace the cell content with the new link
+    pdfCell.innerHTML = ''; // Clear existing content (like '⏳')
+    pdfCell.appendChild(pdfLink);
+    pdfCell.title = "PDF Status"; // Set title back
+}
+
+// Event delegation for the PDF upload links
+document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('pdf-upload-link')) {
+        event.preventDefault(); // Prevent default link behavior
+        // Get the paper ID as a string directly
+        const paperId = event.target.getAttribute('data-paper-id');
+        if (!paperId) { // Check if the ID string is empty or null
+            console.error("Invalid or missing paper ID for PDF upload link.");
+            return;
+        }
+
+        console.log("Attempting upload for paper ID:", paperId); // Debug log
+
+        // Reset the file input to allow selecting the same file again
+        pdfFileInput.value = '';
+
+        // Add event listener for when a file is selected
+        pdfFileInput.onchange = function(e) {
+            if (e.target.files.length > 0) {
+                uploadPDFForPaper(paperId);
+            }
+        };
+
+        // Trigger the hidden file input click
+        pdfFileInput.click();
+    }
+});
+
+
 document.addEventListener('DOMContentLoaded', function () {
         
     // Click Handler for Editable Status Cells
@@ -168,18 +501,6 @@ document.addEventListener('DOMContentLoaded', function () {
         // 3. Send AJAX request
         sendAjaxRequest(cell, dataToSend, currentSymbol, row, paperId, field);
     });
-
-    // --- Batch Action Button Event Listeners ---
-    const parçaToolsBtn = document.getElementById('parça-tools-btn');
-    const classifyAllBtn = document.getElementById('classify-all-btn');
-    const classifyRemainingBtn = document.getElementById('classify-remaining-btn');
-    const verifyAllBtn = document.getElementById('verify-all-btn');
-    const verifyRemainingBtn = document.getElementById('verify-remaining-btn');
-    const batchStatusMessage = document.getElementById('batch-status-message');
-
-    const importActionsBtn = document.getElementById('import-btn');
-    const exportActionsBtn = document.getElementById('export-btn');
-
     function runBatchAction(mode, actionType) { // actionType: 'classify' or 'verify'
         if (isBatchRunning) {
             alert(`A ${actionType} batch is already running.`);
@@ -581,336 +902,127 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 
-});
+    const backupBtn = document.getElementById('backup-btn');
 
-// --- Extracted AJAX logic for reuse ---
-function sendAjaxRequest(cell, dataToSend, currentText, row, paperId, field) {
-    // Use the same endpoint as the form save
-    const saveButton = row.querySelector('.save-btn'); // Find save button in details if needed for disabling
-    const wasSaveButtonDisabled = saveButton ? saveButton.disabled : false;
-    if (saveButton) saveButton.disabled = true; // Optional: disable main save while quick save happens
 
-    fetch('/update_paper', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSend)
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(errData => {
-                throw new Error(errData.message || `HTTP error! status: ${response.status}`);
-            }).catch(() => {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.status === 'success') {
-            // 4. Update other relevant cells in the row based on the response
-            const mainRow = document.querySelector(`tr[data-paper-id="${paperId}"]`);
-            if (mainRow) {
-                // Update audit fields (using formatted timestamp sent back)
-                if (data.changed_formatted !== undefined) {
-                    mainRow.querySelector('.changed-cell').textContent = data.changed_formatted;
+    backupBtn.addEventListener('click', function() {
+        document.documentElement.classList.add('busyCursor');
+        console.log("Backup button clicked");
+
+        backupStatusMessage.textContent = 'Creating backup...';
+        backupStatusMessage.style.color = '';
+
+        // Create backup URL with current filters
+        const currentUrlParams = new URLSearchParams(window.location.search);
+        const backupUrl = `/backup?${currentUrlParams.toString()}`;
+        
+        // Use fetch to get the backup file
+        fetch(backupUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Backup failed: ${response.status} ${response.statusText}`);
                 }
-                if (data.changed_by !== undefined) {
-                    mainRow.querySelector('.changed-by-cell').innerHTML = renderChangedBy(data.changed_by);
-                }
-                if (data.estimated_score !== undefined) {
-                     const estimatedScoreCell = mainRow.cells[estScoreCellIndex]; 
-                     if (estimatedScoreCell) {
-                         estimatedScoreCell.textContent = data.estimated_score !== null && data.estimated_score !== undefined ? data.estimated_score : ''; // Example formatting
-                     }
-                }
-            }
-            updateCounts();
-            console.log(`Quick save successful for ${paperId} field ${field}`);
-        } else {
-            console.error('Quick save error:', data.message);
-            cell.textContent = currentText; // Revert text
-        }
-    })
-    .catch((error) => {
-        console.error('Quick save error:', error);
-        cell.textContent = currentText; // Revert text
-    })
-    .finally(() => {
-        if (saveButton) saveButton.disabled = wasSaveButtonDisabled;
-    });
-}
-
-function saveChanges(paperId) {
-    const form = document.getElementById(`form-${paperId}`);
-    if (!form) {
-        console.error(`Form not found for paper ID: ${paperId}`);
-        return;
-    }
-    // --- Collect Main Fields ---
-    const researchAreaInput = form.querySelector('input[name="research_area"]');
-    const researchAreaValue = researchAreaInput ? researchAreaInput.value : '';
-    const pageCountInput = form.querySelector('input[name="page_count"]');
-    let pageCountValue = pageCountInput ? pageCountInput.value : '';
-    // Convert empty string or invalid input to NULL for the database
-    if (pageCountValue === '') {
-        pageCountValue = null;
-    } else {
-        const parsedValue = parseInt(pageCountValue, 10);
-        if (isNaN(parsedValue)) {
-            pageCountValue = null; // Or handle error as needed
-        } else {
-            pageCountValue = parsedValue;
-        }
-    }
-
-    // --- NEW: Collect Relevance Field ---
-    const relevanceInput = form.querySelector('input[name="relevance"]');
-    let relevanceValue = relevanceInput ? relevanceInput.value : '';
-    // Convert empty string to NULL for the database consistency (optional but good practice)
-    if (relevanceValue === '') {
-        relevanceValue = null;
-    } else {
-        // If you want to ensure it's a number, uncomment the next lines:
-        const parsedRelevance = parseFloat(relevanceValue); // or parseInt if it's an integer
-        if (isNaN(parsedRelevance)) {
-            relevanceValue = null; // Or handle error
-        } else {
-            relevanceValue = parsedRelevance;
-        }
-    }
-
-
-    // --- Collect Additional Fields ---
-    // Model Name -> technique_model
-    const modelNameInput = form.querySelector('input[name="model_name"]');
-    const modelNameValue = modelNameInput ? modelNameInput.value : '';
-    // Other Defects -> features_other
-    const otherDefectsInput = form.querySelector('input[name="features_other"]');
-    const otherDefectsValue = otherDefectsInput ? otherDefectsInput.value : '';
-    // User Comments -> user_trace (stored in main table column, not features/technique JSON)
-    const userCommentsTextarea = form.querySelector('textarea[name="user_trace"]');
-    const userCommentsValue = userCommentsTextarea ? userCommentsTextarea.value : '';
-
-    // --- Prepare Data Payload ---
-    const data = {
-        id: paperId,
-        research_area: researchAreaValue,
-        page_count: pageCountValue,
-        // --- NEW: Add Relevance Field to Payload ---
-        relevance: relevanceValue,
-        // --- Add Additional Fields to Payload ---
-        // Prefix 'technique_' and 'features_' are handled by the backend
-        technique_model: modelNameValue,
-        features_other: otherDefectsValue,
-        user_trace: userCommentsValue // This one is a direct column update
-    };
-
-    // --- UI Feedback and AJAX Call (Remains Largely the Same) ---
-    const saveButton = form.querySelector('.save-btn');
-    const originalText = saveButton ? saveButton.textContent : 'Save Changes';
-    if (saveButton) {
-        saveButton.textContent = 'Saving...';
-        saveButton.disabled = true;
-    }
-    fetch('/update_paper', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data) // <-- Send the updated data object
-    })
-    .then(response => {
-        if (!response.ok) {
-             return response.json().then(errData => {
-                 throw new Error(errData.message || `HTTP error! status: ${response.status}`);
-             }).catch(() => {
-                 throw new Error(`HTTP error! status: ${response.status}`);
-             });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.status === 'success') {
-            const row = document.querySelector(`tr[data-paper-id="${paperId}"]`);
-            if (row) {
-                // Update displayed audit fields if returned
-                if (data.changed_formatted !== undefined) {
-                    row.querySelector('.changed-cell').textContent = data.changed_formatted;
-                }
-                if (data.changed_by !== undefined) {
-                    row.querySelector('.changed-by-cell').innerHTML = renderChangedBy(data.changed_by);
-                }
-                // Update displayed page count if returned
-                const pageCountCell = row.cells[pageCountCellIndex];
-                if (pageCountCell) {
-                     pageCountCell.textContent = data.page_count !== null && data.page_count !== undefined ? data.page_count : '';
-                }
-                // --- NEW: Update displayed relevance if returned ---
-                // Find the relevance cell in the main row (adjust selector if needed)
-                const relevanceCell = row.cells[relevanceCellIndex]; // Or better, add a class like .relevance-cell to the <td> and use '.relevance-cell'
-                if (relevanceCell) {
-                     relevanceCell.textContent = data.relevance !== null && data.relevance !== undefined ? data.relevance : '';
-                }
-                // Note: The UI fields (model_name, features_other, user_trace) are NOT updated here
-                // from the server response because update_paper_custom_fields doesn't return them.
-                // They retain the user-entered value after saving.
-            }
-            // Collapse details row after successful save
-            const toggleBtn = row ? row.querySelector('.toggle-btn') : null;
-            if (toggleBtn && row && row.nextElementSibling && row.nextElementSibling.classList.contains('expanded')) {
-                 toggleDetails(toggleBtn);
-            }
-            if (saveButton) {
-                saveButton.textContent = 'Saved!';
-                setTimeout(() => {
-                    if (saveButton) {
-                        saveButton.textContent = originalText;
-                        saveButton.disabled = false;
+                // Extract filename from Content-Disposition header
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'backup.parça.zst';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
                     }
-                }, 1500);
-            }
-            updateCounts();
-        } else {
-            console.error('Save error:', data.message);
-            if (saveButton) {
-                saveButton.textContent = originalText;
-                saveButton.disabled = false;
-            }
-        }
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-        if (saveButton) {
-            saveButton.textContent = originalText;
-            saveButton.disabled = false;
-        }
+                }
+                
+                return response.blob().then(blob => ({ blob, filename }));
+            })
+            .then(({ blob, filename }) => {
+                // Create a download link for the backup file
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            
+                backupStatusMessage.textContent = 'Backup created successfully!';
+                backupStatusMessage.style.color = 'green';
+                
+                document.documentElement.classList.remove('busyCursor');
+            })
+            .catch(error => {
+                console.error('Backup error:', error);
+                backupStatusMessage.textContent = `Backup Error: ${error.message}`;
+                backupStatusMessage.style.color = 'red';
+                alert(`An error occurred during backup: ${error.message}`);
+                document.documentElement.classList.remove('busyCursor');
+            });
     });
-}
 
+    restoreBtn.addEventListener('click', function() {
+        console.log("Restore button clicked");
+        
+        // Create file input for backup selection
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.zst';
+        fileInput.style.display = 'none';
+        
+        fileInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-// static/comms.js (or within a <script> tag in index.html)
-
-// Add a hidden file input element dynamically if it doesn't exist already
-// (This avoids needing to add it to index.html)
-if (!document.getElementById('pdf-file-input')) {
-    const hiddenFileInput = document.createElement('input');
-    hiddenFileInput.type = 'file';
-    hiddenFileInput.id = 'pdf-file-input';
-    hiddenFileInput.accept = '.pdf'; // Only accept PDF files
-    hiddenFileInput.style.display = 'none';
-    document.body.appendChild(hiddenFileInput);
-}
-
-// Reference the hidden input
-const pdfFileInput = document.getElementById('pdf-file-input');
-
-// Function to handle the actual upload
-function uploadPDFForPaper(paperId) {
-    const file = pdfFileInput.files[0];
-    if (!file) {
-        console.error("No file selected for upload.");
-        alert("No file selected.");
-        return;
-    }
-
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-         alert("Please select a PDF file.");
-         return;
-    }
-
-    const formData = new FormData();
-    formData.append('pdf_file', file);
-
-    // Show a simple loading indicator or disable interaction temporarily
-    const uploadLink = document.querySelector(`.pdf-upload-link[data-paper-id="${paperId}"]`);
-    if (uploadLink) {
-        uploadLink.textContent = '⏳'; // Change icon to indicate processing
-        uploadLink.style.pointerEvents = 'none'; // Disable clicks temporarily
-    }
-
-    fetch(`/upload_pdf/${encodeURIComponent(paperId)}`, { // Use encodeURIComponent for the string ID
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            console.log("PDF uploaded successfully for paper ID:", paperId);
-            // Update the table row with the new PDF info
-            // Pass the filename and state received from the server
-            updateTableRowWithPDFData(paperId, data.pdf_filename, data.pdf_state);
-        } else {
-            console.error("Upload failed:", data.message);
-            alert(`Upload failed: ${data.message}`);
-            // Re-enable the link if it failed
-             if (uploadLink) {
-                 uploadLink.textContent = '❔';
-                 uploadLink.style.pointerEvents = 'auto';
-             }
-        }
-    })
-    .catch(error => {
-        console.error("Error during upload:", error);
-        alert("An error occurred during upload.");
-        // Re-enable the link if it failed
-        if (uploadLink) {
-            uploadLink.textContent = '❔';
-            uploadLink.style.pointerEvents = 'auto';
-        }
-    });
-}
-function updateTableRowWithPDFData(paperId, filename, state) {
-    const row = document.querySelector(`tr[data-paper-id="${paperId}"]`);
-    if (!row) {
-        console.error(`Row for paper ID ${paperId} not found.`);
-        return;
-    }
-
-    const pdfCell = row.cells[pdfCellIndex]; // PDF cell is the second cell (index 1)
-    if (!pdfCell) {
-        console.error(`PDF cell for paper ID ${paperId} not found.`);
-        return;
-    }
-
-    // Create the new link element for the PDF.js viewer
-    const pdfLink = document.createElement('a');
-    pdfLink.href = `/static/pdfjs/web/viewer.html?file=/serve_pdf/${encodeURIComponent(filename)}`; // Use the new viewer URL
-    pdfLink.target = '_blank';
-    pdfLink.title = `Open PDF.js Annotator for: ${filename}`; // Update title
-    pdfLink.textContent = '📕'; // PDF emoji (or use state emoji if you prefer)
-
-    // Replace the cell content with the new link
-    pdfCell.innerHTML = ''; // Clear existing content (like '⏳')
-    pdfCell.appendChild(pdfLink);
-    pdfCell.title = "PDF Status"; // Set title back
-}
-
-// Event delegation for the PDF upload links
-document.addEventListener('click', function(event) {
-    if (event.target.classList.contains('pdf-upload-link')) {
-        event.preventDefault(); // Prevent default link behavior
-        // Get the paper ID as a string directly
-        const paperId = event.target.getAttribute('data-paper-id');
-        if (!paperId) { // Check if the ID string is empty or null
-            console.error("Invalid or missing paper ID for PDF upload link.");
-            return;
-        }
-
-        console.log("Attempting upload for paper ID:", paperId); // Debug log
-
-        // Reset the file input to allow selecting the same file again
-        pdfFileInput.value = '';
-
-        // Add event listener for when a file is selected
-        pdfFileInput.onchange = function(e) {
-            if (e.target.files.length > 0) {
-                uploadPDFForPaper(paperId);
+            // Validate file extension
+            if (!file.name.endsWith('.parça.zst')) {
+                alert('Invalid backup file. Expected .parça.zst file.');
+                return;
             }
-        };
 
-        // Trigger the hidden file input click
-        pdfFileInput.click();
-    }
+            // Create FormData and send restore request
+            const formData = new FormData();
+            formData.append('backup_file', file);
+
+            // Show status message
+                backupStatusMessage.textContent = `Restoring from ${file.name}...`;
+                backupStatusMessage.style.color = '';
+
+            fetch('/restore', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.documentElement.classList.add('busyCursor');
+                if (data.status === 'success') {
+                    console.log(data.message);
+                    backupStatusMessage.textContent = data.message;
+                    backupStatusMessage.style.color = 'green';
+                    
+                    // Reload page after successful restore
+                    setTimeout(() => { window.location.reload(); }, 2000);
+                } else {
+                    console.error("Restore Error:", data.message);
+                    backupStatusMessage.textContent = `Restore Error: ${data.message}`;
+                    backupStatusMessage.style.color = 'red';
+                    alert(`Restore failed: ${data.message}`);
+                }
+                document.documentElement.classList.remove('busyCursor');
+            })
+            .catch(error => {
+                document.documentElement.classList.add('busyCursor');
+                console.error('Restore error:', error);
+                backupStatusMessage.textContent = `Restore Error: ${error.message}`;
+                backupStatusMessage.style.color = 'red';
+                alert(`An error occurred during restore: ${error.message}`);
+                document.documentElement.classList.remove('busyCursor');
+            });
+        });
+
+        // Trigger file selection
+        document.body.appendChild(fileInput);
+        fileInput.click();
+        document.body.removeChild(fileInput);
+    });
+
 });

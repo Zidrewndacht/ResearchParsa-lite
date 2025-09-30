@@ -32,6 +32,22 @@ const loadedPapersCountCell = document.getElementById('loaded-papers-count');
 const applyButton = document.getElementById('apply-serverside-filters');
 // const totalPapersCountCell = document.getElementById('total-papers-count');
 
+
+// --- Batch Action Button Event Listeners ---
+const parçaToolsBtn = document.getElementById('parça-tools-btn');
+const classifyAllBtn = document.getElementById('classify-all-btn');
+const classifyRemainingBtn = document.getElementById('classify-remaining-btn');
+const verifyAllBtn = document.getElementById('verify-all-btn');
+const verifyRemainingBtn = document.getElementById('verify-remaining-btn');
+const batchStatusMessage = document.getElementById('batch-status-message');
+const backupStatusMessage = document.getElementById('backup-status-message');
+
+const importActionsBtn = document.getElementById('import-btn');
+const exportActionsBtn = document.getElementById('export-btn');
+
+const backupBtn = document.getElementById('backup-btn');
+const restoreBtn = document.getElementById('restore-btn');
+
 const headers = document.querySelectorAll('th[data-sort]');
 let currentClientSort = { column: null, direction: 'ASC' };
 
@@ -98,7 +114,10 @@ function closeImportModal() { importModal.classList.remove('modal-active'); }
 
 function showExportActions(){
     exportModal.offsetHeight;
-    exportModal.classList.add('modal-active');
+    exportModal.classList.add('modal-active');   
+    backupStatusMessage.innerHTML = 'Backups include the database, original and annotated PDFs, HTML export and a XLSX spreadsheet.<br><br>Restoring from a backup overwrites all existing data!';
+    backupStatusMessage.style.color = '';
+
 }
 function closeExporthModal() { exportModal.classList.remove('modal-active'); }
 

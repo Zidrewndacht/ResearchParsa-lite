@@ -15,7 +15,7 @@ GRAMMAR_FILE = "" #"output.gbnf" # obsolete, disabled for reasoning models.
 PROMPT_TEMPLATE = "prompt_template.txt"
 VERIFIER_TEMPLATE = "verifier_template.txt"
 
-DATABASE_FILE = os.path.join(os.getcwd(), 'data', 'new.sqlite')
+DATABASE_FILE = os.path.join(os.getcwd(), 'data', 'db.sqlite')
 os.makedirs(os.path.dirname(DATABASE_FILE), exist_ok=True)  # Ensure the directory exists
 
 PDF_STORAGE_DIR = os.path.join(os.getcwd(), 'data', 'pdf')

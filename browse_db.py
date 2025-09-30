@@ -3,7 +3,7 @@ import sqlite3
 import json
 import argparse
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, abort, send_from_directory, Response
+from flask import Flask, render_template, request, jsonify, abort, send_from_directory, Response, send_file
 from markupsafe import Markup 
 import argparse
 import tempfile
@@ -21,6 +21,11 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from werkzeug.utils import secure_filename # Ensure this is imported
 import gzip
 import base64
+import zstandard as zstd
+import tarfile
+import shutil
+from datetime import datetime
+import functools
 
 # Import globals, the classification and verification modules
 import globals
@@ -625,6 +630,328 @@ def truncate_authors(authors_str, max_authors=2):
 
 
 
+# --- Helper Functions for Filtering ---
+def get_default_filter_values(hide_offtopic_param, year_from_param, year_to_param, min_page_count_param, search_query_param):
+    """Extracts and validates filter parameters, returning default values if invalid/missing."""
+    hide_offtopic = True 
+    if hide_offtopic_param is not None:
+        hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
+
+    try:
+        year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
+    except ValueError:
+        year_from_value = DEFAULT_YEAR_FROM
+
+    try:
+        year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
+    except ValueError:
+        year_to_value = DEFAULT_YEAR_TO
+
+    try:
+        min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
+    except ValueError:
+        min_page_count_value = DEFAULT_MIN_PAGE_COUNT
+
+    search_query_value = search_query_param if search_query_param is not None else ""
+
+    return hide_offtopic, year_from_value, year_to_value, min_page_count_value, search_query_value
+
+# --- Core Export Generation Functions ---
+
+def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to_value, min_page_count_value, search_query_value, is_lite_export=False):
+    """Generates the full HTML content string for the static export."""
+    # Strip fat text for lite export:
+    if is_lite_export:
+        for paper in papers:
+            paper['abstract'] = '' # Blank Abstract
+            paper['reasoning_trace'] = '' # Blank Classifier Trace
+            paper['verifier_trace'] = '' # Blank Verifier Trace
+
+    fonts_css_content = ""
+    style_css_content = ""
+    chart_js_content = ""
+    ghpages_js_content = ""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    static_dir = os.path.join(script_dir, 'static')
+    try:
+        with open(os.path.join(static_dir, 'fonts.css'), 'r', encoding='utf-8') as f:
+            fonts_css_content = f.read()
+        with open(os.path.join(static_dir, 'style.css'), 'r', encoding='utf-8') as f:
+            style_css_content = f.read()
+        with open(os.path.join(static_dir, 'chart.js'), 'r', encoding='utf-8') as f:
+            chart_js_content = f.read()
+        with open(os.path.join(static_dir, 'ghpages.js'), 'r', encoding='utf-8') as f:
+            ghpages_js_content = f.read()
+    except FileNotFoundError as e:
+        print(f"Warning: Static file not found during HTML export generation: {e}")
+        # Handle missing files gracefully if possible, or raise an error
+        raise
+
+    fonts_css_content = rcssmin.cssmin(fonts_css_content)
+    style_css_content = rcssmin.cssmin(style_css_content)
+    chart_js_content = rjsmin.jsmin(chart_js_content)
+    ghpages_js_content = rjsmin.jsmin(ghpages_js_content)
+
+    # --- Render the static export template ---
+    papers_table_static_export = render_template(
+        'papers_table_static_export.html',
+        papers=papers, # Pass the potentially modified papers list
+        type_emojis=globals.TYPE_EMOJIS,
+        pdf_emojis=globals.PDF_EMOJIS, # Pass the PDF emojis dictionary
+        default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
+        hide_offtopic=hide_offtopic,
+        year_from_value=str(year_from_value),
+        year_to_value=str(year_to_value),
+        min_page_count_value=str(min_page_count_value),
+        search_query_value=search_query_value
+    )
+    full_html_content = render_template(
+        'index_static_export.html',
+        papers_table_static_export=papers_table_static_export,
+        hide_offtopic=hide_offtopic,
+        year_from_value=year_from_value, # Pass raw values if needed by template logic
+        year_to_value=year_to_value,
+        min_page_count_value=min_page_count_value,
+        search_query=search_query_value,
+        # --- Pass potentially minified static content ---
+        fonts_css_content=Markup(fonts_css_content), # Markup was already applied if needed, or content is minified
+        style_css_content=Markup(style_css_content),
+        chart_js_content=Markup(chart_js_content),
+        ghpages_js_content=Markup(ghpages_js_content)
+    )
+
+    # --- Compress the full HTML content ---
+    html_bytes = full_html_content.encode('utf-8')  # 1. Encode the HTML string to bytes (UTF-8)
+    compressed_bytes = gzip.compress(html_bytes)    # 2. Compress the bytes
+    compressed_base64 = base64.b64encode(compressed_bytes).decode('ascii')  # 3. Encode the compressed bytes to Base64 for embedding in JS
+
+    pako_js_content = ""
+    try:
+        with open(os.path.join(static_dir, 'pako.min.js'), 'r', encoding='utf-8') as f:
+            pako_js_content = f.read()
+    except FileNotFoundError as e:
+        print(f"Warning: pako.min.js not found during HTML export generation: {e}")
+        # Handle missing pako.js gracefully or raise an error
+        raise
+
+    # --- Render the LOADER template, passing the compressed data ---
+    loader_html_content = render_template(
+        'loader.html',
+        compressed_html_data=compressed_base64,
+        pako_js_content=Markup(pako_js_content)
+    )
+    return loader_html_content
+
+def generate_xlsx_export_content(papers):
+    """Generates the Excel file content as bytes."""
+    output = io.BytesIO()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "PCB Inspection Papers"
+
+    # --- Define Headers ---
+    headers = [
+        "Type", "Title", "Year", "Journal/Conf name", "Pages count",
+        # Features
+        "Off-topic", "Relevance", "Survey", "THT", "SMT", "X-Ray",
+        "Tracks", "Holes", "Solder Insufficient", "Solder Excess",
+        "Solder Void", "Solder Crack", "Missing Comp", "Wrong Comp",
+        "Orientation", "Cosmetic", "Other_state", "Other defects",
+        # Techniques
+        "Classic CV", "ML", "CNN Classifier", "CNN Detector",
+        "R-CNN Detector", "Transformers", "Other", "Hybrid", "Datasets",
+        "Model name",
+        # Metadata
+        "Last Changed", "Changed By", "Verified", "Accr. Score", "Verified By",
+        "User Comment State", "User Comments"
+    ]
+
+    # --- Write Headers ---
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num, value=header)
+        cell.font = Font(bold=True)
+
+    # --- Write Data Rows ---
+    for row_num, paper in enumerate(papers, 2): # Start from row 2
+        # --- Helper function for consistent Excel value conversion ---
+        def format_excel_value(val):
+            """
+            Converts Python/DB values to Excel-friendly values:
+            - True/1   -> TRUE (Excel boolean)
+            - False/0  -> FALSE (Excel boolean)
+            - None/''/etc. -> "" (Empty string for blank Excel cell)
+            - Other    -> str(val) (Text)
+            """
+            if val is True or (isinstance(val, (int, float)) and val == 1):
+                return True # Excel TRUE
+            elif val is False or (isinstance(val, (int, float)) and val == 0):
+                return False # Excel FALSE
+            elif val is None or val == "":
+                 return "" # Explicitly empty cell for NULL/empty
+            else:
+                # Handle potential string representations of booleans from inconsistent DB
+                if isinstance(val, str):
+                    lower_val = val.lower()
+                    if lower_val in ('true', '1'):
+                        return True
+                    elif lower_val in ('false', '0'):
+                        return False
+                # Default: Convert to string for text fields
+                return str(val)
+
+        # Extract and format data
+        features = paper.get('features', {})
+        technique = paper.get('technique', {})
+
+        # --- Format the 'Last Changed' date ---
+        changed_timestamp_str = paper.get('changed', '')
+        formatted_changed_date = ""
+        if changed_timestamp_str:
+            try:
+                # Parse the ISO format timestamp
+                dt = datetime.fromisoformat(changed_timestamp_str.replace('Z', '+00:00'))
+                # Format as 'YYYY-MM-DD HH:MM:SS' for Excel compatibility
+                formatted_changed_date = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                # If parsing fails, keep the original string or leave blank
+                formatted_changed_date = changed_timestamp_str # Or ""
+
+        row_data = [
+            paper.get('type', ''),                    # Type (text)
+            paper.get('title', ''),                   # Title (text)
+            paper.get('year'),                        # Year (integer)
+            paper.get('journal', ''),                 # Journal/Conf name (text)
+            paper.get('page_count'),                  # Pages count (integer)
+            # --- Features ---
+            format_excel_value(paper.get('is_offtopic')), # Off-topic (boolean/null)
+            paper.get('relevance'),                   # Relevance (integer)
+            format_excel_value(paper.get('is_survey')), # Survey (boolean/null)
+            format_excel_value(paper.get('is_through_hole')), # THT (boolean/null)
+            format_excel_value(paper.get('is_smt')),    # SMT (boolean/null)
+            format_excel_value(paper.get('is_x_ray')),  # X-Ray (boolean/null) <-- CORRECTED
+            format_excel_value(features.get('tracks')), # Tracks (boolean/null)
+            format_excel_value(features.get('holes')),  # Holes (boolean/null)
+            format_excel_value(features.get('solder_insufficient')), # Solder Insufficient (boolean/null)
+            format_excel_value(features.get('solder_excess')), # Solder Excess (boolean/null)
+            format_excel_value(features.get('solder_void')), # Solder Void (boolean/null)
+            format_excel_value(features.get('solder_crack')), # Solder Crack (boolean/null)
+            format_excel_value(features.get('missing_component')), # Missing Comp (boolean/null)
+            format_excel_value(features.get('wrong_component')), # Wrong Comp (boolean/null)
+            format_excel_value(features.get('orientation')), # Orientation (boolean/null)
+            format_excel_value(features.get('cosmetic')), # Cosmetic (boolean/null)
+            # Other_state (boolean based on 'other' text content) <-- CORRECTED
+            format_excel_value(features.get('other') is not None and str(features.get('other', '')).strip() != ""),
+            features.get('other', ''),               # Other defects (text) <-- This one shows the text
+            # --- Techniques ---
+            format_excel_value(technique.get('classic_cv_based')), # Classic CV (boolean/null)
+            format_excel_value(technique.get('ml_traditional')), # ML (boolean/null)
+            format_excel_value(technique.get('dl_cnn_classifier')), # CNN Classifier (boolean/null)
+            format_excel_value(technique.get('dl_cnn_detector')), # CNN Detector (boolean/null)
+            format_excel_value(technique.get('dl_rcnn_detector')), # R-CNN Detector (boolean/null)
+            format_excel_value(technique.get('dl_transformer')), # Transformers (boolean/null)
+            format_excel_value(technique.get('dl_other')), # Other (boolean/null)
+            format_excel_value(technique.get('hybrid')), # Hybrid (boolean/null)
+            format_excel_value(technique.get('available_dataset')), # Datasets (boolean/null)
+            technique.get('model', ''),              # Model name (text)
+            # --- Metadata ---
+            formatted_changed_date,                 # Last Changed (formatted date string)
+            paper.get('changed_by', ''),            # Changed By (text)
+            format_excel_value(paper.get('verified')), # Verified (boolean/null)
+            paper.get('estimated_score'),           # Accr. Score (integer)
+            paper.get('verified_by', ''),           # Verified By (text)
+            # User comments state (boolean based on 'user_trace' text content) <-- CORRECTED
+            format_excel_value(paper.get('user_trace') is not None and str(paper.get('user_trace', '')).strip() != ""),
+            paper.get('user_trace', '')             # User comments contents (text) <-- This one shows the text
+        ]
+
+        # Write the row data to Excel
+        for col_num, cell_value in enumerate(row_data, 1):
+            ws.cell(row=row_num, column=col_num, value=cell_value)
+
+    # Optional: Auto-adjust column widths (basic attempt)
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter # Get the column name
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        # Cap the width to prevent extremely wide columns
+        ws.column_dimensions[column_letter].width = min(adjusted_width, 50)
+
+    # Optional: Format the data as a table (requires openpyxl >= 2.5)
+    try:
+        if len(papers) > 0:
+            # Adjust the column reference to 'AN' (assuming 34 columns: A through AN)
+            # Headers are row 1, data starts row 2, so last row is len(papers) + 1
+            tab = Table(displayName="PCBPapersTable", ref=f"A1:AN{len(papers) + 1}")
+            style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
+                                   showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+            tab.tableStyleInfo = style
+            ws.add_table(tab)
+    except Exception as e:
+        print(f"Warning: Could not create Excel table: {e}")
+
+    # --- NEW: Apply Conditional Formatting for Boolean Cells ---
+    # Define fills for TRUE and FALSE
+    true_fill = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid") # Light Green
+    false_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid") # Light Red
+    boolean_columns = [
+        6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+        24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 37 # Added 37 (User Comment State)
+    ]
+
+    # Iterate through rows and specified boolean columns to apply formatting
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+        for col_idx in boolean_columns:
+            # Adjust for 0-based indexing in the row list
+            cell = row[col_idx - 1] # col_idx is 1-based, list index is 0-based
+            if cell.value is True:
+                cell.fill = true_fill
+            elif cell.value is False:
+                cell.fill = false_fill
+            # If cell.value is None or "", it remains unformatted (blank cell)
+
+    # --- Optional: Format the data as a table (ensure column ref is correct) - this is probably outdated ---
+    try:
+        if len(papers) > 0:
+            tab = Table(displayName="PCBPapersTable", ref=f"A1:AT{len(papers) + 1}") # CHANGED TO AT - why?
+            style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
+                                   showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+            tab.tableStyleInfo = style
+            ws.add_table(tab)
+    except Exception as e:
+        print(f"Warning: Could not create Excel table: {e}")
+
+    # --- Save Workbook to BytesIO object ---
+    wb.save(output)
+    output.seek(0)
+    return output.getvalue()
+
+def generate_filename(base_name, year_from, year_to, min_page_count, hide_offtopic, search_query, extra_suffix=""):
+    """Generates a filename based on filters."""
+    filename_parts = [base_name]
+    if year_from == year_to:
+        filename_parts.append(str(year_from))
+    else:
+        filename_parts.append(f"{year_from}-{year_to}")
+    if min_page_count > 0:
+        filename_parts.append(f"min{min_page_count}pg")
+    if hide_offtopic:
+        filename_parts.append("noOfftopic")
+    if search_query:
+        # Sanitize search query for filename (basic)
+        safe_search = "".join(c for c in search_query if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        if safe_search:
+            filename_parts.append(f"search_{safe_search[:20]}") # Limit name length
+    if extra_suffix:
+        filename_parts.append(extra_suffix)
+    return "_".join(filename_parts)
+
+
 # --- Jinja2-like filters ---
 def render_status(value):
     """Render status value as emoji/symbol"""
@@ -730,6 +1057,164 @@ def index():
         search_query_value=search_input_value,
         total_paper_count=total_paper_count
     )
+
+@app.route('/backup', methods=['GET'])
+def backup_database():
+    """Creates a backup of the database and related files."""
+    try:
+        # Create backup filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_filename = f"{timestamp}.parça.zst"
+
+        # Create temporary directory for exports
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Generate HTML export (full, not lite)
+            papers = fetch_papers(hide_offtopic=True, year_from=0, year_to=9999, min_page_count=0, search_query="")
+            html_content = generate_html_export_content(papers, True, 0, 9999, 0, "", is_lite_export=False)
+            html_path = os.path.join(temp_dir, 'export.html')
+            with open(html_path, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+
+            # Generate XLSX export
+            xlsx_content = generate_xlsx_export_content(papers)
+            xlsx_path = os.path.join(temp_dir, 'export.xlsx')
+            with open(xlsx_path, 'wb') as f:
+                f.write(xlsx_content)
+
+            # Create in-memory buffer for the backup
+            buffer = io.BytesIO()
+            
+            # Create a Zstandard compressor
+            cctx = zstd.ZstdCompressor(level=1)  # Fastest compression level
+            
+            # Compress the tar directly to the buffer
+            with tarfile.open(fileobj=buffer, mode='w') as tar:
+                # Add database file
+                tar.add(DATABASE, arcname='data/new.sqlite')
+                
+                # Add PDF storage directory
+                if os.path.exists(globals.PDF_STORAGE_DIR):
+                    tar.add(globals.PDF_STORAGE_DIR, arcname='data/pdf')
+                
+                # Add annotated PDF storage directory
+                if os.path.exists(globals.ANNOTATED_PDF_STORAGE_DIR):
+                    tar.add(globals.ANNOTATED_PDF_STORAGE_DIR, arcname='data/pdf_annotated')
+                
+                # Add export files
+                tar.add(html_path, arcname='export.html')
+                tar.add(xlsx_path, arcname='export.xlsx')
+            
+            # Get the uncompressed tar data
+            tar_data = buffer.getvalue()
+            
+            # Now compress the tar data with zstd
+            compressed_data = cctx.compress(tar_data)
+            
+            # Create a new buffer with the compressed data
+            compressed_buffer = io.BytesIO(compressed_data)
+            compressed_buffer.seek(0)
+            
+            # Create a response with the in-memory backup
+            response = send_file(
+                compressed_buffer,
+                as_attachment=True,
+                download_name=backup_filename,
+                mimetype='application/zstd'
+            )
+            
+            # Ensure the filename is set correctly in Content-Disposition
+            response.headers['Content-Disposition'] = f'attachment; filename="{backup_filename}"'
+            
+            return response
+    except Exception as e:
+        print(f"Backup error: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+@app.route('/restore', methods=['POST'])
+def restore_database():
+    """Restores database and related files from a backup."""
+    try:
+        if 'backup_file' not in request.files:
+            return jsonify({'status': 'error', 'message': 'No backup file provided'}), 400
+
+        file = request.files['backup_file']
+        if file.filename == '':
+            return jsonify({'status': 'error', 'message': 'No file selected'}), 400
+
+        if not file.filename.endswith('.parça.zst'):
+            return jsonify({'status': 'error', 'message': 'Invalid backup file format. Expected .parça.zst'}), 400
+
+        # Create temporary directory for extraction
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Save uploaded file temporarily
+            temp_backup_path = os.path.join(temp_dir, 'backup.parça.zst')
+            file.save(temp_backup_path)
+
+            # Decompress and extract
+            dctx = zstd.ZstdDecompressor()
+            with open(temp_backup_path, 'rb') as compressed_file:
+                with dctx.stream_reader(compressed_file) as decomp_stream:
+                    with tarfile.open(fileobj=decomp_stream, mode='r|') as tar:
+                        tar.extractall(path=temp_dir)
+
+            # Paths in the extracted archive
+            extracted_db_path = os.path.join(temp_dir, 'data', 'new.sqlite')
+            extracted_pdf_dir = os.path.join(temp_dir, 'data', 'pdf')
+            extracted_annotated_pdf_dir = os.path.join(temp_dir, 'data', 'pdf_annotated')
+
+            # Verify required files exist
+            if not os.path.exists(extracted_db_path):
+                return jsonify({'status': 'error', 'message': 'Backup does not contain required database file'}), 500
+
+            # Backup current data before restoring (single file name, overwrites previous)
+            backup_current = "backup_before_restore.parça.zst"
+            backup_current_path = os.path.join(os.getcwd(), backup_current)
+            cctx = zstd.ZstdCompressor(level=1)
+            with cctx.stream_writer(open(backup_current_path, 'wb')) as compressor:
+                with tarfile.open(fileobj=compressor, mode='w|') as tar:
+                    if os.path.exists(DATABASE):
+                        tar.add(DATABASE, arcname='data/new.sqlite')
+                    if os.path.exists(globals.PDF_STORAGE_DIR):
+                        tar.add(globals.PDF_STORAGE_DIR, arcname='data/pdf')
+                    if os.path.exists(globals.ANNOTATED_PDF_STORAGE_DIR):
+                        tar.add(globals.ANNOTATED_PDF_STORAGE_DIR, arcname='data/pdf_annotated')
+
+            # Perform restoration
+            # 1. Replace database
+            shutil.move(extracted_db_path, DATABASE)
+            
+            # 2. Replace PDF directories - only if they exist in the backup
+            if os.path.exists(extracted_pdf_dir):
+                # Create parent directory if it doesn't exist
+                os.makedirs(os.path.dirname(globals.PDF_STORAGE_DIR), exist_ok=True)
+                # Remove existing directory if it exists
+                if os.path.exists(globals.PDF_STORAGE_DIR):
+                    shutil.rmtree(globals.PDF_STORAGE_DIR)
+                # Move the extracted directory
+                shutil.move(extracted_pdf_dir, globals.PDF_STORAGE_DIR)
+            else:
+                # Create empty PDF directory if not in backup
+                os.makedirs(globals.PDF_STORAGE_DIR, exist_ok=True)
+                
+            if os.path.exists(extracted_annotated_pdf_dir):
+                # Create parent directory if it doesn't exist
+                os.makedirs(os.path.dirname(globals.ANNOTATED_PDF_STORAGE_DIR), exist_ok=True)
+                # Remove existing directory if it exists
+                if os.path.exists(globals.ANNOTATED_PDF_STORAGE_DIR):
+                    shutil.rmtree(globals.ANNOTATED_PDF_STORAGE_DIR)
+                # Move the extracted directory
+                shutil.move(extracted_annotated_pdf_dir, globals.ANNOTATED_PDF_STORAGE_DIR)
+            else:
+                # Create empty annotated PDF directory if not in backup
+                os.makedirs(globals.ANNOTATED_PDF_STORAGE_DIR, exist_ok=True)
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Restored successfully from backup. Previous data backed up as {backup_current}'
+        })
+    except Exception as e:
+        print(f"Restore error: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # PDF storage/annotation routes
 @app.route('/upload_pdf/<paper_id>', methods=['POST']) # Removed int: converter
@@ -896,6 +1381,7 @@ def upload_annotated_pdf(paper_id):
         return jsonify({'status': 'error', 'message': 'Failed to save file on server.'}), 500
 
 # Export routes
+
 @app.route('/static_export', methods=['GET'])
 def static_export():
     """Generate and serve a downloadable HTML snapshot based on current filters."""
@@ -905,19 +1391,14 @@ def static_export():
     year_to_param = request.args.get('year_to')
     min_page_count_param = request.args.get('min_page_count')
     search_query_param = request.args.get('search_query')
-
     # hidden params (usable, but not implemented in the Web client GUI):
     lite_param = request.args.get('lite', default='0')
     download_param = request.args.get('download', default='1')
 
-    # --- Determine filter values, using defaults if not provided or invalid ---
-    hide_offtopic = True 
-    if hide_offtopic_param is not None:
-        hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
-    year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
-    year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
-    min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
-    search_query_value = search_query_param if search_query_param is not None else ""
+    # --- Determine filter values ---
+    hide_offtopic, year_from_value, year_to_value, min_page_count_value, search_query_value = get_default_filter_values(
+        hide_offtopic_param, year_from_param, year_to_param, min_page_count_param, search_query_param
+    )
 
     # --- Fetch papers based on these filters ---
     papers = fetch_papers(
@@ -928,98 +1409,16 @@ def static_export():
         search_query=search_query_value # Pass the search query
     )
 
-    # Strip fat text for lite export:
     is_lite_export = lite_param.lower() in ['1', 'true', 'yes']
-    if is_lite_export:
-        for paper in papers:
-            paper['abstract'] = '' # Blank Abstract
-            paper['reasoning_trace'] = '' # Blank Classifier Trace
-            paper['verifier_trace'] = '' # Blank Verifier Trace
 
-    fonts_css_content = ""
-    style_css_content = ""
-    chart_js_content = ""
-    ghpages_js_content = ""
-
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    static_dir = os.path.join(script_dir, 'static')
-    with open(os.path.join(static_dir, 'fonts.css'), 'r', encoding='utf-8') as f:
-        fonts_css_content = f.read()
-    with open(os.path.join(static_dir, 'style.css'), 'r', encoding='utf-8') as f:
-        style_css_content = f.read()
-    with open(os.path.join(static_dir, 'chart.js'), 'r', encoding='utf-8') as f:
-        chart_js_content = f.read()
-    with open(os.path.join(static_dir, 'ghpages.js'), 'r', encoding='utf-8') as f:
-        ghpages_js_content = f.read()
-        
-    fonts_css_content = rcssmin.cssmin(fonts_css_content)
-    style_css_content = rcssmin.cssmin(style_css_content)
-    chart_js_content = rjsmin.jsmin(chart_js_content)
-    ghpages_js_content = rjsmin.jsmin(ghpages_js_content)
-    
-    # --- Render the static export template ---
-    papers_table_static_export = render_template(
-        'papers_table_static_export.html',
-        papers=papers, # Pass the potentially modified papers list
-        type_emojis=globals.TYPE_EMOJIS,
-        pdf_emojis=globals.PDF_EMOJIS, # Pass the PDF emojis dictionary
-        default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
-        hide_offtopic=hide_offtopic,
-        year_from_value=str(year_from_value),
-        year_to_value=str(year_to_value),
-        min_page_count_value=str(min_page_count_value),
-        search_query_value=search_query_value
-    )
-    full_html_content = render_template(
-        'index_static_export.html',
-        papers_table_static_export=papers_table_static_export,
-        hide_offtopic=hide_offtopic,
-        year_from_value=year_from_value, # Pass raw values if needed by template logic
-        year_to_value=year_to_value,
-        min_page_count_value=min_page_count_value,
-        search_query=search_query_value,
-        # --- Pass potentially minified static content ---
-        fonts_css_content=Markup(fonts_css_content), # Markup was already applied if needed, or content is minified
-        style_css_content=Markup(style_css_content),
-        chart_js_content=Markup(chart_js_content),
-        ghpages_js_content=Markup(ghpages_js_content)
-    )
-    
-    pako_js_content = ""
-    with open(os.path.join(static_dir, 'pako.min.js'), 'r', encoding='utf-8') as f:
-        pako_js_content = f.read()
-
-    # --- Compress the full HTML content ---
-    html_bytes = full_html_content.encode('utf-8')  # 1. Encode the HTML string to bytes (UTF-8)
-    compressed_bytes = gzip.compress(html_bytes)    # 2. Compress the bytes
-    compressed_base64 = base64.b64encode(compressed_bytes).decode('ascii')  # 3. Encode the compressed bytes to Base64 for embedding in JS
-
-    # --- Render the LOADER template, passing the compressed data ---
-    loader_html_content = render_template(
-        'loader.html',
-        compressed_html_data=compressed_base64,
-        pako_js_content=Markup(pako_js_content)
+    # --- Generate the content using the core function ---
+    full_html_content = generate_html_export_content(
+        papers, hide_offtopic, year_from_value, year_to_value, min_page_count_value, search_query_value, is_lite_export
     )
 
     # --- Create a filename based on filters ---
-    filename_parts = ["ResearchParça"]
-    if year_from_value == year_to_value:
-            filename_parts.append(str(year_from_value))
-    else:
-            filename_parts.append(f"{year_from_value}-{year_to_value}")
-    if min_page_count_value > 0:
-            filename_parts.append(f"min{min_page_count_value}pg")
-    if hide_offtopic:
-            filename_parts.append("noOfftopic")
-    if search_query_value:
-            # Sanitize search query for filename (basic)
-            safe_search = "".join(c for c in search_query_value if c.isalnum() or c in (' ', '-', '_')).rstrip()
-            if safe_search:
-                filename_parts.append(f"search_{safe_search[:20]}") # Limit name length
-    if is_lite_export:
-        filename_parts.append("lite")
-
-    filename = "_".join(filename_parts) + ".html"
+    extra_suffix = "lite" if is_lite_export else ""
+    filename = generate_filename("ResearchParça", year_from_value, year_to_value, min_page_count_value, hide_offtopic, search_query_value, extra_suffix) + ".html"
 
     # --- Prepare Response Headers ---
     response_headers = {"Content-Type": "text/html"}
@@ -1029,14 +1428,13 @@ def static_export():
     else:                           # Default behavior: prompt for download
         response_headers["Content-Disposition"] = f"attachment; filename={filename}"
         print(f"Sending static export as attachment: {filename}") # Optional: Log action
-        
+
     return Response(
-        loader_html_content,
+        full_html_content,
         mimetype="text/html",
         headers=response_headers
     )
 
-# this function probably needs some fixes after table layout changes:
 @app.route('/xlsx_export', methods=['GET'])
 def export_excel():
     """Generate and serve a downloadable Excel (.xlsx) file based on current filters."""
@@ -1047,14 +1445,10 @@ def export_excel():
     min_page_count_param = request.args.get('min_page_count')
     search_query_param = request.args.get('search_query') # Include search
 
-    # --- Determine filter values, using defaults if not provided or invalid ---
-    hide_offtopic = True # Default
-    if hide_offtopic_param is not None:
-        hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
-    year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
-    year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
-    min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
-    search_query_value = search_query_param if search_query_param is not None else ""
+    # --- Determine filter values ---
+    hide_offtopic, year_from_value, year_to_value, min_page_count_value, search_query_value = get_default_filter_values(
+        hide_offtopic_param, year_from_param, year_to_param, min_page_count_param, search_query_param
+    )
 
     # --- Fetch papers based on these filters ---
     papers = fetch_papers(
@@ -1065,226 +1459,15 @@ def export_excel():
         search_query=search_query_value # Pass the search query
     )
 
-    # --- Create Excel Workbook in Memory ---
-    output = io.BytesIO()
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "PCB Inspection Papers"
-
-    # --- Define Headers (Matching your request, translated for clarity if needed) ---
-    # Note: Headers themselves can be in any language, but English keys are often easier for formulas.
-    # If you need headers in another language, translate this list.
-    headers = [
-        "Type", "Title", "Year", "Journal/Conf name", "Pages count",
-        # Features
-        "Off-topic", "Relevance", "Survey", "THT", "SMT", "X-Ray",
-        "Tracks", "Holes", "Solder Insufficient", "Solder Excess",
-        "Solder Void", "Solder Crack", "Missing Comp", "Wrong Comp",
-        "Orientation", "Cosmetic", "Other_state", "Other defects",
-        # Techniques
-        "Classic CV", "ML", "CNN Classifier", "CNN Detector",
-        "R-CNN Detector", "Transformers", "Other", "Hybrid", "Datasets",
-        "Model name",
-        # Metadata
-        "Last Changed", "Changed By", "Verified", "Accr. Score", "Verified By",
-        "User Comment State", "User Comments"
-    ]
-
-    # --- Write Headers ---
-    for col_num, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col_num, value=header)
-        cell.font = Font(bold=True)
-        # Optional: Add background color to header
-        # from openpyxl.styles import PatternFill
-        # cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
-
-    # --- Write Data Rows ---
-    for row_num, paper in enumerate(papers, 2): # Start from row 2
-        # --- Helper function for consistent Excel value conversion ---
-        def format_excel_value(val):
-            """
-            Converts Python/DB values to Excel-friendly values:
-            - True/1   -> TRUE (Excel boolean)
-            - False/0  -> FALSE (Excel boolean)
-            - None/''/etc. -> "" (Empty string for blank Excel cell)
-            - Other    -> str(val) (Text)
-            """
-            if val is True or (isinstance(val, (int, float)) and val == 1):
-                return True # Excel TRUE
-            elif val is False or (isinstance(val, (int, float)) and val == 0):
-                return False # Excel FALSE
-            elif val is None or val == "":
-                 return "" # Explicitly empty cell for NULL/empty
-            else:
-                # Handle potential string representations of booleans from inconsistent DB
-                if isinstance(val, str):
-                    lower_val = val.lower()
-                    if lower_val in ('true', '1'):
-                        return True
-                    elif lower_val in ('false', '0'):
-                        return False
-                    # elif lower_val in ('null', 'none', ''): # If DB stores 'null' as string
-                    #     return ""
-                # Default: Convert to string for text fields
-                return str(val)
-
-        # Extract and format data
-        features = paper.get('features', {})
-        technique = paper.get('technique', {})
-
-        # --- Format the 'Last Changed' date ---
-        changed_timestamp_str = paper.get('changed', '')
-        formatted_changed_date = ""
-        if changed_timestamp_str:
-            try:
-                # Parse the ISO format timestamp
-                dt = datetime.fromisoformat(changed_timestamp_str.replace('Z', '+00:00'))
-                # Format as 'YYYY-MM-DD HH:MM:SS' for Excel compatibility
-                formatted_changed_date = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                # If parsing fails, keep the original string or leave blank
-                formatted_changed_date = changed_timestamp_str # Or ""
-
-        row_data = [
-            paper.get('type', ''),                    # Type (text)
-            paper.get('title', ''),                   # Title (text)
-            paper.get('year'),                        # Year (integer)
-            paper.get('journal', ''),                 # Journal/Conf name (text)
-            paper.get('page_count'),                  # Pages count (integer)
-
-            # --- Features ---
-            # Use format_excel_value for ALL boolean/nullable fields
-            format_excel_value(paper.get('is_offtopic')), # Off-topic (boolean/null)
-            paper.get('relevance'),                   # Relevance (integer)
-            format_excel_value(paper.get('is_survey')), # Survey (boolean/null)
-            format_excel_value(paper.get('is_through_hole')), # THT (boolean/null)
-            format_excel_value(paper.get('is_smt')),    # SMT (boolean/null)
-            format_excel_value(paper.get('is_x_ray')),  # X-Ray (boolean/null) <-- CORRECTED
-            format_excel_value(features.get('tracks')), # Tracks (boolean/null)
-            format_excel_value(features.get('holes')),  # Holes (boolean/null)
-            format_excel_value(features.get('solder_insufficient')), # Solder Insufficient (boolean/null)
-            format_excel_value(features.get('solder_excess')), # Solder Excess (boolean/null)
-            format_excel_value(features.get('solder_void')), # Solder Void (boolean/null)
-            format_excel_value(features.get('solder_crack')), # Solder Crack (boolean/null)
-            format_excel_value(features.get('missing_component')), # Missing Comp (boolean/null)
-            format_excel_value(features.get('wrong_component')), # Wrong Comp (boolean/null)
-            format_excel_value(features.get('orientation')), # Orientation (boolean/null)
-            format_excel_value(features.get('cosmetic')), # Cosmetic (boolean/null)
-            # Other_state (boolean based on 'other' text content) <-- CORRECTED
-            format_excel_value(features.get('other') is not None and str(features.get('other', '')).strip() != ""),
-            features.get('other', ''),               # Other defects (text) <-- This one shows the text
-
-            # --- Techniques ---
-            format_excel_value(technique.get('classic_cv_based')), # Classic CV (boolean/null)
-            format_excel_value(technique.get('ml_traditional')), # ML (boolean/null)
-            format_excel_value(technique.get('dl_cnn_classifier')), # CNN Classifier (boolean/null)
-            format_excel_value(technique.get('dl_cnn_detector')), # CNN Detector (boolean/null)
-            format_excel_value(technique.get('dl_rcnn_detector')), # R-CNN Detector (boolean/null)
-            format_excel_value(technique.get('dl_transformer')), # Transformers (boolean/null)
-            format_excel_value(technique.get('dl_other')), # Other (boolean/null)
-            format_excel_value(technique.get('hybrid')), # Hybrid (boolean/null)
-            format_excel_value(technique.get('available_dataset')), # Datasets (boolean/null)
-            technique.get('model', ''),              # Model name (text)
-
-            # --- Metadata ---
-            formatted_changed_date,                 # Last Changed (formatted date string)
-            paper.get('changed_by', ''),            # Changed By (text)
-            format_excel_value(paper.get('verified')), # Verified (boolean/null)
-            paper.get('estimated_score'),           # Accr. Score (integer)
-            paper.get('verified_by', ''),           # Verified By (text)
-            # User comments state (boolean based on 'user_trace' text content) <-- CORRECTED
-            format_excel_value(paper.get('user_trace') is not None and str(paper.get('user_trace', '')).strip() != ""),
-            paper.get('user_trace', '')             # User comments contents (text) <-- This one shows the text
-        ]
-
-        # Write the row data to Excel
-        for col_num, cell_value in enumerate(row_data, 1):
-            ws.cell(row=row_num, column=col_num, value=cell_value)
-
-
-    # Optional: Auto-adjust column widths (basic attempt)
-    for column in ws.columns:
-        max_length = 0
-        column_letter = column[0].column_letter # Get the column name
-        for cell in column:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        adjusted_width = (max_length + 2)
-        # Cap the width to prevent extremely wide columns
-        ws.column_dimensions[column_letter].width = min(adjusted_width, 50)
-
-    # Optional: Format the data as a table (requires openpyxl >= 2.5)
-    try:
-        if len(papers) > 0:
-            # Adjust the column reference to 'AN' (assuming 34 columns: A through AN)
-            # Headers are row 1, data starts row 2, so last row is len(papers) + 1
-            tab = Table(displayName="PCBPapersTable", ref=f"A1:AN{len(papers) + 1}")
-            style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
-                                   showLastColumn=False, showRowStripes=True, showColumnStripes=False)
-            tab.tableStyleInfo = style
-            ws.add_table(tab)
-    except Exception as e:
-        print(f"Warning: Could not create Excel table: {e}")
-
-    # --- NEW: Apply Conditional Formatting for Boolean Cells ---
-    # Define fills for TRUE and FALSE
-    true_fill = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid") # Light Green
-    false_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid") # Light Red
-    boolean_columns = [
-        6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-        24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 37 # Added 37 (User Comment State)
-    ]
-
-    # Iterate through rows and specified boolean columns to apply formatting
-    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-        for col_idx in boolean_columns:
-            # Adjust for 0-based indexing in the row list
-            cell = row[col_idx - 1] # col_idx is 1-based, list index is 0-based
-            if cell.value is True:
-                cell.fill = true_fill
-            elif cell.value is False:
-                cell.fill = false_fill
-            # If cell.value is None or "", it remains unformatted (blank cell)
-
-    # --- Optional: Format the data as a table (ensure column ref is correct) - this is probably outdated ---
-    try:
-        if len(papers) > 0:
-            tab = Table(displayName="PCBPapersTable", ref=f"A1:AT{len(papers) + 1}") # CHANGED TO AT - why?
-            style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
-                                   showLastColumn=False, showRowStripes=True, showColumnStripes=False)
-            tab.tableStyleInfo = style
-            ws.add_table(tab)
-    except Exception as e:
-        print(f"Warning: Could not create Excel table: {e}")
-
-    # --- Save Workbook to BytesIO object ---
-    wb.save(output)
-    output.seek(0)
+    # --- Generate the content using the core function ---
+    excel_bytes = generate_xlsx_export_content(papers)
 
     # --- Create a filename based on filters ---
-    filename_parts = ["ResearchParça"]
-    if year_from_value == year_to_value:
-            filename_parts.append(str(year_from_value))
-    else:
-            filename_parts.append(f"{year_from_value}-{year_to_value}")
-    if min_page_count_value > 0:
-            filename_parts.append(f"min{min_page_count_value}pg")
-    if hide_offtopic:
-            filename_parts.append("noOfftopic")
-    if search_query_value:
-            # Sanitize search query for filename (basic)
-            safe_search = "".join(c for c in search_query_value if c.isalnum() or c in (' ', '-', '_')).rstrip()
-            if safe_search:
-                filename_parts.append(f"search_{safe_search[:20]}") # Limit length
-    filename = "_".join(filename_parts) + ".xlsx"
+    filename = generate_filename("ResearchParça", year_from_value, year_to_value, min_page_count_value, hide_offtopic, search_query_value) + ".xlsx"
 
     # --- Return as a downloadable attachment ---
-    from flask import Response
     return Response(
-        output.getvalue(), # Get the bytes from the BytesIO object
+        excel_bytes, # Get the bytes from the core function
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
@@ -1644,20 +1827,48 @@ if __name__ == '__main__':
     parser.add_argument('db_file', nargs='?', help='SQLite database file path (optional)')
     args = parser.parse_args()
     
-    # Determine which database file to use
     if args.db_file:
         DATABASE = args.db_file
-    elif hasattr(globals, 'DATABASE_FILE'):
+        print(f"Attempting to use database file from command line argument: {DATABASE}")
+    elif hasattr(globals, 'DATABASE_FILE') and globals.DATABASE_FILE:
         DATABASE = globals.DATABASE_FILE
-    else:
-        print("Error: No database file specified and no default in globals.DATABASE_FILE")
-        sys.exit(1)
+        print(f"Attempting to use database file from globals.DATABASE_FILE: {DATABASE}")
 
-    # Check if database exists before starting server
+    # 3. If DATABASE is still None (neither arg nor globals provided), or if the specified file doesn't exist,
+    #    fall back to 'fallback.sqlite' by copying it to globals.DATABASE_FILE location
+    fallback_needed = False
+    if DATABASE is None:
+        fallback_needed = True
+        print("Info: No database file specified via argument or globals.DATABASE_FILE.")
+    elif not os.path.exists(DATABASE):
+        fallback_needed = True
+        print(f"Warning: Specified database file not found: {DATABASE}")
+
+    if fallback_needed:
+        # Check if fallback.sqlite exists in the script's directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        fallback_path = os.path.join(script_dir, 'fallback.sqlite')
+        
+        if not os.path.exists(fallback_path):
+            print(f"Error: Fallback database file not found: {fallback_path}")
+            print("Please ensure 'fallback.sqlite' exists in the script's directory.")
+            sys.exit(1)
+        
+        target_database = globals.DATABASE_FILE
+        print(f"Copying fallback database from {fallback_path} to {target_database}")
+        
+        # Copy the fallback database to the target location
+        import shutil
+        shutil.copy2(fallback_path, target_database)
+        
+        DATABASE = target_database
+        print(f"Using database file: {DATABASE}")
+
+    # Check if the final determined database file exists
     if not os.path.exists(DATABASE):
-        print(f"Error: Database file not found: {DATABASE}")
-        print("Please provide a valid database file.")
-        sys.exit(1)
+        print(f"Error: Final database file not found: {DATABASE}")
+        print("Please provide a valid database file via command line argument, set globals.DATABASE_FILE correctly, or ensure 'fallback.sqlite' exists in the script's directory.")
+        sys.exit(1) # Exit if even the fallback doesn't exist
 
     # Verify the database has the required tables
     try:
@@ -1691,7 +1902,6 @@ if __name__ == '__main__':
     # 1. Once in the parent process (to manage the reloader)
     # 2. Once in the child process (the actual server, where WERKZEUG_RUN_MAIN is set)
     # We only want to open the browser in the child process.
-    import os
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         # Function to open the browser after a delay
         def open_browser():

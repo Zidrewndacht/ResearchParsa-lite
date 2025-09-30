@@ -11,34 +11,55 @@
 </tr>
 {% for paper in papers %}
     <tr data-paper-id="{{ paper.id }}" >
-        <td class="status-cell" title="{{ paper.type }}">{{ type_emojis.get(paper.type, default_type_emoji) }} 
+        {% if paper.pdf_filename %}
+        <td class="status-cell pdf-status">
+            {% if paper.pdf_state == 'annotated' %}
+                <a href="data/pdf_annotated/{{ paper.pdf_filename }}" target="_blank" class="pdf-link" title="Open PDF">
+                    {{ pdf_emojis.get(paper.pdf_state) }}
+                </a>
+            {% else %}
+                <a href="data/pdf/{{ paper.pdf_filename }}" target="_blank" class="pdf-link" title="Open PDF">
+                    {{ pdf_emojis.get(paper.pdf_state) }}
+                </a>
+            {% endif %}
+        </td>
+        {% else %}
+        <td></td>
+        {% endif %}
         </td><td class="title-cell">
             {% if paper.doi %}
                 <a href="https://doi.org/{{ paper.doi }}" target="_blank">{{ paper.title }}</a>
             {% else %}
-                {{ paper.title }}
+                <span style="font-weight: 300;">{{paper.title}}</span> 
             {% endif %}
         </td>
-        <td class="secondary-text-cell number-cell" style="width:28px; min-width:28px; max-width:28px">{{ paper.year or '' }}</td>
-        <td class="secondary-text-cell">{{ paper.journal }}</td>        
+
+        <td class="secondary-text-cell number-cell">{{ paper.year or '' }}</td>
         <td class="secondary-text-cell number-cell">{{ paper.page_count or '' }}</td>
+        <td class="secondary-text-cell">{{ paper.journal }}</td>        
+        <td class="status-cell" title="{{ paper.type }}">{{ type_emojis.get(paper.type, default_type_emoji) }} <!-- Use the emoji mapping passed from Python -->
+        
+        
+
         <td class="status-cell editable-status" data-field="is_offtopic">{{ paper.is_offtopic | render_status }}</td>
-        <td class="secondary-text-cell number-cell">{{ paper.relevance or '' }}</td>
+        <td class="secondary-text-cell number-cell">{{ paper.relevance or '' }}</td>        <!-- NEW DATA CELL: Relevance -->
         <td class="status-cell editable-status" data-field="is_survey">{{ paper.is_survey | render_status }}</td>
         <td class="status-cell editable-status" data-field="is_through_hole">{{ paper.is_through_hole | render_status }}</td>
         <td class="status-cell editable-status" data-field="is_smt">{{ paper.is_smt | render_status }}</td>
         <td class="status-cell editable-status" data-field="is_x_ray">{{ paper.is_x_ray | render_status }}</td>
+
         <td class="status-cell editable-status highlight-status" data-field="features_tracks">{{ paper.features.tracks | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_holes">{{ paper.features.holes | render_status }}</td>
-        <td class="status-cell editable-status"  data-field="features_solder_insufficient">{{ paper.features.solder_insufficient | render_status }}</td>
-        <td class="status-cell editable-status"  data-field="features_solder_excess">{{ paper.features.solder_excess | render_status }}</td>
-        <td class="status-cell editable-status"  data-field="features_solder_void">{{ paper.features.solder_void | render_status }}</td>
-        <td class="status-cell editable-status"  data-field="features_solder_crack">{{ paper.features.solder_crack | render_status }}</td>
+        <td class="status-cell editable-status" data-field="features_solder_insufficient">{{ paper.features.solder_insufficient | render_status }}</td>
+        <td class="status-cell editable-status" data-field="features_solder_excess">{{ paper.features.solder_excess | render_status }}</td>
+        <td class="status-cell editable-status" data-field="features_solder_void">{{ paper.features.solder_void | render_status }}</td>
+        <td class="status-cell editable-status" data-field="features_solder_crack">{{ paper.features.solder_crack | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_missing_component">{{ paper.features.missing_component | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_wrong_component">{{ paper.features.wrong_component | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_orientation">{{ paper.features.orientation | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_cosmetic">{{ paper.features.cosmetic | render_status }}</td>
         <td class="status-cell highlight-status" data-field="features_other_state">{{ '✔️' if paper.features.other and (paper.features.other|string).strip() else '❌' }}</td>
+
         <td class="status-cell editable-status" data-field="technique_classic_cv_based">{{ paper.technique.classic_cv_based | render_status }}</td>
         <td class="status-cell editable-status" data-field="technique_ml_traditional">{{ paper.technique.ml_traditional | render_status }}</td>
         <td class="status-cell editable-status" data-field="technique_dl_cnn_classifier">{{ paper.technique.dl_cnn_classifier | render_status }}</td>
@@ -48,7 +69,8 @@
         <td class="status-cell editable-status" data-field="technique_dl_other">{{ paper.technique.dl_other | render_status }}</td>
         <td class="status-cell editable-status" data-field="technique_hybrid">{{ paper.technique.hybrid | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="technique_available_dataset">{{ paper.technique.available_dataset | render_status }}</td>
-        <td class="secondary-text-cell changed-cell highlight-status">{{ paper.changed_formatted }}</td>
+
+        <td class="secondary-text-cell changed-cell highlight-status">{{ paper.changed_formatted }}</td> <!-- Use formatted timestamp -->
         <td class="status-cell changed-by-cell highlight-status" data-field="changed_by">{{ paper.changed_by | render_changed_by }}</td>           
         <td class="status-cell editable-status" data-field="verified">{{ paper.verified | render_status }}</td>
         <td class="secondary-text-cell number-cell" data-field="verified">{{ paper.estimated_score  or '' }}</td>
