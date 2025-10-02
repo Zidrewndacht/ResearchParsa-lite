@@ -797,7 +797,7 @@ tr.filter-hidden {
 
 .modal-small-content {
     width: 1080px;
-    grid-template-columns: 4fr 2fr;
+    grid-template-columns: 1fr 280px;
 }
 
 .modal-small-section h4,.modal-small-section p,.modal-small-section ul {

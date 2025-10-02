@@ -264,7 +264,7 @@ function updateCounts() {
             // and add a tooltip showing both counts
             if (field === 'pdf_present') {
                 countCell.textContent = counts['pdf_present'];
-                countCell.title = `Stored PDFs: ${counts['pdf_present']}, Annotated PDFs: ${counts['pdf_annotated']}`; // Set tooltip
+                countCell.title = `Stored PDFs: ${counts['pdf_present']}, Annotated PDFs: ${counts['pdf_annotated']}. Data for the currently filtered set.`; // Set tooltip
             } else {
                 // For all other fields, set the text content normally
                 countCell.textContent = counts[field];

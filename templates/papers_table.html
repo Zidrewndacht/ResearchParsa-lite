@@ -14,8 +14,8 @@
     <tr data-paper-id="{{ paper.id }}" >
         <td class="status-cell pdf-status">
             {% if paper.pdf_filename %}
-                <a href="{{ url_for('static', filename='pdfjs/web/viewer.html') }}?file={{ url_for('serve_pdf', filename=paper.pdf_filename) | urlencode }}" target="_blank" title="Open PDF.js Annotator for: {{ paper.pdf_filename }}">
-                    {{ pdf_emojis.get(paper.pdf_state) }}
+                <a href="{{ url_for('static', filename='pdfjs/web/viewer.html') }}?file={{ url_for('serve_pdf', paper_id=paper.id) | urlencode }}" target="_blank" class="pdf-link" title="Open PDF in the Annotator">
+                        {{ pdf_emojis.get(paper.pdf_state) }}
                 </a>
             {% else %}
                 <a href="#" class="pdf-upload-link" data-paper-id="{{ paper.id }}" title="No PDF stored yet. Click to upload PDF for this article">{{ pdf_emojis.get('none') }}</a>
