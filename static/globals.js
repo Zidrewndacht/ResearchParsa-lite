@@ -79,9 +79,10 @@ const SYMBOL_SORT_WEIGHTS = {
     '❔': 0  // Unknown
 };
 const SYMBOL_PDF_WEIGHTS = {
-    '📗': 2, // Annotated
-    '📕': 1, // PDF
-    '❔': 0  // None
+    '📗': 3, // Annotated
+    '📕': 2, // PDF
+    '❔': 1,  // None
+    '💰': 0 // Paywalled
 };
 
 // --- Status Cycling Logic ---
@@ -157,8 +158,9 @@ function updateCounts() {
                 counts['pdf_present'] = (counts['pdf_present'] || 0) + 1;
             } else if (pdfContent === '📗') { // Annotated PDF present
                 counts['pdf_annotated'] = (counts['pdf_annotated'] || 0) + 1;
-                // Also count annotated as a PDF present
-                counts['pdf_present'] = (counts['pdf_present'] || 0) + 1;
+                counts['pdf_present'] =   (counts['pdf_present']   || 0) + 1;       // Also count annotated as a PDF present
+            } else if (pdfContent === '💰') { 
+                counts['pdf_paywalled'] = (counts['pdf_paywalled'] || 0) + 1;
             }
             // '❔' means no PDF, so no increment needed for this state
         }
@@ -264,7 +266,7 @@ function updateCounts() {
             // and add a tooltip showing both counts
             if (field === 'pdf_present') {
                 countCell.textContent = counts['pdf_present'];
-                countCell.title = `Stored PDFs: ${counts['pdf_present']}, Annotated PDFs: ${counts['pdf_annotated']}. Data for the currently filtered set.`; // Set tooltip
+                countCell.title = `Stored PDFs: ${counts['pdf_present']}, Annotated PDFs: ${counts['pdf_annotated']}, Paywalleds: ${counts['pdf_paywalled']}. Data for the currently filtered set.`; // Set tooltip
             } else {
                 // For all other fields, set the text content normally
                 countCell.textContent = counts[field];

@@ -288,7 +288,7 @@ input[type=search]::-webkit-input-placeholder {
     font-size: 11pt;
     transition: all .33s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,.15);
-    min-width: 158px; /* larger than this causes HiDPI issues (won't fit at some scales) */
+    min-width: 160px;
     height: 40px;
     text-shadow: var(--dark-shadow);
     border: 1px solid #0002;

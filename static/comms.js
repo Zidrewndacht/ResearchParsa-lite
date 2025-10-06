@@ -343,7 +343,8 @@ function uploadPDFForPaper(paperId) {
         }
     });
 }
-function updateTableRowWithPDFData(paperId, filename, state) {
+
+function updateTableRowWithPDFData(paperId, filename) {
     const row = document.querySelector(`tr[data-paper-id="${paperId}"]`);
     if (!row) {
         console.error(`Row for paper ID ${paperId} not found.`);
@@ -356,12 +357,15 @@ function updateTableRowWithPDFData(paperId, filename, state) {
         return;
     }
 
+    // Remove .pdf extension from filename for the viewer URL
+    const filenameWithoutExtension = filename.replace(/\.pdf$/i, '');
+    
     // Create the new link element for the PDF.js viewer
     const pdfLink = document.createElement('a');
-    pdfLink.href = `/static/pdfjs/web/viewer.html?file=/serve_pdf/${encodeURIComponent(filename)}`; // Use the new viewer URL
+    pdfLink.href = `/static/pdfjs/web/viewer.html?file=/serve_pdf/${encodeURIComponent(filenameWithoutExtension)}`;
     pdfLink.target = '_blank';
-    pdfLink.title = `Open PDF.js Annotator for: ${filename}`; // Update title
-    pdfLink.textContent = '📕'; // PDF emoji (or use state emoji if you prefer)
+    pdfLink.title = `Open PDF.js Annotator for: ${filename}`;
+    pdfLink.textContent = '📕';
 
     // Replace the cell content with the new link
     pdfCell.innerHTML = ''; // Clear existing content (like '⏳')

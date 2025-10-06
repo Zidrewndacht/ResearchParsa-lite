@@ -70,6 +70,7 @@ DEFAULT_TYPE_EMOJI = '📄' # Using article as default
 PDF_EMOJIS = {
     'PDF': '📕',        
     'annotated': '📗',
+    'paywalled': '💰',
     'none': '❔'
 }
 

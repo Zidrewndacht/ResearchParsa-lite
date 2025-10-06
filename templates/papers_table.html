@@ -14,11 +14,15 @@
     <tr data-paper-id="{{ paper.id }}" >
         <td class="status-cell pdf-status">
             {% if paper.pdf_filename %}
-                <a href="{{ url_for('static', filename='pdfjs/web/viewer.html') }}?file={{ url_for('serve_pdf', paper_id=paper.id) | urlencode }}" target="_blank" class="pdf-link" title="Open PDF in the Annotator">
+                <a href="{{ url_for('static', filename='pdfjs/web/viewer.html') }}?file={{ url_for('serve_pdf', paper_id=paper.id) | urlencode }}" target="_blank" class="pdf-link" 
+                title="{% if paper.pdf_state == 'annotated' %}Open this annotated PDF in the Annotator{% else %}Open this PDF in the Annotator{% endif %}">
                         {{ pdf_emojis.get(paper.pdf_state) }}
                 </a>
             {% else %}
-                <a href="#" class="pdf-upload-link" data-paper-id="{{ paper.id }}" title="No PDF stored yet. Click to upload PDF for this article">{{ pdf_emojis.get('none') }}</a>
+                <a href="#" class="pdf-upload-link" data-paper-id="{{ paper.id }}" 
+                title="{% if paper.pdf_state == 'paywalled' %}Article is paywalled. Click to upload if a copy is available{% else %}No PDF stored yet. Click to upload PDF for this article{% endif %}">
+                    {{ pdf_emojis.get(paper.pdf_state) }}
+                </a>
             {% endif %}
         </td>
 

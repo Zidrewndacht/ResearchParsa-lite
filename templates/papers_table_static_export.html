@@ -24,7 +24,13 @@
             {% endif %}
         </td>
         {% else %}
-        <td></td>
+        <td>
+            {% if paper.pdf_state == 'paywalled' %}
+                <span title="This paper is paywalled">
+                    {{ pdf_emojis.get(paper.pdf_state) }}
+                </span>
+            </td>
+            {% endif %}
         {% endif %}
         </td><td class="title-cell">
             {% if paper.doi %}

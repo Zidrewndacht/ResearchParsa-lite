@@ -24,8 +24,6 @@ import base64
 import zstandard as zstd
 import tarfile
 import shutil
-from datetime import datetime
-import functools
 
 # Import globals, the classification and verification modules
 import globals
@@ -33,7 +31,7 @@ import automate_classification
 import verify_classification
 
 # Define default year range - For this app:
-DEFAULT_YEAR_FROM = 2016
+DEFAULT_YEAR_FROM = 2020
 DEFAULT_YEAR_TO = 2025
 DEFAULT_MIN_PAGE_COUNT = 4
 
@@ -1008,8 +1006,6 @@ def render_verified_by_filter(value):
     return Markup(render_verified_by(value)) 
 
 
-
-
 #Routes: 
 @app.route('/', methods=['GET'])
 def index():
@@ -1058,6 +1054,7 @@ def index():
         total_paper_count=total_paper_count
     )
 
+#Backup/restore
 @app.route('/backup', methods=['GET'])
 def backup_database():
     """Creates a backup of the database and related files."""
@@ -1381,7 +1378,6 @@ def upload_annotated_pdf(paper_id):
         return jsonify({'status': 'error', 'message': 'Failed to save file on server.'}), 500
 
 # Export routes
-
 @app.route('/static_export', methods=['GET'])
 def static_export():
     """Generate and serve a downloadable HTML snapshot based on current filters."""
@@ -1472,7 +1468,7 @@ def export_excel():
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
-# Table/stats generation routes (data read)
+# Table/stats generation routes (data reading)
 @app.route('/get_detail_row', methods=['GET'])
 def get_detail_row():
     """Endpoint to fetch and render the detail row content for a specific paper."""
@@ -1650,7 +1646,7 @@ def get_stats():
         print(f"Error calculating stats: {e}")
         return jsonify({'status': 'error', 'message': 'Failed to calculate statistics'}), 500
 
-# Data import/update routes (writes):
+# Data import/update routes (data writing):
 @app.route('/update_paper', methods=['POST'])
 def update_paper():
     """Endpoint to handle AJAX updates (partial or full)."""
@@ -1818,7 +1814,6 @@ def upload_bibtex():
             return jsonify({'status': 'error', 'message': f'Import failed: {str(e)}'}), 500
     else:
         return jsonify({'status': 'error', 'message': 'Invalid file type. Please upload a .bib file.'}), 400
-
 
 
 

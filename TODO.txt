@@ -172,3 +172,5 @@ OK              Add a fallback empty DB to always allow app to open without data
         Low relevance XHR limitations/fixes:
                 Update commented&other field displays on save.
                 Update PDF icon on first annotation without manual reload.
+
+        Automatic add/remove paywalled icon to papers based on user trace containing 'paywalled' string;
