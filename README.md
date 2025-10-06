@@ -16,7 +16,7 @@ The system is designed to streamline literature reviews by allowing for advanced
 - **Data Export**: The currently filtered view of the database can be exported to:
     - A self-contained, interactive static **HTML file**. This export is compressed for a smaller file size and includes client-side filtering and charting capabilities.
     - An **Excel (.xlsx) file**, with boolean fields conditionally formatted for readability, ready to be processed using pivot tables and/or any other Excel tools.
-- **Backup and Restore**: The system includes functionality to create a complete backup (`.parça.zst` file) containing the SQLite database, all stored PDFs, and exported files. A restore feature allows rebuilding the application state from a backup file.
+- **Backup and Restore**: The system includes functionality to create a complete backup (`.parça.zst` file) containing the SQLite database, all stored PDFs, and exported files. A restore feature allows rebuilding the application state from a backup file. The backup file can also be manually extracted and browsed (including annotated PDFs) directly from the included HTML export.
 
 ## Usage
 
