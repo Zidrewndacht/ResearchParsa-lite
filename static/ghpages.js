@@ -38,6 +38,13 @@ const SYMBOL_SORT_WEIGHTS = {
     '❔': 0
 };
 
+const SYMBOL_PDF_WEIGHTS = {
+    '📗': 3, // Annotated
+    '📕': 2, // PDF
+    '❔': 1,  // None
+    '💰': 0 // Paywalled
+};
+
 function scheduleFilterUpdate() {
     clearTimeout(filterTimeoutId);
     document.documentElement.classList.add('busyCursor');
@@ -284,8 +291,9 @@ function updateCounts() {
                 counts['pdf_present'] = (counts['pdf_present'] || 0) + 1;
             } else if (pdfContent === '📗') { // Annotated PDF present
                 counts['pdf_annotated'] = (counts['pdf_annotated'] || 0) + 1;
-                // Also count annotated as a PDF present
-                counts['pdf_present'] = (counts['pdf_present'] || 0) + 1;
+                counts['pdf_present'] =   (counts['pdf_present']   || 0) + 1;       // Also count annotated as a PDF present
+            } else if (pdfContent === '💰') { 
+                counts['pdf_paywalled'] = (counts['pdf_paywalled'] || 0) + 1;
             }
             // '❔' means no PDF, so no increment needed for this state
         }
@@ -385,14 +393,14 @@ function updateCounts() {
         if (field === 'pdf_annotated') {
              return; // Skip updating the individual annotated count cell directly
         }
-
+        
         const countCell = document.getElementById(`count-${field}`);
         if (countCell) {
             // For 'pdf_present', set the text content to the total count
             // and add a tooltip showing both counts
             if (field === 'pdf_present') {
                 countCell.textContent = counts['pdf_present'];
-                countCell.title = `Stored PDFs: ${counts['pdf_present']}, Annotated PDFs: ${counts['pdf_annotated']}`; // Set tooltip
+                countCell.title = `Stored PDFs: ${counts['pdf_present']}, Annotated PDFs: ${counts['pdf_annotated']}, Paywalleds: ${counts['pdf_paywalled']}. Data for the currently filtered set.`; // Set tooltip
             } else {
                 // For all other fields, set the text content normally
                 countCell.textContent = counts[field];
@@ -431,6 +439,7 @@ function sortTable() {
         const sortData = [];
         let mainRow, paperId, cellValue, detailRow, cell;
 
+
         for (let i = 0; i < visibleMainRows.length; i++) {
             mainRow = visibleMainRows[i];
             paperId = mainRow.getAttribute('data-paper-id');
@@ -445,6 +454,12 @@ function sortTable() {
             } else if (['type', 'changed', 'changed_by', 'verified', 'verified_by', 'research_area', 'user_comment_state', 'features_other_state'].includes(sortBy)) {
                 cell = mainRow.cells[headerIndex];
                 cellValue = cell ? cell.textContent.trim() : '';
+            } else if (sortBy === 'pdf-link') { // NEW: Handle PDF link column sorting
+                cell = mainRow.cells[headerIndex]; // PDF cell is the second cell (index 1)
+                cellValue = cell ? cell.textContent.trim() : '';
+
+                // Use the weight, defaulting to 0 if symbol not found
+                cellValue = SYMBOL_PDF_WEIGHTS[cellValue] ?? 0;
             } else { // Status/Feature/Technique columns
                 cell = mainRow.querySelector(`.editable-status[data-field="${sortBy}"]`);
                 // Use SYMBOL_SORT_WEIGHTS for sorting, defaulting to 0 if symbol not found
@@ -454,6 +469,7 @@ function sortTable() {
             detailRow = mainRow.nextElementSibling; // Get the associated detail row
             sortData.push({ value: cellValue, mainRow, detailRow, paperId });
         }
+
 
         sortData.sort((a, b) => {
             let comparison = 0;
@@ -516,7 +532,7 @@ function calculateStats() {
 
     const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
     visibleRows.forEach(row => {
-        const journalCell = row.cells[3];
+        const journalCell = row.cells[journalCellIndex];
         if (journalCell) {
             const journal = journalCell.textContent.trim();
             if (journal) {
