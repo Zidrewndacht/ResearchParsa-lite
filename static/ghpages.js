@@ -1,4 +1,7 @@
 // static/ghpages.js
+// This should eventually be refactored to use globals.js and only keep here 
+// the logic exclusive to the client-side-only standalone HTML/GHpages version
+
 const searchInput = document.getElementById('search-input');
 const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
 const hideXrayCheckbox = document.getElementById('hide-xray-checkbox');
@@ -8,6 +11,7 @@ const onlySurveyCheckbox = document.getElementById('only-survey-checkbox');
 const showPCBcheckbox = document.getElementById('show-pcb-checkbox');
 const showSolderCheckbox = document.getElementById('show-solder-checkbox');
 const showPCBAcheckbox = document.getElementById('show-pcba-checkbox');
+const noFeaturesCheckbox = document.getElementById('no-features-checkbox');
 
 const minPageCountInput = document.getElementById('min-page-count');
 const yearFromInput = document.getElementById('year-from');
@@ -67,6 +71,7 @@ function scheduleFilterUpdate() {
             const showPCBChecked = showPCBcheckbox.checked;
             const showSolderChecked = showSolderCheckbox.checked;
             const showPCBAChecked = showPCBAcheckbox.checked;
+            const showNoFeaturesChecked = noFeaturesCheckbox.checked;
 
             const rows = tbody.querySelectorAll('tr[data-paper-id]');
             rows.forEach(row => {
@@ -172,32 +177,35 @@ function scheduleFilterUpdate() {
                         });
                     };
 
-                    // Define feature fields for each group
-                    const pcbFeatures = ['features_tracks', 'features_holes'];
-                    const solderFeatures = [
-                        'features_solder_insufficient',
-                        'features_solder_excess',
-                        'features_solder_void',
-                        'features_solder_crack'
-                    ];
-                    const pcbaFeatures = [
-                        'features_orientation',
-                        'features_missing_component',
-                        'features_wrong_component',
-                        'features_cosmetic',
-                        'features_other_state'
-                    ];
+                // Define feature fields for each group
+                const pcbFeatures = ['features_tracks', 'features_holes', 'features_bare_pcb_other'];
+                const solderFeatures = [
+                    'features_solder_insufficient',
+                    'features_solder_excess',
+                    'features_solder_void',
+                    'features_solder_crack',
+                    'features_solder_other'
+                ];
+                const pcbaFeatures = [
+                    'features_orientation',
+                    'features_missing_component',
+                    'features_wrong_component',
+                    'features_component_other',
+                    'features_cosmetic',
+                    'features_other_state'
+                ];
 
-                    // Check which groups the paper belongs to (has at least one ✔️)
-                    if (showPCBChecked) {
-                        hasPCBFeature = hasAnyFeature(pcbFeatures);
-                    }
-                    if (showSolderChecked) {
-                        hasSolderFeature = hasAnyFeature(solderFeatures);
-                    }
-                    if (showPCBAChecked) {
-                        hasPCBAFeature = hasAnyFeature(pcbaFeatures);
-                    }
+                // Check which groups the paper belongs to (has at least one ✔️)
+                if (showPCBChecked) {
+                    hasPCBFeature = hasAnyFeature(pcbFeatures);
+                }
+                if (showSolderChecked) {
+                    hasSolderFeature = hasAnyFeature(solderFeatures);
+                }
+                if (showPCBAChecked) {
+                    hasPCBAFeature = hasAnyFeature(pcbaFeatures);
+                }
+
 
                     // The core OR logic:
                     // Hide the row ONLY if it does NOT belong to ANY of the enabled groups.
@@ -207,6 +215,33 @@ function scheduleFilterUpdate() {
                     }
                 }
 
+                // Define feature fields that need to be checked for the "No Features" filter
+                // These correspond to the data-field attributes in your table cells
+                const featureFieldsToCheck = [
+                    'features_tracks', 'features_holes', 'features_bare_pcb_other',
+                    'features_solder_insufficient', 'features_solder_excess', 'features_solder_void', 'features_solder_crack', 'features_solder_other',
+                    'features_missing_component', 'features_wrong_component', 'features_component_other',
+                    'features_orientation', 'features_cosmetic',
+                    'features_other_state' // Note: 'features_other_state' is the editable cell. The actual 'other' text might be in the detail row, so filtering by its blank state might be the best we can do client-side.
+                ];
+
+                // --- Apply NEW "No Features" Filter ---
+                // Only apply this filter if the checkbox is checked
+                if (showRow && showNoFeaturesChecked) {
+                    // Check if ALL feature fields in the list are empty or contain only a space (' ')
+                    const hasAnyFeatureFilled = featureFieldsToCheck.some(fieldName => {
+                        const cell = row.querySelector(`[data-field="${fieldName}"]`);
+                        const cellText = cell ? cell.textContent.trim() : '';
+                        // Consider '✔️', '❌', '👤', '🖥️' as filled. Blank (' ') or empty string means not filled.
+                        // Also consider if the cell content is just the initial blank space.
+                        return cellText !== '' && cellText !== '❌' && cellText !== '❔'; // Adjust if '❔' is the initial state instead of ' '
+                    });
+
+                    // Hide the row if ANY feature was found to be filled
+                    if (hasAnyFeatureFilled) {
+                        showRow = false;
+                    }
+                }
 
                 // Apply the visibility state
                 row.classList.toggle('filter-hidden', !showRow);
@@ -238,19 +273,24 @@ function toggleDetails(element) {
 let latestCounts = {}; // This will store the counts calculated by updateCounts
 let latestYearlyData = {}; // NEW: Store yearly data for charts
 
-// Define the fields for which we want to count '✔️'
+// Define the fields for which we want to count '✔️':
 const COUNT_FIELDS = [
     'pdf_present', 
     'pdf_annotated',
 
     'is_offtopic', 'is_survey', 'is_through_hole', 'is_smt', 'is_x_ray', // Classification (Top-level)
-    'features_tracks', 'features_holes', 'features_solder_insufficient', 'features_solder_excess',
-    'features_solder_void', 'features_solder_crack', 'features_orientation', 'features_wrong_component',
-    'features_missing_component', 'features_cosmetic', 'features_other_state', // Features (Nested under 'features')
+
+    'features_tracks', 'features_holes', 'features_bare_pcb_other',
+    'features_solder_insufficient', 'features_solder_excess',
+    'features_solder_void', 'features_solder_crack',  'features_solder_other',
+    'features_orientation', 'features_wrong_component', 'features_missing_component',  'features_component_other',
+    'features_cosmetic', 'features_other_state',
+
     'technique_classic_cv_based', 'technique_ml_traditional',
     'technique_dl_cnn_classifier', 'technique_dl_cnn_detector', 'technique_dl_rcnn_detector',
     'technique_dl_transformer', 'technique_dl_other', 'technique_hybrid', 'technique_available_dataset', // Techniques (Nested under 'technique')
-    'changed_by', 'verified', 'verified_by', 'user_comment_state' // Add these for user counting (Top-level)
+
+    'changed_by', 'verified', 'verified_by', 'user_comment_state' // user counting (Top-level)
 ];
 
 // NEW: Define fields for techniques and features to track per year
@@ -519,26 +559,43 @@ const spanClose = document.querySelector('#statsModal .close');
 const aboutBtn = document.getElementById('static-about-btn');
 const modalSmall = document.getElementById('aboutModal');
 const smallClose = document.querySelector('#aboutModal .close');
-
 function calculateStats() {
     const stats = {
-        journals: {},
+        journals: {}, // Will store journal names and counts
+        conferences: {}, // NEW: Will store conference names and counts
         keywords: {},
         authors: {},
         researchAreas: {},
-        otherDetectedFeatures: {}, // This line is crucial
-        modelNames: {}             // This line is crucial
+        otherDetectedFeatures: {},
+        modelNames: {}
     };
-
     const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
     visibleRows.forEach(row => {
-        const journalCell = row.cells[journalCellIndex];
-        if (journalCell) {
-            const journal = journalCell.textContent.trim();
-            if (journal) {
-                stats.journals[journal] = (stats.journals[journal] || 0) + 1;
+        // --- Get Journal/Conference and Type ---
+        const journalCell = row.cells[journalCellIndex]; // Index 4 (Journal/Conf column)
+        const typeCell = row.cells[typeCellIndex]; // Index 5 (Type column)
+
+        if (journalCell && typeCell) { // Ensure cells exist
+            const journalConfName = journalCell.textContent.trim();
+            const typeValue = (typeCell.getAttribute('title') || typeCell.textContent.trim()).toLowerCase(); // Use title if available, standardize case
+
+            if (journalConfName) {
+                // Determine if it's a journal or conference based on type
+                // Common BibTeX types: 'article' -> journal, 'inproceedings', 'proceedings', 'conference' -> conference
+                if (typeValue === 'article') {
+                    stats.journals[journalConfName] = (stats.journals[journalConfName] || 0) + 1;
+                } else if (typeValue === 'inproceedings' || typeValue === 'proceedings' || typeValue === 'conference') {
+                    stats.conferences[journalConfName] = (stats.conferences[journalConfName] || 0) + 1;
+                } else {
+                    // Optional: Handle other types or log them if needed
+                    // console.log(`Unrecognized type for ${journalConfName}: ${typeValue}`);
+                    // You could add them to a 'miscellaneous' category if desired
+                }
             }
         }
+
+        // --- Existing Logic for Keywords, Authors, etc. ---
+        // (Keep the rest of the loop body unchanged)
         const detailRow = row.nextElementSibling;
         if (detailRow && detailRow.classList.contains('detail-row')) {
             const keywordsPara = detailRow.querySelector('.detail-metadata p strong');
@@ -585,7 +642,6 @@ function calculateStats() {
             stats.authors = stats.authors || {};
             stats.authors[author] = (stats.authors[author] || 0) + 1;
         });
-
         const detailRowForResearchArea = row.nextElementSibling;
         if (detailRowForResearchArea && detailRowForResearchArea.classList.contains('detail-row')) {
             const researchAreaInput = detailRowForResearchArea.querySelector('.detail-edit input[name="research_area"]');
@@ -596,7 +652,6 @@ function calculateStats() {
                 }
             }
         }
-
         // --- New Logic for Other Detected Features ---
         const detailRowForOtherFeature = row.nextElementSibling;
         if (detailRowForOtherFeature && detailRowForOtherFeature.classList.contains('detail-row')) {
@@ -608,7 +663,6 @@ function calculateStats() {
                     const featuresList = otherFeatureText.split(';')
                         .map(f => f.trim())
                         .filter(f => f.length > 0);
-
                     featuresList.forEach(feature => {
                         // Count occurrences of each feature string
                         stats.otherDetectedFeatures[feature] = (stats.otherDetectedFeatures[feature] || 0) + 1;
@@ -616,7 +670,6 @@ function calculateStats() {
                 }
             }
         }
-
         // --- New Logic for Model Names ---
         const detailRowForModelName = row.nextElementSibling;
         if (detailRowForModelName && detailRowForModelName.classList.contains('detail-row')) {
@@ -628,7 +681,6 @@ function calculateStats() {
                     const modelNamesList = modelNameText.split(';')
                         .map(m => m.trim())
                         .filter(m => m.length > 0);
-
                     modelNamesList.forEach(modelName => {
                         // Count occurrences of each model name string
                         stats.modelNames[modelName] = (stats.modelNames[modelName] || 0) + 1;
@@ -636,8 +688,6 @@ function calculateStats() {
                 }
             }
         }
-
-
     });
     return stats;
 }
@@ -683,30 +733,36 @@ function displayStats() {
 
     // --- Define Consistent Colors for Features ---
     // These are the original colors used in the Features Distribution chart (in original order)
-    // Note: There are 10 features but only 4 distinct colors used.
+    // Note: There are 12 features but only 5 distinct colors used.
     const featuresColorsOriginalOrder = [
-        'hsla(180, 48%, 32%, 0.66)',    // 0 - PCB - Tracks (Teal)
-        'hsla(180, 48%, 32%, 0.66)',    // 1 - PCB - Holes (Teal)
-        'hsla(0, 0%, 48%, 0.66)',       // 2 - solder - Insufficient (Grey)
-        'hsla(0, 0%, 48%, 0.66)',       // 3 - solder - Excess (Grey)
-        'hsla(0, 0%, 48%, 0.66)',       // 4 - solder - Void (Grey)
-        'hsla(0, 0%, 48%, 0.66)',       // 5 - solder - Crack (Grey)
-        'hsla(347, 70%, 49%, 0.66)',    // 6 - PCBA - Orientation (Red)
-        'hsla(347, 70%, 49%, 0.66)',    // 7 - PCBA - Missing Comp (Red)
-        'hsla(347, 70%, 49%, 0.66)',    // 8 - PCBA - Wrong Comp (Red)
-        'hsla(204, 82%, 37%, 0.66)',    // 9 - Cosmetic (Blue)
-        'hsla(284, 82%, 37%, 0.66)',    // 10 - Other 
+        'hsla(180, 48%, 32%, 0.66)',    //  - PCB - Tracks (Teal)
+        'hsla(180, 48%, 32%, 0.66)',    //  - PCB - Holes (Teal)
+        'hsla(180, 48%, 32%, 0.66)',    //  - PCB - other (Teal)
+        'hsla(0, 0%, 48%, 0.66)',       //  - solder - Insufficient (Grey)
+        'hsla(0, 0%, 48%, 0.66)',       //  - solder - Excess (Grey)
+        'hsla(0, 0%, 48%, 0.66)',       //  - solder - Void (Grey)
+        'hsla(0, 0%, 48%, 0.66)',       //  - solder - Crack (Grey)
+        'hsla(0, 0%, 48%, 0.66)',       //  - solder - other (Grey)
+        'hsla(347, 70%, 49%, 0.66)',    //  - PCBA - Orientation (Red)
+        'hsla(347, 70%, 49%, 0.66)',    //  - PCBA - Missing Comp (Red)
+        'hsla(347, 70%, 49%, 0.66)',    //  - PCBA - Wrong Comp (Red)
+        'hsla(347, 70%, 49%, 0.66)',    //  - PCBA - Other (Red)
+        'hsla(204, 82%, 37%, 0.66)',    //  - Cosmetic (Blue)
+        'hsla(284, 82%, 37%, 0.66)',    //  - Other 
     ];
     const featuresBorderColorsOriginalOrder = [
         'hsla(204, 82%, 18%, 1.00)',    // 0 - PCB - Tracks
         'hsla(204, 82%, 18%, 1.00)',    // 1 - PCB - Holes
+        'hsla(204, 82%, 18%, 1.00)',    // 
         'hsla(0, 0%, 28%, 1.00)',       // 2 - solder - Insufficient
         'hsla(0, 0%, 28%, 1.00)',       // 3 - solder - Excess
         'hsla(0, 0%, 28%, 1.00)',       // 4 - solder - Void
         'hsla(0, 0%, 28%, 1.00)',       // 5 - solder - Crack
+        'hsla(0, 0%, 28%, 1.00)',       // 
         'hsla(347, 70%, 29%, 1.00)',    // 6 - PCBA - Orientation
         'hsla(347, 70%, 29%, 1.00)',    // 7 - PCBA - Missing Comp
         'hsla(347, 70%, 29%, 1.00)',    // 8 - PCBA - Wrong Comp
+        'hsla(347, 70%, 29%, 1.00)',    // 
         'hsla(219, 100%, 30%, 1.00)',   // 9 - Cosmetic
         'hsla(284, 82%, 37%, 1.00)',    // 10 - Other 
     ];
@@ -714,24 +770,28 @@ function displayStats() {
     // Map feature fields to their *original* index in the unsorted list
     // IMPORTANT: This list must match the order of FEATURE_FIELDS_FOR_YEARLY
     const FEATURE_FIELDS_FOR_YEARLY = [
-        'features_tracks', 'features_holes', 'features_solder_insufficient', 'features_solder_excess',
-        'features_solder_void', 'features_solder_crack', 'features_orientation', 'features_wrong_component',
-        'features_missing_component', 'features_cosmetic', 'features_other_state'
+        'features_tracks', 'features_holes', 'features_bare_pcb_other', 
+        'features_solder_insufficient', 'features_solder_excess', 'features_solder_void', 'features_solder_crack',  'features_solder_other',
+        'features_orientation', 'features_wrong_component', 'features_missing_component', 'features_component_other', 
+        'features_cosmetic', 
+        'features_other_state'
     ];
     const FEATURE_FIELD_INDEX_MAP = {};
+
     FEATURE_FIELDS_FOR_YEARLY.forEach((field, index) => {
         FEATURE_FIELD_INDEX_MAP[field] = index; // Map field to its original index
     });
+
 
     // --- Map Feature Fields to their Color Groups for Line Chart ---
     // Define the distinct color groups for the line chart based on original colors
     // The keys are the indices in the original color arrays that represent unique colors
     const featureColorGroups = {
-        0: { label: 'PCB Features', fields: [] },      // Teal
-        2: { label: 'Solder Defects', fields: [] },    // Grey
-        6: { label: 'PCBA Issues', fields: [] },       // Red
-        9: { label: 'Cosmetic', fields: [] },          // Blue
-        10: { label: 'Other', fields: [] }
+        0: { label: 'PCB Features', fields: [] },      
+        3: { label: 'Solder Defects', fields: [] },    
+        8: { label: 'PCBA Issues', fields: [] },       
+        12: { label: 'Cosmetic', fields: [] },          
+        13: { label: 'Other', fields: [] }
     };
 
     // Populate the groups with the actual feature fields
@@ -756,12 +816,12 @@ function displayStats() {
         }
     });
 
-
     const FEATURE_FIELDS = [
-        'features_tracks', 'features_holes', 'features_solder_insufficient',
-        'features_solder_excess', 'features_solder_void', 'features_solder_crack',
-        'features_orientation', 'features_missing_component', 'features_wrong_component',
-        'features_cosmetic', 'features_other_state'
+        'features_tracks', 'features_holes', 'features_bare_pcb_other', 
+        'features_solder_insufficient', 'features_solder_excess', 'features_solder_void', 'features_solder_crack',  'features_solder_other',
+        'features_orientation', 'features_wrong_component', 'features_missing_component', 'features_component_other', 
+        'features_cosmetic', 
+        'features_other_state'
     ];
     // Include Datasets here temporarily to get the label mapping easily,
     // then filter it out for data/labels for the Techniques chart
@@ -771,18 +831,24 @@ function displayStats() {
         'technique_dl_transformer', 'technique_dl_other', 'technique_hybrid',
         'technique_available_dataset' // Included to get label easily
     ];
+
     // Map NEW field names (data-field values / structure keys) to user-friendly labels (based on your table headers)
     const FIELD_LABELS = {
         // Features
         'features_tracks': 'Tracks',
         'features_holes': 'Holes',
+        'features_bare_pcb_other': 'Other (bare) PCB',
+
         'features_solder_insufficient': 'Insufficient Solder',
         'features_solder_excess': 'Excess Solder',
         'features_solder_void': 'Solder Voids',
         'features_solder_crack': 'Solder Cracks',
+        'features_solder_other': 'Solder (Other)',
+
         'features_orientation': 'Orientation/Polarity', // Combined as per previous logic
         'features_wrong_component': 'Wrong Component',
         'features_missing_component': 'Missing Component',
+        'features_component_other': 'Component (Other)',
         'features_cosmetic': 'Cosmetic',
         'features_other_state': 'Other',
         // Techniques
@@ -796,7 +862,6 @@ function displayStats() {
         'technique_hybrid': 'Hybrid',
         'technique_available_dataset': 'Datasets' // Label for Datasets
     };
-
 
     // --- Read Counts from Footer Cells ---
     // We read the counts directly from the cells updated by updateCounts()
@@ -1263,11 +1328,16 @@ function displayStats() {
     }
     const stats = calculateStats();
 
-    // --- New Function Call to Populate Lists ---
+    // --- New Function Call to Populate Lists with Search Buttons ---
     // Function to populate lists where items *can* appear only once (no > 1 filter)
     function populateSimpleList(listElementId, dataObj) {
         const listElement = document.getElementById(listElementId);
+        if (!listElement) {
+            console.warn(`List element with ID ${listElementId} not found.`);
+            return;
+        }
         listElement.innerHTML = '';
+
         // Sort entries: primarily by count (descending), then alphabetically (ascending) for ties
         const sortedEntries = Object.entries(dataObj)
             .sort((a, b) => {
@@ -1286,45 +1356,95 @@ function displayStats() {
             const listItem = document.createElement('li');
             // Escape HTML to prevent XSS if data contains special characters
             const escapedName = name.replace(/&/g, "&amp;").replace(/</g, "<").replace(/>/g, ">");
-            listItem.innerHTML = `<span class="count">${count}</span> <span class="name">${escapedName}</span>`;
+            const escapedNameForTitle = escapedName.replace(/"/g, "&quot;"); // Escape quotes for title attribute
+
+            // Create the list item content with count, search button, and name
+            listItem.innerHTML = `<span class="count">${count}</span><button type="button" class="search-item-btn" title="Search for &quot;${escapedNameForTitle}&quot;">🔍</button><span class="name">${escapedName}</span>`;
+
             listElement.appendChild(listItem);
+        });
+
+        // Add event listeners to the newly created search buttons
+        listElement.querySelectorAll('.search-item-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const listItem = this.closest('li');
+                const nameSpan = listItem.querySelector('.name');
+                if (nameSpan) {
+                    const searchTerm = nameSpan.textContent.trim();
+                    searchInput.value = searchTerm; // Set the search input value
+                    closeModal(); // Close the stats modal
+                    scheduleFilterUpdate(); // Trigger the filter update
+                }
+            });
         });
     }
 
-    // Populate the new lists using the new helper function
-    populateSimpleList('otherDetectedFeaturesStatsList', stats.otherDetectedFeatures);
-    populateSimpleList('modelNamesStatsList', stats.modelNames);
-
+    // Function to populate lists where items must appear more than once (count > 1)
     function populateList(listElementId, dataObj) {
         const listElement = document.getElementById(listElementId);
+        if (!listElement) {
+            console.warn(`List element with ID ${listElementId} not found.`);
+            return;
+        }
         listElement.innerHTML = '';
+
         const sortedEntries = Object.entries(dataObj)
-            .filter(([name, count]) => count > 1)
+            .filter(([name, count]) => count > 1) // Keep only entries with count > 1
             .sort((a, b) => {
                 if (b[1] !== a[1]) {
                     return b[1] - a[1];
                 }
                 return a[0].localeCompare(b[0]);
             });
+
         if (sortedEntries.length === 0) {
             listElement.innerHTML = '<li>No items with count > 1.</li>';
             return;
         }
+
         sortedEntries.forEach(([name, count]) => {
             const listItem = document.createElement('li');
+            // Escape HTML to prevent XSS if data contains special characters
             const escapedName = name.replace(/&/g, "&amp;").replace(/</g, "<").replace(/>/g, ">");
-            listItem.innerHTML = `<span class="count">${count}</span> <span class="name">${escapedName}</span>`;
+            const escapedNameForTitle = escapedName.replace(/"/g, "&quot;"); // Escape quotes for title attribute
+
+            // Create the list item content with count, search button, and name
+            listItem.innerHTML = `<span class="count">${count}</span><button type="button" class="search-item-btn" title="Search for &quot;${escapedNameForTitle}&quot;">🔍</button><span class="name">${escapedName}</span>`;
+
             listElement.appendChild(listItem);
         });
+
+        // Add event listeners to the newly created search buttons
+        listElement.querySelectorAll('.search-item-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const listItem = this.closest('li');
+                const nameSpan = listItem.querySelector('.name');
+                if (nameSpan) {
+                    const searchTerm = nameSpan.textContent.trim();
+                    searchInput.value = searchTerm; // Set the search input value
+                    closeModal(); // Close the stats modal
+                    scheduleFilterUpdate(); // Trigger the filter update
+                }
+            });
+        });
     }
-    populateList('journalStatsList', stats.journals);
+
+    // Populate the new lists using the new helper functions
+    populateSimpleList('otherDetectedFeaturesStatsList', stats.otherDetectedFeatures);
+    populateSimpleList('modelNamesStatsList', stats.modelNames);
+    // Populate Journals (only items with type 'article')
+    populateList('journalStatsList', stats.journals); // Uses stats.journals object
+    // Populate Conferences (only items with type 'inproceedings', 'proceedings', 'conference')
+    populateList('conferenceStatsList', stats.conferences); // NEW: Uses stats.conferences object
     populateList('keywordStatsList', stats.keywords);
     populateList('authorStatsList', stats.authors);
     populateList('researchAreaStatsList', stats.researchAreas);
 
-    modal.offsetHeight;
+    // Trigger reflow and add modal-active class after charts are drawn and lists are populated
+    modal.offsetHeight; // Trigger reflow
     modal.classList.add('modal-active');
 }
+
 
 function displayAbout(){
     setTimeout(() => {
@@ -1353,6 +1473,7 @@ document.addEventListener('DOMContentLoaded', function () {
     showPCBcheckbox.addEventListener('change', scheduleFilterUpdate);
     showSolderCheckbox.addEventListener('change', scheduleFilterUpdate);
     showPCBAcheckbox.addEventListener('change', scheduleFilterUpdate);
+    noFeaturesCheckbox.addEventListener('change', scheduleFilterUpdate);
 
     headers.forEach(header => { header.addEventListener('click', sortTable); });
     statsBtn.addEventListener('click', function () {

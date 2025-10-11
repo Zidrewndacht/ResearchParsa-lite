@@ -46,30 +46,36 @@ const TECHNIQUE_FIELD_COLOR_MAP = {};
 
 // --- Define Consistent Colors for Features ---
 // These are the original colors used in the Features Distribution chart (in original order)
-// Note: There are 10 features but only 4 distinct colors used.
+// Note: There are 12 features but only 5 distinct colors used.
 const featuresColorsOriginalOrder = [
-    'hsla(180, 48%, 32%, 0.66)',    // 0 - PCB - Tracks (Teal)
-    'hsla(180, 48%, 32%, 0.66)',    // 1 - PCB - Holes (Teal)
-    'hsla(0, 0%, 48%, 0.66)',       // 2 - solder - Insufficient (Grey)
-    'hsla(0, 0%, 48%, 0.66)',       // 3 - solder - Excess (Grey)
-    'hsla(0, 0%, 48%, 0.66)',       // 4 - solder - Void (Grey)
-    'hsla(0, 0%, 48%, 0.66)',       // 5 - solder - Crack (Grey)
-    'hsla(347, 70%, 49%, 0.66)',    // 6 - PCBA - Orientation (Red)
-    'hsla(347, 70%, 49%, 0.66)',    // 7 - PCBA - Missing Comp (Red)
-    'hsla(347, 70%, 49%, 0.66)',    // 8 - PCBA - Wrong Comp (Red)
-    'hsla(204, 82%, 37%, 0.66)',    // 9 - Cosmetic (Blue)
-    'hsla(284, 82%, 37%, 0.66)',    // 10 - Other 
+    'hsla(130, 49%, 32%, 0.66)',    //  - PCB - Tracks (Teal)
+    'hsla(130, 48%, 32%, 0.66)',    //  - PCB - Holes (Teal)
+    'hsla(130, 48%, 32%, 0.66)',    //  - PCB - other (Teal)
+    'hsla(0, 0%, 48%, 0.66)',       //  - solder - Insufficient (Grey)
+    'hsla(0, 0%, 48%, 0.66)',       //  - solder - Excess (Grey)
+    'hsla(0, 0%, 48%, 0.66)',       //  - solder - Void (Grey)
+    'hsla(0, 0%, 48%, 0.66)',       //  - solder - Crack (Grey)
+    'hsla(0, 0%, 48%, 0.66)',       //  - solder - other (Grey)
+    'hsla(347, 70%, 49%, 0.66)',    //  - PCBA - Orientation (Red)
+    'hsla(347, 70%, 49%, 0.66)',    //  - PCBA - Missing Comp (Red)
+    'hsla(347, 70%, 49%, 0.66)',    //  - PCBA - Wrong Comp (Red)
+    'hsla(347, 70%, 49%, 0.66)',    //  - PCBA - Other (Red)
+    'hsla(204, 82%, 37%, 0.66)',    //  - Cosmetic (Blue)
+    'hsla(284, 82%, 37%, 0.66)',    //  - Other 
 ];
 const featuresBorderColorsOriginalOrder = [
-    'hsla(204, 82%, 18%, 1.00)',    // 0 - PCB - Tracks
-    'hsla(204, 82%, 18%, 1.00)',    // 1 - PCB - Holes
+    'hsla(144, 83%, 18%, 1.00)',    // 0 - PCB - Tracks
+    'hsla(144, 82%, 18%, 1.00)',    // 1 - PCB - Holes
+    'hsla(144, 82%, 18%, 1.00)',    // 
     'hsla(0, 0%, 28%, 1.00)',       // 2 - solder - Insufficient
     'hsla(0, 0%, 28%, 1.00)',       // 3 - solder - Excess
     'hsla(0, 0%, 28%, 1.00)',       // 4 - solder - Void
     'hsla(0, 0%, 28%, 1.00)',       // 5 - solder - Crack
+    'hsla(0, 0%, 28%, 1.00)',       // 
     'hsla(347, 70%, 29%, 1.00)',    // 6 - PCBA - Orientation
     'hsla(347, 70%, 29%, 1.00)',    // 7 - PCBA - Missing Comp
     'hsla(347, 70%, 29%, 1.00)',    // 8 - PCBA - Wrong Comp
+    'hsla(347, 70%, 29%, 1.00)',    // 
     'hsla(219, 100%, 30%, 1.00)',   // 9 - Cosmetic
     'hsla(284, 82%, 37%, 1.00)',    // 10 - Other 
 ];
@@ -77,17 +83,20 @@ const featuresBorderColorsOriginalOrder = [
 // Map feature fields to their *original* index in the unsorted list
 // IMPORTANT: This list must match the order of FEATURE_FIELDS_FOR_YEARLY
 const FEATURE_FIELDS_FOR_YEARLY = [
-    'features_tracks', 'features_holes', 'features_solder_insufficient', 'features_solder_excess',
-    'features_solder_void', 'features_solder_crack', 'features_orientation', 'features_wrong_component',
-    'features_missing_component', 'features_cosmetic', 'features_other_state'
+    'features_tracks', 'features_holes', 'features_bare_pcb_other', 
+    'features_solder_insufficient', 'features_solder_excess', 'features_solder_void', 'features_solder_crack',  'features_solder_other',
+    'features_orientation', 'features_wrong_component', 'features_missing_component', 'features_component_other', 
+    'features_cosmetic', 
+    'features_other_state'
 ];
 const FEATURE_FIELD_INDEX_MAP = {};
 
 const FEATURE_FIELDS = [
-    'features_tracks', 'features_holes', 'features_solder_insufficient',
-    'features_solder_excess', 'features_solder_void', 'features_solder_crack',
-    'features_orientation', 'features_missing_component', 'features_wrong_component',
-    'features_cosmetic', 'features_other_state'
+    'features_tracks', 'features_holes', 'features_bare_pcb_other', 
+    'features_solder_insufficient', 'features_solder_excess', 'features_solder_void', 'features_solder_crack',  'features_solder_other',
+    'features_orientation', 'features_wrong_component', 'features_missing_component', 'features_component_other', 
+    'features_cosmetic', 
+    'features_other_state'
 ];
 // Include Datasets here temporarily to get the label mapping easily,
 // then filter it out for data/labels for the Techniques chart
@@ -102,13 +111,18 @@ const FIELD_LABELS = {
     // Features
     'features_tracks': 'Tracks',
     'features_holes': 'Holes',
+    'features_bare_pcb_other': 'Other (bare) PCB',
+
     'features_solder_insufficient': 'Insufficient Solder',
     'features_solder_excess': 'Excess Solder',
     'features_solder_void': 'Solder Voids',
     'features_solder_crack': 'Solder Cracks',
+    'features_solder_other': 'Solder (Other)',
+
     'features_orientation': 'Orientation/Polarity', // Combined as per previous logic
     'features_wrong_component': 'Wrong Component',
     'features_missing_component': 'Missing Component',
+    'features_component_other': 'Component (Other)',
     'features_cosmetic': 'Cosmetic',
     'features_other_state': 'Other',
     // Techniques
@@ -128,11 +142,56 @@ const FIELD_LABELS = {
 // The keys are the indices in the original color arrays that represent unique colors
 const featureColorGroups = {
     0: { label: 'PCB Features', fields: [] },      
-    2: { label: 'Solder Defects', fields: [] },    
-    6: { label: 'PCBA Issues', fields: [] },       
-    9: { label: 'Cosmetic', fields: [] },          
-    10: { label: 'Other', fields: [] }
+    3: { label: 'Solder Defects', fields: [] },    
+    8: { label: 'PCBA Issues', fields: [] },       
+    12: { label: 'Cosmetic', fields: [] },          
+    13: { label: 'Other', fields: [] }
 };
+
+
+
+function calculateJournalConferenceStats() {
+    const journalCounts = {};
+    const conferenceCounts = {};
+
+    // Select only VISIBLE main rows
+    const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
+
+    visibleRows.forEach(row => {
+        const journalCell = row.cells[journalCellIndex]; // Use the global defined in globals.js
+        const typeCell = row.cells[typeCellIndex]; // Use the global defined in globals.js
+
+        if (journalCell && typeCell) {
+            const journalName = journalCell.textContent.trim();
+            const type = typeCell.getAttribute('title') || typeCell.textContent.trim(); // Prefer title attribute for type
+
+            // Only count if journal name is not empty
+            if (journalName) {
+                if (type && type.toLowerCase() === 'article') {
+                    journalCounts[journalName] = (journalCounts[journalName] || 0) + 1;
+                } else if (type && type.toLowerCase() === 'inproceedings') {
+                    conferenceCounts[journalName] = (conferenceCounts[journalName] || 0) + 1; // Use journal cell content for conf name
+                }
+            }
+        }
+    });
+
+    // Sort and filter results (count >= 2)
+    const sortedJournals = Object.entries(journalCounts)
+        .filter(([name, count]) => count >= 2) // Filter after counting
+        .sort((a, b) => b[1] - a[1]); // Sort by count descending
+
+    const sortedConferences = Object.entries(conferenceCounts)
+        .filter(([name, count]) => count >= 2) // Filter after counting
+        .sort((a, b) => b[1] - a[1]); // Sort by count descending
+
+    return {
+        journals: sortedJournals.map(([name, count]) => ({ name, count })),
+        conferences: sortedConferences.map(([name, count]) => ({ name, count }))
+    };
+}
+
+
 
 function displayStats() {
     
@@ -615,15 +674,17 @@ function displayStats() {
                 }
             });
         }
+        const { journals, conferences } = calculateJournalConferenceStats();
 
-        // --- 1. FETCH SERVER STATS  ---
+        // --- Fetch Server Stats (for other lists) ---
         const urlParams = new URLSearchParams(window.location.search);
         const statsUrl = `/get_stats?${urlParams.toString()}`;
         fetch(statsUrl).then(response => {
             return response.json();
         }).then(data => {
             if (data.status === 'success' && data.data) {
-                const statsData = data.data;
+                const serverStatsData = data.data;
+
                 function populateListFromServer(listElementId, dataArray) { //for items with count >=2
                     const listElement = document.getElementById(listElementId);
                     listElement.innerHTML = '';
@@ -637,14 +698,41 @@ function displayStats() {
                             .replace(/&/g, "&amp;").replace(/</g, "<")
                             .replace(/>/g, ">").replace(/"/g, "&quot;")
                             .replace(/'/g, "&#39;");
-                        listItem.innerHTML = `<span class="count">${item.count}</span> <span class="name">${escapedName}</span>`;
+
+                        // --- Preserve Original Structure ---
+                        const countSpan = document.createElement('span');
+                        countSpan.className = 'count';
+                        countSpan.textContent = item.count;
+
+                        const nameSpan = document.createElement('span');
+                        nameSpan.className = 'name';
+                        nameSpan.textContent = escapedName;
+
+                        // --- NEW: Create search button element ---
+                        const searchButton = document.createElement('button');
+                        searchButton.type = 'button'; // Important to prevent form submission if inside one
+                        searchButton.className = 'search-item-btn'; // Add a specific class for styling/listening
+                        searchButton.title = `Search for "${item.name}"`;
+                        searchButton.textContent = '🔍'; // Or use an icon image
+
+                        // --- NEW: Add click event listener to the button ---
+                        searchButton.addEventListener('click', function(event) {
+                            event.stopPropagation(); // Prevent triggering other click listeners on the <li>
+                            searchInput.value = item.name; // Set the search input value
+                            closeModal(); // Close the stats modal
+                            // Trigger the existing search mechanism (which includes debouncing)
+                            const inputEvent = new Event('input', { bubbles: true });
+                            searchInput.dispatchEvent(inputEvent);
+                        });
+
+                        // --- Append elements preserving the original structure ---
+                        listItem.appendChild(countSpan);
+                        listItem.appendChild(searchButton); 
+                        listItem.appendChild(nameSpan);
+
                         listElement.appendChild(listItem);
                     });
                 }
-                populateListFromServer('journalStatsList', statsData.journals);
-                populateListFromServer('keywordStatsList', statsData.keywords);
-                populateListFromServer('authorStatsList', statsData.authors);
-                populateListFromServer('researchAreaStatsList', statsData.research_areas);
 
                 function populateAllListFromServer(listElementId, dataArray) { //for ALL items, not just repeating ones
                     const listElement = document.getElementById(listElementId);
@@ -659,15 +747,102 @@ function displayStats() {
                             .replace(/&/g, "&amp;").replace(/</g, "<")
                             .replace(/>/g, ">").replace(/"/g, "&quot;")
                             .replace(/'/g, "&#39;");
-                        // Use the same format for consistency
-                        listItem.innerHTML = `<span class="count">${item.count}</span> <span class="name">${escapedName}</span>`;
+
+                        // --- Preserve Original Structure ---
+                        const countSpan = document.createElement('span');
+                        countSpan.className = 'count';
+                        countSpan.textContent = item.count;
+
+                        const nameSpan = document.createElement('span');
+                        nameSpan.className = 'name';
+                        nameSpan.textContent = escapedName;
+
+                        // --- NEW: Create search button element ---
+                        const searchButton = document.createElement('button');
+                        searchButton.type = 'button';
+                        searchButton.className = 'search-item-btn';
+                        searchButton.title = `Search for "${item.name}"`;
+                        searchButton.textContent = '🔍';
+
+                        // --- NEW: Add click event listener to the button ---
+                        searchButton.addEventListener('click', function(event) {
+                            event.stopPropagation();
+                            searchInput.value = item.name;
+                            closeModal();
+                            const inputEvent = new Event('input', { bubbles: true });
+                            searchInput.dispatchEvent(inputEvent);
+                        });
+
+                        // --- Append elements preserving the original structure ---
+                        listItem.appendChild(countSpan);
+                        listItem.appendChild(searchButton);
+                        listItem.appendChild(nameSpan);
+
                         listElement.appendChild(listItem);
                     });
                 }
-                populateAllListFromServer('otherDetectedFeaturesStatsList', statsData.other_features_all);
-                populateAllListFromServer('modelNamesStatsList', statsData.model_names_all);
 
+                // Populate Server Lists (Keywords, Authors, etc.)
+                populateListFromServer('keywordStatsList', serverStatsData.keywords);
+                populateListFromServer('authorStatsList', serverStatsData.authors);
+                populateListFromServer('researchAreaStatsList', serverStatsData.research_areas);
+                populateAllListFromServer('otherDetectedFeaturesStatsList', serverStatsData.other_features_all);
+                populateAllListFromServer('modelNamesStatsList', serverStatsData.model_names_all);
+            } else {
+                // Handle potential fetch error - still populate client-side lists if possible
+                console.error("Failed to fetch server stats:", data);
             }
+
+            // --- Populate Client-side Journal/Conference Lists ---
+            function populateListFromClient(listElementId, dataArray) { //for items with count >=2
+                const listElement = document.getElementById(listElementId);
+                listElement.innerHTML = '';
+                if (!dataArray || dataArray.length === 0) {
+                    listElement.innerHTML = '<li>No items with count > 1.</li>';
+                    return;
+                }
+                dataArray.forEach(item => {
+                    const listItem = document.createElement('li');
+                    const escapedName = (item.name || '').toString()
+                        .replace(/&/g, "&amp;").replace(/</g, "<")
+                        .replace(/>/g, ">").replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#39;");
+
+                    // --- Preserve Original Structure ---
+                    const countSpan = document.createElement('span');
+                    countSpan.className = 'count';
+                    countSpan.textContent = item.count;
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'name';
+                    nameSpan.textContent = escapedName;
+
+                    // --- NEW: Create search button element ---
+                    const searchButton = document.createElement('button');
+                    searchButton.type = 'button';
+                    searchButton.className = 'search-item-btn';
+                    searchButton.title = `Search for "${item.name}"`;
+                    searchButton.textContent = '🔍';
+
+                    // --- NEW: Add click event listener to the button ---
+                    searchButton.addEventListener('click', function(event) {
+                        event.stopPropagation();
+                        searchInput.value = item.name;
+                        closeModal();
+                        const inputEvent = new Event('input', { bubbles: true });
+                        searchInput.dispatchEvent(inputEvent);
+                    });
+
+                    // --- Append elements preserving the original structure ---
+                    listItem.appendChild(countSpan);
+                    listItem.appendChild(searchButton);
+                    listItem.appendChild(nameSpan);
+
+                    listElement.appendChild(listItem);
+                });
+            }
+            populateListFromClient('journalStatsList', journals);
+            populateListFromClient('conferenceStatsList', conferences); // Use the new ID
         })
 
 

@@ -28,17 +28,34 @@ os.makedirs(ANNOTATED_PDF_STORAGE_DIR, exist_ok=True)
 DEFAULT_FEATURES = {
     "tracks": None,
     "holes": None,
+    "bare_pcb_other": None,         #new
     "solder_insufficient": None,
     "solder_excess": None,
     "solder_void": None,
     "solder_crack": None,
+    "solder_other": None,           #new
     "orientation": None,
     "wrong_component": None,
     "missing_component": None,
+    "component_other": None,        #new
     "cosmetic": None,
     "other": None   #text
 }
-
+BOOLEAN_FEATURE_KEYS = [    # for no_features re-classification
+    "tracks",
+    "holes",
+    "bare_pcb_other",
+    "solder_insufficient",
+    "solder_excess",
+    "solder_void",
+    "solder_crack",
+    "solder_other",
+    "orientation",
+    "wrong_component",
+    "missing_component",
+    "component_other",
+    "cosmetic"
+]
 DEFAULT_TECHNIQUE = {
     "classic_cv_based": None,
     "ml_traditional": None,

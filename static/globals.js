@@ -23,6 +23,7 @@ const onlySurveyCheckbox = document.getElementById('only-survey-checkbox');
 const showPCBcheckbox = document.getElementById('show-pcb-checkbox');
 const showSolderCheckbox = document.getElementById('show-solder-checkbox');
 const showPCBAcheckbox = document.getElementById('show-pcba-checkbox');
+const noFeaturesCheckbox = document.getElementById('no-features-checkbox');
 
 const minPageCountInput = document.getElementById('min-page-count');
 const yearFromInput = document.getElementById('year-from');
@@ -60,10 +61,13 @@ const COUNT_FIELDS = [
     'pdf_annotated',
 
     'is_offtopic', 'is_survey', 'is_through_hole', 'is_smt', 'is_x_ray', // Classification (Top-level)
-    'features_tracks', 'features_holes', 'features_solder_insufficient', 'features_solder_excess',
-    'features_solder_void', 'features_solder_crack', 'features_orientation', 'features_wrong_component',
 
-    'features_missing_component', 'features_cosmetic', 'features_other_state', // Features (Nested under 'features')
+    'features_tracks', 'features_holes', 'features_bare_pcb_other',
+    'features_solder_insufficient', 'features_solder_excess',
+    'features_solder_void', 'features_solder_crack',  'features_solder_other',
+    'features_orientation', 'features_wrong_component', 'features_missing_component',  'features_component_other',
+    'features_cosmetic', 'features_other_state',
+
     'technique_classic_cv_based', 'technique_ml_traditional',
     'technique_dl_cnn_classifier', 'technique_dl_cnn_detector', 'technique_dl_rcnn_detector',
     'technique_dl_transformer', 'technique_dl_other', 'technique_hybrid', 'technique_available_dataset', // Techniques (Nested under 'technique')

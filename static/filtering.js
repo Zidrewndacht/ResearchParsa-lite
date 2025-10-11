@@ -221,6 +221,7 @@ function applyLocalFilters() {
         const showPCBChecked = showPCBcheckbox.checked;
         const showSolderChecked = showSolderCheckbox.checked;
         const showPCBAChecked = showPCBAcheckbox.checked;
+        const showNoFeaturesChecked = noFeaturesCheckbox.checked;
 
         const rows = tbody.querySelectorAll('tr[data-paper-id]');
         rows.forEach(row => {
@@ -263,17 +264,19 @@ function applyLocalFilters() {
                 };
 
                 // Define feature fields for each group
-                const pcbFeatures = ['features_tracks', 'features_holes'];
+                const pcbFeatures = ['features_tracks', 'features_holes', 'features_bare_pcb_other'];
                 const solderFeatures = [
                     'features_solder_insufficient',
                     'features_solder_excess',
                     'features_solder_void',
-                    'features_solder_crack'
+                    'features_solder_crack',
+                    'features_solder_other'
                 ];
                 const pcbaFeatures = [
                     'features_orientation',
                     'features_missing_component',
                     'features_wrong_component',
+                    'features_component_other',
                     'features_cosmetic',
                     'features_other_state'
                 ];
@@ -296,6 +299,35 @@ function applyLocalFilters() {
                     showRow = false;
                 }
             }
+
+            // Define feature fields that need to be checked for the "No Features" filter
+            // These correspond to the data-field attributes in your table cells
+            const featureFieldsToCheck = [
+                'features_tracks', 'features_holes', 'features_bare_pcb_other',
+                'features_solder_insufficient', 'features_solder_excess', 'features_solder_void', 'features_solder_crack', 'features_solder_other',
+                'features_missing_component', 'features_wrong_component', 'features_component_other',
+                'features_orientation', 'features_cosmetic',
+                'features_other_state' // Note: 'features_other_state' is the editable cell. The actual 'other' text might be in the detail row, so filtering by its blank state might be the best we can do client-side.
+            ];
+
+            // --- Apply NEW "No Features" Filter ---
+            // Only apply this filter if the checkbox is checked
+            if (showRow && showNoFeaturesChecked) {
+                // Check if ALL feature fields in the list are empty or contain only a space (' ')
+                const hasAnyFeatureFilled = featureFieldsToCheck.some(fieldName => {
+                    const cell = row.querySelector(`[data-field="${fieldName}"]`);
+                    const cellText = cell ? cell.textContent.trim() : '';
+                    // Consider '✔️', '❌', '👤', '🖥️' as filled. Blank (' ') or empty string means not filled.
+                    // Also consider if the cell content is just the initial blank space.
+                    return cellText !== '' && cellText !== '❌' && cellText !== '❔'; // Adjust if '❔' is the initial state instead of ' '
+                });
+
+                // Hide the row if ANY feature was found to be filled
+                if (hasAnyFeatureFilled) {
+                    showRow = false;
+                }
+            }
+
             // Apply the visibility state
             row.classList.toggle('filter-hidden', !showRow);
             if (detailRow) { // Ensure detailRow exists before toggling
@@ -416,6 +448,7 @@ document.addEventListener('DOMContentLoaded', function () {
     showPCBcheckbox.addEventListener('change', applyLocalFilters);
     showSolderCheckbox.addEventListener('change', applyLocalFilters);
     showPCBAcheckbox.addEventListener('change', applyLocalFilters);
+    noFeaturesCheckbox.addEventListener('change', applyLocalFilters);
 
     yearFromInput.addEventListener('change', showApplyButton);
     yearToInput.addEventListener('change', showApplyButton);

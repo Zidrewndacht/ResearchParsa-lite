@@ -80,6 +80,17 @@ def update_paper_from_llm(db_path, paper_id, llm_data, changed_by="LLM", reasoni
         current_technique.update(llm_data['technique'])
         update_fields.append("technique = ?")
         update_values.append(json.dumps(current_technique))
+
+    # Reset verification fields when classification is updated
+    # This ensures verified status is cleared after re-classification
+    update_fields.append("verified = ?")
+    update_values.append(None)
+    update_fields.append("estimated_score = ?")
+    update_values.append(None)
+    update_fields.append("verified_by = ?")
+    update_values.append("")
+    update_fields.append("verifier_trace = ?")
+    update_values.append("")
     
     # Audit fields
     update_fields.append("changed = ?")
@@ -247,6 +258,28 @@ def run_classification(mode='remaining', paper_id=None, db_file=None, grammar_fi
                  conn.close()
                  return True
             cursor.execute("SELECT id FROM papers WHERE id = ?", (paper_id,))
+
+        elif mode == 'no_features':
+            # Goal: Re-classify on-topic papers that LLM failed to assign any defect/features to.
+            # Off-topic papers are excluded by design (they have no features intentionally).        
+            print("Fetching on-topic papers with no boolean features set to true...")
+            conditions = [
+                f"(JSON_EXTRACT(features, '$.{key}') IS NULL OR JSON_EXTRACT(features, '$.{key}') = 0)"
+                for key in globals.BOOLEAN_FEATURE_KEYS
+            ]
+            # Group all "no features" cases
+            no_features_expr = f"""
+                (features IS NULL 
+                 OR features = '' 
+                 OR features = '{{}}'
+                 OR ({' AND '.join(conditions)}))
+            """
+            # Only include if NOT off-topic (i.e., on-topic or unreviewed)
+            where_clause = f"""
+                {no_features_expr}
+                AND (is_offtopic = 0 OR is_offtopic IS NULL)
+            """
+            cursor.execute(f"SELECT id FROM papers WHERE {where_clause}")
         else: # Default to 'remaining'
             print("Fetching unprocessed papers (changed_by IS NULL or blank)...")
             cursor.execute("SELECT id FROM papers WHERE changed_by IS NULL OR changed_by = '' OR is_offtopic = '' OR is_offtopic IS NULL ") #set to reclassify when manually removing offtopic status
@@ -327,8 +360,10 @@ def run_classification(mode='remaining', paper_id=None, db_file=None, grammar_fi
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Automate LLM classification for papers in the database.')
-    parser.add_argument('--mode', '-m', choices=['all', 'remaining', 'id'], default='remaining',
-                        help="Processing mode: 'all' (classify everything), 'remaining' (classify unprocessed), 'id' (classify a specific paper). Default: 'remaining'.")
+    parser.add_argument('--mode', '-m', 
+                    choices=['all', 'remaining', 'id', 'no_features'], 
+                    default='remaining',
+                    help="Processing mode: 'all', 'remaining', 'id', or 'no_features' (papers with no features set). Default: 'remaining'.")
     parser.add_argument('--paper_id', '-i', type=int, help='Paper ID to classify (required if --mode id).')
     parser.add_argument('--db_file', default=globals.DATABASE_FILE,
                        help=f'SQLite database file path (default: {globals.DATABASE_FILE})')
@@ -338,6 +373,7 @@ if __name__ == "__main__":
                        help=f'Path to the prompt template file (default: {globals.PROMPT_TEMPLATE})')
     parser.add_argument('--server_url', default=globals.LLM_SERVER_URL,
                        help=f'Base URL of the LLM server (default: {globals.LLM_SERVER_URL})')
+    
     args = parser.parse_args()
 
     signal.signal(signal.SIGINT, globals.signal_handler)

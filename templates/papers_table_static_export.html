@@ -43,12 +43,11 @@
         <td class="secondary-text-cell number-cell">{{ paper.year or '' }}</td>
         <td class="secondary-text-cell number-cell">{{ paper.page_count or '' }}</td>
         <td class="secondary-text-cell">{{ paper.journal }}</td>        
-        <td class="status-cell" title="{{ paper.type }}">{{ type_emojis.get(paper.type, default_type_emoji) }} <!-- Use the emoji mapping passed from Python -->
-        
+        <td class="status-cell" title="{{ paper.type }}">{{ type_emojis.get(paper.type, default_type_emoji) }}
         
 
         <td class="status-cell editable-status" data-field="is_offtopic">{{ paper.is_offtopic | render_status }}</td>
-        <td class="secondary-text-cell number-cell">{{ paper.relevance or '' }}</td>        <!-- NEW DATA CELL: Relevance -->
+        <td class="secondary-text-cell number-cell">{{ paper.relevance or '' }}</td>
         <td class="status-cell editable-status" data-field="is_survey">{{ paper.is_survey | render_status }}</td>
         <td class="status-cell editable-status" data-field="is_through_hole">{{ paper.is_through_hole | render_status }}</td>
         <td class="status-cell editable-status" data-field="is_smt">{{ paper.is_smt | render_status }}</td>
@@ -56,13 +55,16 @@
 
         <td class="status-cell editable-status highlight-status" data-field="features_tracks">{{ paper.features.tracks | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_holes">{{ paper.features.holes | render_status }}</td>
+        <td class="status-cell editable-status highlight-status" data-field="features_bare_pcb_other">{{ paper.features.bare_pcb_other | render_status }}</td>
         <td class="status-cell editable-status" data-field="features_solder_insufficient">{{ paper.features.solder_insufficient | render_status }}</td>
         <td class="status-cell editable-status" data-field="features_solder_excess">{{ paper.features.solder_excess | render_status }}</td>
         <td class="status-cell editable-status" data-field="features_solder_void">{{ paper.features.solder_void | render_status }}</td>
         <td class="status-cell editable-status" data-field="features_solder_crack">{{ paper.features.solder_crack | render_status }}</td>
+        <td class="status-cell editable-status" data-field="features_solder_other">{{ paper.features.solder_other | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_missing_component">{{ paper.features.missing_component | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_wrong_component">{{ paper.features.wrong_component | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_orientation">{{ paper.features.orientation | render_status }}</td>
+        <td class="status-cell editable-status highlight-status" data-field="features_component_other">{{ paper.features.component_other | render_status }}</td>
         <td class="status-cell editable-status highlight-status" data-field="features_cosmetic">{{ paper.features.cosmetic | render_status }}</td>
         <td class="status-cell highlight-status" data-field="features_other_state">{{ '✔️' if paper.features.other and (paper.features.other|string).strip() else '❌' }}</td>
 
@@ -85,7 +87,7 @@
         <td class="toggle-btn" onclick="toggleDetails(this)"><span>Show</span></td>
     </tr>
     <tr class="detail-row">
-        <td colspan="38">
+        <td colspan="42">
             <div class="detail-flex-container">
                 <div class="detail-content detail-abstract">
                     <p><strong>Abstract:</strong> {{ paper.abstract or 'No abstract available.' }}</p>
