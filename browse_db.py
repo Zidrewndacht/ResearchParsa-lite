@@ -747,21 +747,23 @@ def generate_xlsx_export_content(papers):
     ws = wb.active
     ws.title = "PCB Inspection Papers"
 
-    # --- Define Headers ---
+    # --- Define Headers (Updated Order - Corrected Boolean Features) ---
     headers = [
         "Type", "Title", "Year", "Journal/Conf name", "Pages count",
-        # Features
+        # Classification Summary
         "Off-topic", "Relevance", "Survey", "THT", "SMT", "X-Ray",
-        "Tracks", "Holes", "Solder Insufficient", "Solder Excess",
-        "Solder Void", "Solder Crack", "Missing Comp", "Wrong Comp",
-        "Orientation", "Cosmetic", "Other_state", "Other defects",
-        # Techniques
+        # Features Summary (Updated Order - Corrected Boolean Features)
+        "Tracks", "Holes / Vias", "Bare PCB Other", # Boolean (e.g., bare_pcb_other)
+        "Solder Insufficient", "Solder Excess", "Solder Void", "Solder Crack", "Solder Other", # Boolean (e.g., solder_other)
+        "Missing Comp", "Wrong Comp", "Orientation", "Comp Other", # Boolean (e.g., component_other)
+        "Cosmetic", "Other State", # Boolean for state (based on 'other' text content)
+        "Other Defects Text", # Text for content (the 'other' field)
+        # Techniques Summary (Updated Order)
         "Classic CV", "ML", "CNN Classifier", "CNN Detector",
-        "R-CNN Detector", "Transformers", "Other", "Hybrid", "Datasets",
-        "Model name",
+        "R-CNN Detector", "Transformers", "Other DL", "Hybrid", "Datasets", "Model name",
         # Metadata
         "Last Changed", "Changed By", "Verified", "Accr. Score", "Verified By",
-        "User Comment State", "User Comments"
+        "User Comment State", "User Comments" # Boolean for state, Text for content
     ]
 
     # --- Write Headers ---
@@ -820,34 +822,38 @@ def generate_xlsx_export_content(papers):
             paper.get('year'),                        # Year (integer)
             paper.get('journal', ''),                 # Journal/Conf name (text)
             paper.get('page_count'),                  # Pages count (integer)
-            # --- Features ---
+            # --- Classification Summary ---
             format_excel_value(paper.get('is_offtopic')), # Off-topic (boolean/null)
             paper.get('relevance'),                   # Relevance (integer)
             format_excel_value(paper.get('is_survey')), # Survey (boolean/null)
             format_excel_value(paper.get('is_through_hole')), # THT (boolean/null)
             format_excel_value(paper.get('is_smt')),    # SMT (boolean/null)
-            format_excel_value(paper.get('is_x_ray')),  # X-Ray (boolean/null) <-- CORRECTED
+            format_excel_value(paper.get('is_x_ray')),  # X-Ray (boolean/null)
+            # --- Features Summary (Updated Order - Corrected Boolean Features) ---
             format_excel_value(features.get('tracks')), # Tracks (boolean/null)
-            format_excel_value(features.get('holes')),  # Holes (boolean/null)
+            format_excel_value(features.get('holes')),  # Holes / Vias (boolean/null)
+            format_excel_value(features.get('bare_pcb_other')), # Bare PCB Other (boolean/null) - ADDED
             format_excel_value(features.get('solder_insufficient')), # Solder Insufficient (boolean/null)
             format_excel_value(features.get('solder_excess')), # Solder Excess (boolean/null)
             format_excel_value(features.get('solder_void')), # Solder Void (boolean/null)
             format_excel_value(features.get('solder_crack')), # Solder Crack (boolean/null)
+            format_excel_value(features.get('solder_other')), # Solder Other (boolean/null) - ADDED
             format_excel_value(features.get('missing_component')), # Missing Comp (boolean/null)
             format_excel_value(features.get('wrong_component')), # Wrong Comp (boolean/null)
             format_excel_value(features.get('orientation')), # Orientation (boolean/null)
+            format_excel_value(features.get('component_other')), # Comp Other (boolean/null) - ADDED
             format_excel_value(features.get('cosmetic')), # Cosmetic (boolean/null)
-            # Other_state (boolean based on 'other' text content) <-- CORRECTED
+            # Other State (boolean based on 'other' text content) - CORRECTED COMMENT
             format_excel_value(features.get('other') is not None and str(features.get('other', '')).strip() != ""),
-            features.get('other', ''),               # Other defects (text) <-- This one shows the text
-            # --- Techniques ---
+            features.get('other', ''),               # Other Defects Text (text) - This one shows the text
+            # --- Techniques Summary (Updated Order) ---
             format_excel_value(technique.get('classic_cv_based')), # Classic CV (boolean/null)
             format_excel_value(technique.get('ml_traditional')), # ML (boolean/null)
             format_excel_value(technique.get('dl_cnn_classifier')), # CNN Classifier (boolean/null)
             format_excel_value(technique.get('dl_cnn_detector')), # CNN Detector (boolean/null)
             format_excel_value(technique.get('dl_rcnn_detector')), # R-CNN Detector (boolean/null)
             format_excel_value(technique.get('dl_transformer')), # Transformers (boolean/null)
-            format_excel_value(technique.get('dl_other')), # Other (boolean/null)
+            format_excel_value(technique.get('dl_other')), # Other DL (boolean/null)
             format_excel_value(technique.get('hybrid')), # Hybrid (boolean/null)
             format_excel_value(technique.get('available_dataset')), # Datasets (boolean/null)
             technique.get('model', ''),              # Model name (text)
@@ -857,9 +863,9 @@ def generate_xlsx_export_content(papers):
             format_excel_value(paper.get('verified')), # Verified (boolean/null)
             paper.get('estimated_score'),           # Accr. Score (integer)
             paper.get('verified_by', ''),           # Verified By (text)
-            # User comments state (boolean based on 'user_trace' text content) <-- CORRECTED
+            # User comments state (boolean based on 'user_trace' text content) - CORRECTED COMMENT
             format_excel_value(paper.get('user_trace') is not None and str(paper.get('user_trace', '')).strip() != ""),
-            paper.get('user_trace', '')             # User comments contents (text) <-- This one shows the text
+            paper.get('user_trace', '')             # User comments contents (text) - This one shows the text
         ]
 
         # Write the row data to Excel
@@ -883,9 +889,9 @@ def generate_xlsx_export_content(papers):
     # Optional: Format the data as a table (requires openpyxl >= 2.5)
     try:
         if len(papers) > 0:
-            # Adjust the column reference to 'AN' (assuming 34 columns: A through AN)
+            # Adjust the column reference to 'AQ' (assuming 37 columns now: A through AQ)
             # Headers are row 1, data starts row 2, so last row is len(papers) + 1
-            tab = Table(displayName="PCBPapersTable", ref=f"A1:AN{len(papers) + 1}")
+            tab = Table(displayName="PCBPapersTable", ref=f"A1:AQ{len(papers) + 1}")
             style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
                                    showLastColumn=False, showRowStripes=True, showColumnStripes=False)
             tab.tableStyleInfo = style
@@ -897,9 +903,19 @@ def generate_xlsx_export_content(papers):
     # Define fills for TRUE and FALSE
     true_fill = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid") # Light Green
     false_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid") # Light Red
+    # Updated boolean column indices based on corrected new order (1-based indexing)
     boolean_columns = [
-        6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-        24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 37 # Added 37 (User Comment State)
+        # Classification Summary
+        6, 8, 9, 10, 11,
+        # Features Summary (Boolean Features)
+        12, 13, 14, # Tracks, Holes, Bare PCB Other
+        15, 16, 17, 18, 19, # Solder Insufficient, Excess, Void, Crack, Solder Other
+        20, 21, 22, 23, # Missing Comp, Wrong Comp, Orientation, Comp Other
+        24, 25, 27, # Cosmetic, Other State, User Comment State
+        # Techniques Summary
+        28, 29, 30, 31, 32, 33, 34, 35, 36,
+        # Metadata
+        39 # Verified (column 39)
     ]
 
     # Iterate through rows and specified boolean columns to apply formatting
@@ -912,17 +928,6 @@ def generate_xlsx_export_content(papers):
             elif cell.value is False:
                 cell.fill = false_fill
             # If cell.value is None or "", it remains unformatted (blank cell)
-
-    # --- Optional: Format the data as a table (ensure column ref is correct) - this is probably outdated ---
-    try:
-        if len(papers) > 0:
-            tab = Table(displayName="PCBPapersTable", ref=f"A1:AT{len(papers) + 1}") # CHANGED TO AT - why?
-            style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
-                                   showLastColumn=False, showRowStripes=True, showColumnStripes=False)
-            tab.tableStyleInfo = style
-            ws.add_table(tab)
-    except Exception as e:
-        print(f"Warning: Could not create Excel table: {e}")
 
     # --- Save Workbook to BytesIO object ---
     wb.save(output)

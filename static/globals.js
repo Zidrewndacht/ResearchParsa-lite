@@ -11,7 +11,7 @@ const pageCountCellIndex = 3;
 const journalCellIndex = 4;
 const typeCellIndex = 5;
 const relevanceCellIndex = 7;
-const estScoreCellIndex = 36;
+const estScoreCellIndex = 39;
 
 //HTML Elements:
 const searchInput = document.getElementById('search-input');

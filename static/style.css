@@ -96,7 +96,8 @@ html.busyCursor .loading-overlay {
 h3,th {
     position: sticky;
     top: 0;
-    text-shadow: var(--dark-shadow)
+    text-shadow: var(--dark-shadow);
+    z-index: 100;
 }
 
 h3 {
@@ -568,12 +569,12 @@ tr.filter-hidden {
 #counts-footer tr {
     background-color: var(--primary-ui-color);
     color: #fff;
-    font-weight: 700
+    font-weight: 700;
 }
 
 #counts-footer td {
     text-align: center;
-    font-size: 9pt;
+    font-size: 8.5pt;
     padding: 9px 0
 }
 
@@ -664,12 +665,12 @@ tr.filter-hidden {
     gap: 16px;
     border-radius: 8px;
     background: #f5f7fad9;
-    border: 1.5px solid var(--classify-btn-color);
+    border: 1px solid #444;
     box-shadow: 0 48px 96px 32px rgba(64,64,64, 0.5);
     box-sizing: border-box;
     transition: opacity .3s ease-in-out, transform .3s ease-out;
     /*! background: linear-gradient(180deg,var(--classify-btn-color) 0%,var(--verify-btn-color) 48px,#f5f7fad9 20px); */
-    width: 354px;
+    width: 358px;
     text-align: justify;
 }
 #batch-actions{
@@ -982,6 +983,31 @@ tr.filter-hidden {
 
 
 
+
+/* Ensure the list items layout accommodates the button */
+.stats-list-multicolumn-2 li,
+.stats-list-multicolumn-short li {
+    display: flex; /* Use flexbox */
+    justify-content: space-between; /* Distribute space */
+    align-items: center; /* Align items vertically */
+    gap: 4px; /* Add a small gap between elements */
+}
+
+.stats-list-multicolumn-2 li .count,
+.stats-list-multicolumn-short li .count {
+    flex-shrink: 0; /* Don't shrink the count */
+}
+
+.stats-list-multicolumn-2 li .name,
+.stats-list-multicolumn-short li .name {
+    flex-grow: 1; /* Allow the name to grow */
+    word-break: break-word; /* Break long names if necessary */
+}
+
+.stats-list-multicolumn-2 li .search-item-btn,
+.stats-list-multicolumn-short li .search-item-btn {
+    flex-shrink: 0; /* Don't shrink the button */
+}
 
 
 
