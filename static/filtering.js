@@ -538,9 +538,10 @@ function sortTable(){
         // --- Schedule UI Updates after DOM change ---
         // Use requestAnimationFrame to align with browser repaint
         requestAnimationFrame(() => {
-            applyAlternatingShading();
-            const currentVisibleRowsForJournal = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
-            applyDuplicateShading(currentVisibleRowsForJournal);
+            if (document.body.id !== 'html-export') {
+                applyAlternatingShading();
+                applyDuplicateShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
+            }
             updateCounts();
         });
         currentClientSort = { column: sortBy, direction: newDirection };
