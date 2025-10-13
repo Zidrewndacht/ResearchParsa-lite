@@ -145,19 +145,28 @@ OK      Add full zip export (static HTML viewer + database + PDF folders)
 OK              Implement full backup/restore
 OK              Add a fallback empty DB to always allow app to open without data (so restores can be done from Web UI)
 
+OK      Add solder_other, pcb_other, etc. boolean fields;
+OK      Add 'search this' buttons on every statistics list item;
+OK      Separate journal count from conference count in the stats;
+
+OK		Add tri-state checkbox for off-topic papers;
+
+OK		Add stacked/cumulative charts;
+
+		Re-factor JS to remove duplicated code from ghpages.js: keep only actual export-specific code
+OK			Refactor filtering.js
+OK			Refactor stats.js
+
         Refactor browse_db.py (too large)?
                 Moving SQLite logic to a separate file for DB operations may cause 
                         'sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 34640 and this is thread id 16976.'
                 Moving helpers away is fine, but there are only three.
                 
-        Re-factor JS to remove duplicated code from ghpages.js: keep only actual export-specific code
-
         Fix ugly checkboxes
                 Show negative vs positive checkboxes differently
 
-        Integrate base64 favicon incl. HTML Export
+        Integrate base64 favicon incl. in HTML Export
         Add ABNT? citation to detail pane
-
 
         Add multiuser capability (naming users, user-selectable DB) -- good for offline "sneakernet" collaboration;
                 Possibly auth for online server hosting? -- low priority
@@ -166,11 +175,14 @@ OK              Add a fallback empty DB to always allow app to open without data
                 separate fixed from domain-specific HTML templates;
                 add a python file exclusive for the domain-specific details (DB schema, JSON schemas, etc) and change existing scripts to use it accordingly;
                 separate JS for logic that access the domain-specific HTML parts from generic JS
+                See docs.md for info on some domain-specific scattered code.
 
-        Optimize FTS Search (use all searchable fields) -- not a priority, works fast enough as is, client-side table re-render is always the bottleneck in any tested hardware?
-        
         Low relevance XHR limitations/fixes:
                 Update commented&other field displays on save.
                 Update PDF icon on first annotation without manual reload.
 
         Automatic add/remove paywalled icon to papers based on user trace containing 'paywalled' string;
+
+        
+        Fix FTS search (not finding text fields at all?)
+                Optimize FTS Search (use all searchable fields)

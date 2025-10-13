@@ -66,7 +66,7 @@ DEFAULT_TECHNIQUE = {
     "dl_other": None,
     "hybrid": None,
     "model": None,   #text
-    "available_dataset": None   #text
+    "available_dataset": None  
 }
 
 # mover para client-side?

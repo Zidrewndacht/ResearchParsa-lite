@@ -280,6 +280,17 @@ def run_classification(mode='remaining', paper_id=None, db_file=None, grammar_fi
                 AND (is_offtopic = 0 OR is_offtopic IS NULL)
             """
             cursor.execute(f"SELECT id FROM papers WHERE {where_clause}")
+        
+        elif mode == 'on_topic_implementation':
+            # Goal: Re-classify papers that are currently marked as on-topic AND non-survey.
+            print("Fetching papers marked as on-topic and non-survey for re-classification...")
+            # Query for papers where is_offtopic is NULL or 0 AND is_survey is NULL or 0
+            cursor.execute("""
+                SELECT id FROM papers
+                WHERE (is_offtopic = 0 OR is_offtopic IS NULL)
+                AND (is_survey = 0 OR is_survey IS NULL)
+            """)
+            
         else: # Default to 'remaining'
             print("Fetching unprocessed papers (changed_by IS NULL or blank)...")
             cursor.execute("SELECT id FROM papers WHERE changed_by IS NULL OR changed_by = '' OR is_offtopic = '' OR is_offtopic IS NULL ") #set to reclassify when manually removing offtopic status
@@ -360,10 +371,10 @@ def run_classification(mode='remaining', paper_id=None, db_file=None, grammar_fi
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Automate LLM classification for papers in the database.')
-    parser.add_argument('--mode', '-m', 
-                    choices=['all', 'remaining', 'id', 'no_features'], 
-                    default='remaining',
-                    help="Processing mode: 'all', 'remaining', 'id', or 'no_features' (papers with no features set). Default: 'remaining'.")
+    parser.add_argument('--mode', '-m',
+                choices=['all', 'remaining', 'id', 'no_features', 'on_topic_implementation'], # <-- Updated choices
+                default='remaining',
+                help="Processing mode: 'all', 'remaining', 'id', 'no_features' (papers with no features set), or 'on_topic_implementation' (papers classified as on-topic and non-survey). Default: 'remaining'.") # <-- Updated help text
     parser.add_argument('--paper_id', '-i', type=int, help='Paper ID to classify (required if --mode id).')
     parser.add_argument('--db_file', default=globals.DATABASE_FILE,
                        help=f'SQLite database file path (default: {globals.DATABASE_FILE})')

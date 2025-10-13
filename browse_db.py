@@ -680,6 +680,10 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
             chart_js_content = f.read()
         with open(os.path.join(static_dir, 'ghpages.js'), 'r', encoding='utf-8') as f:
             ghpages_js_content = f.read()
+        with open(os.path.join(static_dir, 'stats.js'), 'r', encoding='utf-8') as f:
+            stats_js_content = f.read()
+        with open(os.path.join(static_dir, 'filtering.js'), 'r', encoding='utf-8') as f:
+            filtering_js_content = f.read()
     except FileNotFoundError as e:
         print(f"Warning: Static file not found during HTML export generation: {e}")
         # Handle missing files gracefully if possible, or raise an error
@@ -689,6 +693,8 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
     style_css_content = rcssmin.cssmin(style_css_content)
     chart_js_content = rjsmin.jsmin(chart_js_content)
     ghpages_js_content = rjsmin.jsmin(ghpages_js_content)
+    stats_js_content = rjsmin.jsmin(stats_js_content)
+    filtering_js_content = rjsmin.jsmin(filtering_js_content)
 
     # --- Render the static export template ---
     papers_table_static_export = render_template(
@@ -715,7 +721,9 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
         fonts_css_content=Markup(fonts_css_content), # Markup was already applied if needed, or content is minified
         style_css_content=Markup(style_css_content),
         chart_js_content=Markup(chart_js_content),
-        ghpages_js_content=Markup(ghpages_js_content)
+        ghpages_js_content=Markup(ghpages_js_content),
+        filtering_js_content=Markup(filtering_js_content),
+        stats_js_content=Markup(stats_js_content)
     )
 
     # --- Compress the full HTML content ---

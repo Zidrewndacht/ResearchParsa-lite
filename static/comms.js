@@ -272,7 +272,103 @@ function saveChanges(paperId) {
 }
 
 
-// static/comms.js (or within a <script> tag in index.html)
+
+function toggleDetails(element) {   //has server-based logic
+    const row = element.closest('tr');
+    const detailRow = row.nextElementSibling;
+    const isExpanded = detailRow && detailRow.classList.contains('expanded');
+    const paperId = row.getAttribute('data-paper-id');
+
+    if (isExpanded) {
+        detailRow.classList.remove('expanded');
+        element.innerHTML = '<span>Show</span>';
+    } else {
+        detailRow.classList.add('expanded');
+        element.innerHTML = '<span>Hide</span>';
+        const contentPlaceholder = detailRow.querySelector('.detail-content-placeholder');
+        fetch(`/get_detail_row?paper_id=${encodeURIComponent(paperId)}`)
+            .then(response => {
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success' && data.html) {
+                    contentPlaceholder.innerHTML = data.html;
+                } else {  // Handle error from server
+                    console.error(`Error loading detail row for paper ${paperId}:`, data.message);
+                    if (contentPlaceholder) {
+                        contentPlaceholder.innerHTML = `<p>Error loading details: ${data.message || 'Unknown error'}</p>`;
+                    }
+                }
+            })
+            .catch(error => {  // Handle network or other errors
+                console.error(`Error fetching detail row for paper ${paperId}:`, error);
+                if (contentPlaceholder) {
+                    contentPlaceholder.innerHTML = `<p>Error loading details: ${error.message}</p>`;
+                }
+            });
+    }
+}
+
+function applyServerSideFilters() {     //moved from filtering as it has server-based
+    document.documentElement.classList.add('busyCursor');
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const isOfftopicChecked = hideOfftopicCheckbox.checked;
+    urlParams.set('hide_offtopic', isOfftopicChecked ? '1' : '0');
+
+    const yearFromValue = document.getElementById('year-from').value.trim();
+    if (yearFromValue !== '' && !isNaN(parseInt(yearFromValue))) {
+        urlParams.set('year_from', yearFromValue);
+    } else {
+        urlParams.delete('year_from');
+    }
+    const yearToValue = document.getElementById('year-to').value.trim();
+    if (yearToValue !== '' && !isNaN(parseInt(yearToValue))) {
+        urlParams.set('year_to', yearToValue);
+    } else {
+        urlParams.delete('year_to');
+    }
+
+    const minPageCountValue = document.getElementById('min-page-count').value.trim();
+    if (minPageCountValue !== '' && !isNaN(parseInt(minPageCountValue))) {
+        urlParams.set('min_page_count', minPageCountValue);
+    } else {
+        urlParams.delete('min_page_count');
+    }
+
+    const searchValue = document.getElementById('search-input').value.trim();
+    if (searchValue !== '') {
+        urlParams.set('search_query', searchValue);
+    } else {
+        urlParams.delete('search_query');
+    }
+    // Construct the URL for the /load_table endpoint with current parameters
+    const loadTableUrl = `/load_table?${urlParams.toString()}`;
+    fetch(loadTableUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
+        .then(html => {
+            const tbody = document.querySelector('#papersTable tbody');
+            if (tbody) {
+                tbody.innerHTML = html;
+                const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+                window.history.replaceState({ path: newUrl }, '', newUrl);
+                applyLocalFilters(); //update local filters and let it remove busy state
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching updated table:', error);
+            document.documentElement.classList.remove('busyCursor');
+        });
+}
+
+
+
+
 
 // Add a hidden file input element dynamically if it doesn't exist already
 // (This avoids needing to add it to index.html)
@@ -402,8 +498,128 @@ document.addEventListener('click', function(event) {
 });
 
 
+function fetchDetailRowLists(){
+        // --- Fetch Server Stats (for other lists) ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const statsUrl = `/get_stats?${urlParams.toString()}`;
+    fetch(statsUrl).then(response => {
+        return response.json();
+    }).then(data => {
+        if (data.status === 'success' && data.data) {
+            const serverStatsData = data.data;
+            function populateListFromServer(listElementId, dataArray) { //for items with count >=2
+                const listElement = document.getElementById(listElementId);
+                listElement.innerHTML = '';
+                if (!dataArray || dataArray.length === 0) {
+                    listElement.innerHTML = '<li>No items with count > 1.</li>';
+                    return;
+                }
+                dataArray.forEach(item => {
+                    const listItem = document.createElement('li');
+                    const escapedName = (item.name || '').toString()
+                        .replace(/&/g, "&amp;").replace(/</g, "<")
+                        .replace(/>/g, ">").replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#39;");
+                    // --- Preserve Original Structure ---
+                    const countSpan = document.createElement('span');
+                    countSpan.className = 'count';
+                    countSpan.textContent = item.count;
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'name';
+                    nameSpan.textContent = escapedName;
+                    // --- NEW: Create search button element ---
+                    const searchButton = document.createElement('button');
+                    searchButton.type = 'button'; // Important to prevent form submission if inside one
+                    searchButton.className = 'search-item-btn'; // Add a specific class for styling/listening
+                    searchButton.title = `Search for "${item.name}"`;
+                    searchButton.textContent = '🔍'; // Or use an icon image
+                    // --- NEW: Add click event listener to the button ---
+                    searchButton.addEventListener('click', function(event) {
+                        event.stopPropagation(); // Prevent triggering other click listeners on the <li>
+                        searchInput.value = item.name; // Set the search input value
+                        closeModal(); // Close the stats modal
+                        // Trigger the existing search mechanism (which includes debouncing)
+                        const inputEvent = new Event('input', { bubbles: true });
+                        searchInput.dispatchEvent(inputEvent);
+                    });
+                    // --- Append elements preserving the original structure ---
+                    listItem.appendChild(countSpan);
+                    listItem.appendChild(searchButton); 
+                    listItem.appendChild(nameSpan);
+                    listElement.appendChild(listItem);
+                });
+            }
+            function populateAllListFromServer(listElementId, dataArray) { //for ALL items, not just repeating ones
+                const listElement = document.getElementById(listElementId);
+                listElement.innerHTML = '';
+                if (!dataArray || dataArray.length === 0) {
+                    listElement.innerHTML = '<li>No non-empty items found.</li>';
+                    return;
+                }
+                dataArray.forEach(item => {
+                    const listItem = document.createElement('li');
+                    const escapedName = (item.name || '').toString()
+                        .replace(/&/g, "&amp;").replace(/</g, "<")
+                        .replace(/>/g, ">").replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#39;");
+                    // --- Preserve Original Structure ---
+                    const countSpan = document.createElement('span');
+                    countSpan.className = 'count';
+                    countSpan.textContent = item.count;
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'name';
+                    nameSpan.textContent = escapedName;
+                    // --- NEW: Create search button element ---
+                    const searchButton = document.createElement('button');
+                    searchButton.type = 'button';
+                    searchButton.className = 'search-item-btn';
+                    searchButton.title = `Search for "${item.name}"`;
+                    searchButton.textContent = '🔍';
+                    // --- NEW: Add click event listener to the button ---
+                    searchButton.addEventListener('click', function(event) {
+                        event.stopPropagation();
+                        searchInput.value = item.name;
+                        closeModal();
+                        const inputEvent = new Event('input', { bubbles: true });
+                        searchInput.dispatchEvent(inputEvent);
+                    });
+                    // --- Append elements preserving the original structure ---
+                    listItem.appendChild(countSpan);
+                    listItem.appendChild(searchButton);
+                    listItem.appendChild(nameSpan);
+                    listElement.appendChild(listItem);
+                });
+            }
+            // Populate Server Lists (Keywords, Authors, etc.)
+            populateListFromServer('keywordStatsList', serverStatsData.keywords);
+            populateListFromServer('authorStatsList', serverStatsData.authors);
+            populateListFromServer('researchAreaStatsList', serverStatsData.research_areas);
+            populateAllListFromServer('otherDetectedFeaturesStatsList', serverStatsData.other_features_all);
+            populateAllListFromServer('modelNamesStatsList', serverStatsData.model_names_all);
+        } else {
+            // Handle potential fetch error - still populate client-side lists if possible
+            console.error("Failed to fetch server stats:", data);
+        }
+    })
+}
+
+function showApplyButton(){  applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; }
+
 document.addEventListener('DOMContentLoaded', function () {
-        
+    
+    yearFromInput.addEventListener('change', showApplyButton);
+    yearToInput.addEventListener('change', showApplyButton);
+    minPageCountInput.addEventListener('change', showApplyButton);
+    hideOfftopicCheckbox.addEventListener('change', applyServerSideFilters);
+
+    applyButton.addEventListener('click', applyServerSideFilters);
+    document.getElementById('search-input').addEventListener('input', function () {
+        clearTimeout(filterTimeoutId);
+        filterTimeoutId = setTimeout(() => {
+            applyServerSideFilters();
+        }, 300);  //additional debounce for typing
+    });
+
     // Click Handler for Editable Status Cells
     document.addEventListener('click', function (event) {
         // Check if the clicked element is an editable status cell

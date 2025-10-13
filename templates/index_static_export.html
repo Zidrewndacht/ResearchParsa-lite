@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html class="busyCursor">
 <head>
-    <title>ResearchParça - PCB Inspection Papers</title>
+    <title>HTML Export - ResearchParça - PCB Inspection Papers</title>
     <link rel="stylesheet" type="text/css" href="static/fonts.css">
     <style>
     {{ style_css_content | safe }}
@@ -19,7 +19,7 @@
     {{ chart_js_content | safe }}
     </script>
 </head>
-<body>
+<body id="html-export">
 <div class="table-container">
     <div id="papers-table-container">
         <table id="papersTable" style="table-layout: fixed;">
@@ -89,8 +89,8 @@
                                 <input type="number" id="year-to" value="{{ year_to_value }}" min="{{ year_from_value }}" max="{{ year_to_value }}" title="Exported file contains papers from {{ year_from_value }} to {{ year_to_value }}.">
                             </div>
                             <div>
-                                <button class="action-btn" id="static-about-btn" title="About / Help" ><span>?</span></button>
-                                <button class="action-btn" id="static-stats-btn">View <strong>Statistics</strong></button>
+                                <button class="action-btn" id="about-btn" title="About / Help" ><span>?</span></button>
+                                <button class="action-btn" id="stats-btn">View <strong>Statistics</strong></button>
                             </div>
                         </div>
                     </th>
@@ -109,8 +109,10 @@
                     </th>
                     
                     <th class="ontop-header" colspan="7" rowspan="2" >
-                        
-                        <input type="search" id="search-input" placeholder="Type to search all fields..." value="{{ search_query_value }}">
+                        <div class="search-container">
+                            <input type="search" id="search-input" placeholder="Type to search all fields..." value="{{ search_query_value }}">
+                            <button type="button" id="clear-search-btn" class="clear-btn" title="Clear search">&times;</button>
+                        </div>
                     </th>
                 </tr>
                 <tr>
@@ -135,10 +137,15 @@
                             <input type="checkbox" title="Enable to include papers about solder features" id="show-solder-checkbox">
                         </div>
                     </th>
-                    <th class="inferred-header inferred-header-2 ontop-header" colspan="6">
+                    <th class="inferred-header inferred-header-2 ontop-header" colspan="5">
                         <div>
-                            <span>PCBA</span>
-                            <input type="checkbox" title="Enable to include papers about PCBA features" id="show-pcba-checkbox">    
+                            <span>PCBA / Other</span>
+                            <input type="checkbox" title="Enable to include (or limit to if it's the only checkbox enabled) papers about PCBA features" id="show-pcba-checkbox">    
+                        </div>
+                    </th>
+                    <th class="inferred-header inferred-header-2 ontop-header" colspan="1">
+                        <div>
+                            <input type="checkbox" title="Enable to include (or limit to if it's the only checkbox enabled) papers about PCBA features" id="show-other-checkbox">    
                         </div>
                     </th>
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="8">Techniques</th>
@@ -208,145 +215,21 @@
 <div id="statsModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <div class="stats-lists">
-            <!-- <div class="stats-section">
-                <h3>Repeating <strong>Journal/Conferences</strong><span style="font-size:0.6em"> — Scroll down on each list for more ↓</span></h3> </span></h3>  
-                <ul id="journalStatsList" class="stats-list-multicolumn-2"></ul>
-            </div> -->
-            <div class="stats-section">
-                <h3>Repeating <strong>Journals</strong> <span style="font-size:0.6em"> — Scroll down on each list for more ↓</span></h3>
-                <ul id="journalStatsList" class="stats-list-multicolumn-2"></ul>
-            </div>
-            <div class="stats-section">
-                <h3>Repeating <strong>Conferences</strong> <span style="font-size:0.6em">↓</span></h3>
-                <ul id="conferenceStatsList" class="stats-list-multicolumn-2"></ul> 
-            </div>
-            <div class="stats-section">
-                <h3>Repeating <strong>Keywords</strong> <span style="font-size:0.6em">↓</span></h3>
-                <ul id="keywordStatsList" class="stats-list-multicolumn-short"></ul>        
-            </div>
-            <div class="stats-section">
-                <h3>Repeating <strong>Authors</strong> <span style="font-size:0.6em">↓</span></h3>
-                <ul id="authorStatsList" class="stats-list-multicolumn-short"></ul>
-            </div>
-            <div class="stats-section" style="display: none;">
-                <h3>Repeating <strong>Research Areas</strong> <span style="font-size:0.6em">↓</span></h3>
-                <ul id="researchAreaStatsList" class="stats-list-multicolumn-short"></ul>
-            </div>
-            <div class="stats-section">
-                <h3>Mentioned <strong>other detected features</strong> <span style="font-size:0.6em">↓</span></h3>
-                <ul id="otherDetectedFeaturesStatsList" class="stats-list-multicolumn-2"></ul>
-            </div>
-            <div class="stats-section">
-                <h3>Mentioned <strong>Model Names</strong> <span style="font-size:0.6em">↓</span></h3>
-                <ul id="modelNamesStatsList" class="stats-list-multicolumn-short"></ul>
-            </div>
-        </div>
-        <div class="stats-charts">
-            <div class="stats-section">
-                <h3><strong>Techniques</strong> Distribution</h3>
-                <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto;">
-                    <canvas id="techniquesPieChart"></canvas>
-                </div>
-            </div>
-            <div class="stats-section">
-                <h3><strong>Features</strong> Distribution</h3>
-                <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto;">
-                    <canvas id="featuresPieChart"></canvas>
-                </div>
-            </div>
-            <div class="stats-section">                
-                <h3><strong>Publication Types</strong> per Year</h3>
-                <div class="chart-container-fullwidth" style="height: calc(80% - 20px); margin: auto;">
-                    <canvas id="pubTypesPerYearLineChart"></canvas>
-                </div>
-            </div>
-            <div class="stats-section">
-                <h3><strong>Techniques</strong> per Year <span style="font-size:0.6em"> — Click on a label to show/hide its data and reflow the chart</span></h3>
-                <div class="chart-container-fullwidth" style="height:calc(100% - 43px); margin: auto;">
-                    <canvas id="techniquesPerYearLineChart"></canvas>
-                </div>
-            </div>
-
-            <div class="stats-section">
-                <h3><strong>Features</strong> per Year  <span style="font-size:0.6em"> — Data in this page is dynamically calculated based on <strong>currently visible</strong> papers.</span></h3>
-                <div class="chart-container-fullwidth" style="height:calc(100% - 43px); margin: auto;">
-                    <canvas id="featuresPerYearLineChart"></canvas>
-                </div>
-            </div>
-            <div class="stats-section">
-                <h3><strong>Survey</strong> vs <strong>Implementation</strong> Papers per Year</h3>
-                <div class="chart-container-fullwidth" style="height:calc(80% - 20px);  margin: auto;">
-                    <canvas id="surveyVsImplLineChart"></canvas>
-                </div>
-            </div>
-        </div>
+        {% include 'stats_modal_content.html' %}
     </div>
 </div>
 
 <div id="aboutModal" class="modal">
     <div class="modal-small-content">
-        <span class="close">&times;</span>
-        <div class="modal-small-section">
-            <h3><strong>Quick Help</strong> Guide</h3>
-            <p style="margin-bottom: 0"><strong>Understanding the Symbols:</strong></p>
-                <p style="margin: 0"><strong style="font-size:1.75em">✔️</strong>: Confirmed "Yes" (e.g., paper is a Survey, uses SMT, etc.);</p>
-                <p style="margin: 0"><strong style="font-size:1.75em">❌</strong>: Confirmed "No";</p>
-                <p style="margin: 0"><strong style="font-size:1.75em">❔</strong>: Unknown / Not Classified / Not Applicable;</p>
-                <p style="margin: 0"><strong style="font-size:1.75em">👤</strong>: Last changed or verified by the (hopefully human) user;</p>
-                <p style="margin: 0"><strong style="font-size:1.75em">🖥️</strong>: Last changed or verified by an AI Model (hover for model name);</p>
-
-            <p><strong>How to Use:</strong></p>
-                <p><strong>Filter Papers:</strong> Use the year range, minimum page count, and the search bar at the top. Press "Apply" (appears on change) for server-side filters.</p>
-                <p><strong>Toggle Columns:</strong> Use checkboxes like "Hide Offtopic", "Hide X-Ray", or "Only Survey" for quick client-side filtering. As the checkboxes have no permanent labels, hover each checkbox to identify its purpose.</p>
-                <p><strong>Classify/Verify:</strong> Click the "Classify this paper" or "Verify this paper" button in the detail row to run AI on a single paper. Use the top buttons for batch processing.</p>
-                <p><strong>Search:</strong> Type on the search bar for instant search on all relevant fields. User comments are searchable. Classifier/Verifier traces are not (to avoid false-positives/noise)</p>
-                <p><strong>View Statistics:</strong> Click the "View Statistics" button to see charts and lists of repeating journals, authors, keywords, and mentioned features/models as well as relevant charts. 
-                    The stats are calculated based on currently visible filtered data.</p>
-                <p><strong>Import/Export and Edit Data:</strong> These functionalities are unavailable on HTML exports. Use the full Flask application instead.</p> 
-
-
-            <p><strong>Tip:</strong> The table is pre-sorted to show papers with user comments first. You can click any column header to sort by that field.</p>
-        </div>
-        <div class="modal-small-section" style="background: var(--detail-button-background);">
-            <h3><strong>About</strong></h3>
-                <div class="header-branding" style="padding: 10px 0 0;  text-align: center;"><span>Research</span><span style="font-weight: 600; color: var(--primary-ui-color);">Parça</span></div>
-                <p><strong><a href="https://github.com/Zidrewndacht/bibtex-custom-parser" target="_blank" rel="noopener">ReseachParça</a> - PCB Inspection Papers Database Browser.</a></strong></p>
-                <p>Developed by <a href="https://zidrewndacht.github.io/" target="_blank" rel="noopener"><strong>Luis Alfredo da Silva</strong></a>, 
-                    to assist his own Master's degree research at <strong><a href="https://www.udesc.br/cct" target="_blank" rel="noopener">Universidade do Estado de Santa Catarina <strong>(UDESC)</strong></a></strong>. </p>
-                <p>The following open source libraries, and its dependencies, are leveraged by this software:</p>
-                <p><strong>Backend:</strong> 
-                    <a href="https://www.python.org/" target="_blank" rel="noopener">Python</a>, 
-                    <a href="https://flask.palletsprojects.com/" target="_blank" rel="noopener">Flask</a>, 
-                    <a href="https://www.sqlite.org/" target="_blank" rel="noopener">SQLite3</a>
-                </p>
-                <p><strong>Frontend:</strong> 
-                    <a href="https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/HTML5" target="_blank" rel="noopener">HTML5</a>, 
-                    <a href="https://developer.mozilla.org/en-US/docs/Web/CSS" target="_blank" rel="noopener">CSS3</a>, 
-                    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noopener">JavaScript (Vanilla JS)</a>, <a href="https://www.chartjs.org/" target="_blank" rel="noopener">Chart.js</a>
-                </p>
-                <p><strong>Utilities:</strong> 
-                    <a href="https://opensource.perlig.de/rcssmin/" target="_blank" rel="noopener">rcssmin</a>, 
-                    <a href="https://opensource.perlig.de/rjsmin/" target="_blank" rel="noopener">rjsmin</a> (minification), 
-                    <a href="https://openpyxl.readthedocs.io/" target="_blank" rel="noopener">openpyxl</a> (Excel export), 
-                    <a href="https://nodeca.github.io/pako/" target="_blank" rel="noopener">pako</a> (compressed HTML export)
-                </p>
-                <p>Classification and verification was inferenced by Unsloth's Dynamic quants of <strong><a href="https://huggingface.co/unsloth/Qwen3-30B-A3B-Thinking-2507-GGUF" target="_blank" rel="noopener">Qwen3-30B-A3B-Thinking-2507</a></strong> model from <strong><a href="https://www.alibabacloud.com/en/solutions/generative-ai/qwen?_p_lc=1" target="_blank" rel="noopener">Qwen/Alibaba Cloud</a>.</strong></p>
-                <p><strong>Local Inference engine:</strong> <a href="https://github.com/ggerganov/llama.cpp" target="_blank" rel="noopener">llama.cpp</a>.</p>
-                <p>Original papers data (BibTeX) was sourced from 
-                    <a href="https://www.scopus.com/" target="_blank" rel="noopener">Scopus</a>, 
-                    <a href="https://ieeexplore.ieee.org/" target="_blank" rel="noopener">IEEE Xplore</a> (some) and 
-                    <a href="https://dl.acm.org/" target="_blank" rel="noopener">ACM Digital Library</a>
-                </p>
-                <p><strong>Original search query:</strong>
-                    <span style="font-size:0.75em">("printed circuit*" OR "Circuit board*" OR pcb OR pcba) AND (inspection OR manufactur* OR assembly OR defect* OR solder* OR weld* OR "Automat* optical")</span>
-                </p>
-            </div>
-        </div>
+        <span class="close">&times;</span>      
+        {% include 'about_modal_content.html' %}
     </div>
 </div>
+
 <script>
     {{ ghpages_js_content | safe }}
+    {{ stats_js_content | safe }}
+    {{ filtering_js_content | safe }}
 </script>
 </body>
 </html>

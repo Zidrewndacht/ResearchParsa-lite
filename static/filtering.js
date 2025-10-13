@@ -1,47 +1,59 @@
 // static/filtering.js
-
-function toggleDetails(element) {
-    const row = element.closest('tr');
-    const detailRow = row.nextElementSibling;
-    const isExpanded = detailRow && detailRow.classList.contains('expanded');
-    const paperId = row.getAttribute('data-paper-id');
-
-    if (isExpanded) {
-        detailRow.classList.remove('expanded');
-        element.innerHTML = '<span>Show</span>';
-    } else {
-        detailRow.classList.add('expanded');
-        element.innerHTML = '<span>Hide</span>';
-        const contentPlaceholder = detailRow.querySelector('.detail-content-placeholder');
-        fetch(`/get_detail_row?paper_id=${encodeURIComponent(paperId)}`)
-            .then(response => {
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === 'success' && data.html) {
-                    contentPlaceholder.innerHTML = data.html;
-                } else {  // Handle error from server
-                    console.error(`Error loading detail row for paper ${paperId}:`, data.message);
-                    if (contentPlaceholder) {
-                        contentPlaceholder.innerHTML = `<p>Error loading details: ${data.message || 'Unknown error'}</p>`;
-                    }
-                }
-            })
-            .catch(error => {  // Handle network or other errors
-                console.error(`Error fetching detail row for paper ${paperId}:`, error);
-                if (contentPlaceholder) {
-                    contentPlaceholder.innerHTML = `<p>Error loading details: ${error.message}</p>`;
-                }
-            });
-    }
-}
+/** everything left here should be mostly ready for direct reuse in GH export.
+ * Finish refactoring later. 
+ */
 
 /**
  * Applies alternating row shading to visible main rows.
  * Ensures detail rows follow their main row's shading.
  * Each "paper group" (main row + detail row) gets a single alternating color.
+ * Should be pure client-side to be reused for HTML export
  */
-function applyAlternatingShading() {
+
+//Hardocoded cells - used for multiple scripts:
+const pdfCellIndex = 0;
+const titleCellIndex = 1;
+const yearCellIndex = 2;
+const pageCountCellIndex = 3;
+const journalCellIndex = 4;
+const typeCellIndex = 5;
+const relevanceCellIndex = 7;
+const estScoreCellIndex = 38;
+
+
+const searchInput = document.getElementById('search-input');
+const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
+const hideXrayCheckbox = document.getElementById('hide-xray-checkbox');
+const hideApprovedCheckbox = document.getElementById('hide-approved-checkbox');
+const onlySurveyCheckbox = document.getElementById('only-survey-checkbox');
+const showPCBcheckbox = document.getElementById('show-pcb-checkbox');
+const showSolderCheckbox = document.getElementById('show-solder-checkbox');
+const showPCBAcheckbox = document.getElementById('show-pcba-checkbox');
+const noFeaturesCheckbox = document.getElementById('no-features-checkbox');
+const showOtherCheckbox = document.getElementById('show-other-checkbox');
+
+let filterTimeoutId = null;
+const FILTER_DEBOUNCE_DELAY = 200;
+
+const headers = document.querySelectorAll('th[data-sort]');
+let currentClientSort = { column: null, direction: 'ASC' };
+
+
+const SYMBOL_SORT_WEIGHTS = {
+    '✔️': 2,
+    '❌': 1,
+    '❔': 0
+};
+
+const SYMBOL_PDF_WEIGHTS = {
+    '📗': 3, // Annotated
+    '📕': 2, // PDF
+    '❔': 1,  // None
+    '💰': 0 // Paywalled
+};
+
+
+function applyAlternatingShading() {   
     // Select only visible main rows
     const visibleMainRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
 
@@ -63,7 +75,7 @@ function applyAlternatingShading() {
     });
 }
 
-function applyDuplicateShading(rows) {
+function applyDuplicateShading(rows) {  // not used in HTML export due to performance concerns.
     const journalCounts = new Map();
     const titleCounts = new Map();
 
@@ -150,62 +162,61 @@ function applyDuplicateShading(rows) {
     });
 }
 
-function applyServerSideFilters() {
-    document.documentElement.classList.add('busyCursor');
-    const urlParams = new URLSearchParams(window.location.search);
+// --- Tri-State Survey Filter Logic (Add to globals.js) ---
+// Define the states for the survey filter
+const SURVEY_FILTER_STATES = {
+    ALL: 'all',           // Default: Show all papers
+    ONLY_SURVEYS: 'surveys', // Show only papers marked as surveys (✔️)
+    ONLY_NON_SURVEYS: 'non_surveys' // Show only papers NOT marked as surveys (❌ or ❔)
+};
 
-    const isOfftopicChecked = hideOfftopicCheckbox.checked;
-    urlParams.set('hide_offtopic', isOfftopicChecked ? '1' : '0');
+// Store the current state of the survey filter
+let currentSurveyFilterState = SURVEY_FILTER_STATES.ALL; // Start with showing all
 
-    const yearFromValue = document.getElementById('year-from').value.trim();
-    if (yearFromValue !== '' && !isNaN(parseInt(yearFromValue))) {
-        urlParams.set('year_from', yearFromValue);
-    } else {
-        urlParams.delete('year_from');
-    }
-    const yearToValue = document.getElementById('year-to').value.trim();
-    if (yearToValue !== '' && !isNaN(parseInt(yearToValue))) {
-        urlParams.set('year_to', yearToValue);
-    } else {
-        urlParams.delete('year_to');
-    }
+// Function to cycle the checkbox's visual state and update the title
+function updateSurveyCheckboxUI() {
+    const checkbox = onlySurveyCheckbox; // Reference from your globals
+    const state = currentSurveyFilterState;
 
-    const minPageCountValue = document.getElementById('min-page-count').value.trim();
-    if (minPageCountValue !== '' && !isNaN(parseInt(minPageCountValue))) {
-        urlParams.set('min_page_count', minPageCountValue);
-    } else {
-        urlParams.delete('min_page_count');
-    }
+    // Remove any previous tri-state classes (if you add custom styling)
+    checkbox.classList.remove('tri-state-indeterminate'); // Example class
 
-    const searchValue = document.getElementById('search-input').value.trim();
-    if (searchValue !== '') {
-        urlParams.set('search_query', searchValue);
-    } else {
-        urlParams.delete('search_query');
+    switch (state) {
+        case SURVEY_FILTER_STATES.ALL:
+            checkbox.checked = false;
+            checkbox.indeterminate = false; // Ensure indeterminate is off
+            checkbox.title = 'Currently showing all papers. Click to show only Survey papers';
+            break;
+        case SURVEY_FILTER_STATES.ONLY_SURVEYS:
+            checkbox.checked = true; // Visually checked
+            checkbox.indeterminate = false;
+            checkbox.title = 'Currently showing only Surveys. Click to show only implementation (non-survey) papers';
+            break;
+        case SURVEY_FILTER_STATES.ONLY_NON_SURVEYS:
+            checkbox.checked = false; // Visually unchecked
+            checkbox.indeterminate = true; // Use indeterminate to show the third state
+            checkbox.title = 'Currently showing only implementation (non-survey) papers. Click to show All papers';
+            break;
     }
-    // Construct the URL for the /load_table endpoint with current parameters
-    const loadTableUrl = `/load_table?${urlParams.toString()}`;
-    fetch(loadTableUrl)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.text();
-        })
-        .then(html => {
-            const tbody = document.querySelector('#papersTable tbody');
-            if (tbody) {
-                tbody.innerHTML = html;
-                const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
-                window.history.replaceState({ path: newUrl }, '', newUrl);
-                applyLocalFilters(); //update local filters and let it remove busy state
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching updated table:', error);
-            document.documentElement.classList.remove('busyCursor');
-        });
 }
+
+// Function to cycle the filter state on click
+function cycleSurveyFilterState() {
+    switch (currentSurveyFilterState) {
+        case SURVEY_FILTER_STATES.ALL:
+            currentSurveyFilterState = SURVEY_FILTER_STATES.ONLY_SURVEYS;
+            break;
+        case SURVEY_FILTER_STATES.ONLY_SURVEYS:
+            currentSurveyFilterState = SURVEY_FILTER_STATES.ONLY_NON_SURVEYS;
+            break;
+        case SURVEY_FILTER_STATES.ONLY_NON_SURVEYS:
+            currentSurveyFilterState = SURVEY_FILTER_STATES.ALL;
+            break;
+    }
+    updateSurveyCheckboxUI();
+    applyLocalFilters(); // Re-apply filters after state change
+}
+
 
 function applyLocalFilters() {
     clearTimeout(filterTimeoutId);
@@ -214,13 +225,14 @@ function applyLocalFilters() {
         const tbody = document.querySelector('#papersTable tbody');
         if (!tbody) return;
         const hideXrayChecked = hideXrayCheckbox.checked;
-        const onlySurveyChecked = onlySurveyCheckbox.checked;
+        //const onlySurveyChecked = onlySurveyCheckbox.checked; //not a normal checkbox anymore.
         const hideApprovedChecked = hideApprovedCheckbox.checked;
 
         // --- NEW: Get the state of PCB/Solder/PCBA checkboxes ---
         const showPCBChecked = showPCBcheckbox.checked;
         const showSolderChecked = showSolderCheckbox.checked;
         const showPCBAChecked = showPCBAcheckbox.checked;
+        const showOtherChecked = showOtherCheckbox.checked;
         const showNoFeaturesChecked = noFeaturesCheckbox.checked;
 
         const rows = tbody.querySelectorAll('tr[data-paper-id]');
@@ -228,16 +240,120 @@ function applyLocalFilters() {
             let showRow = true;
             let detailRow = row.nextElementSibling; // Get the associated detail row
 
+            if (document.body.id === 'html-export') {   //full-client-side implementation for GH pages:
+                const hideOfftopicChecked = hideOfftopicCheckbox.checked;
+                
+                if (showRow && hideOfftopicChecked) {
+                    const offtopicCell = row.querySelector('.editable-status[data-field="is_offtopic"]');
+                    if (offtopicCell && offtopicCell.textContent.trim() === '✔️') {
+                        showRow = false;
+                    }
+                }
+                
+                // 2. Minimum Page Count
+                // Only hide if page count is a known number and it's less than the minimum
+                const minPageCountValue = document.getElementById('min-page-count').value.trim();
+                if (showRow && minPageCountValue > 0) { // Only check if min value is set
+                    const pageCountCell = row.cells[4]; // Index 4 for 'Pages' column
+                    if (pageCountCell) {
+                        const pageCountText = pageCountCell.textContent.trim();
+                        // Only filter if there's actual text to parse
+                        if (pageCountText !== '') {
+                            const pageCount = parseInt(pageCountText, 10);
+                            // If parsing was successful and the number is less than the minimum, hide
+                            if (!isNaN(pageCount) && pageCount < minPageCountValue) {
+                                showRow = false;
+                            }
+                        }
+                        // If pageCountText is '', pageCount is NaN, or pageCount >= min, row stays visible
+                    }
+                }
+
+                // 3. Year Range
+                const yearFromValue = document.getElementById('year-from').value.trim();
+                const yearToValue = document.getElementById('year-to').value.trim();
+                if (showRow) {
+                    const yearCell = row.cells[2]; // Index 2 for 'Year' column
+                    if (yearCell) {
+                        const yearText = yearCell.textContent.trim();
+                        const year = yearText ? parseInt(yearText, 10) : NaN;
+                        // If year is not a number or outside the range, hide the row
+                        // Ensure year is valid before comparison
+                        if (isNaN(year) || year < yearFromValue || year > yearToValue) {
+                            showRow = false;
+                        }
+                    }
+                }
+
+                // 4. Search Term - added model name, etc. values search.
+                const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+                if (showRow && searchTerm) {
+                    let rowText = (row.textContent || '').toLowerCase();
+                    let detailText = '';
+                    let inputValuesText = ''; // NEW: To store values from input fields
+
+                    if (detailRow) {
+                        const detailClone = detailRow.cloneNode(true);
+                        // Exclude traces from search if desired (as in original)
+                        detailClone.querySelector('.detail-evaluator-trace .trace-content')?.remove();
+                        detailClone.querySelector('.detail-verifier-trace .trace-content')?.remove();
+                        detailText = (detailClone.textContent || '').toLowerCase();
+
+                        // NEW: Extract values from specific input fields in the detail row
+                        const inputSelectors = [
+                            'input[name="research_area"]',
+                            'input[name="model_name"]',
+                            'input[name="features_other"]',
+                            'input[name="user_trace"]' // Also include user comments if desired
+                        ];
+
+                        inputSelectors.forEach(selector => {
+                            const inputElement = detailRow.querySelector(selector);
+                            if (inputElement && inputElement.value) {
+                                inputValuesText += ' ' + inputElement.value.toLowerCase();
+                            }
+                        });
+
+                        // NEW: Also check textarea values if needed, e.g., user_trace
+                        const textareaElement = detailRow.querySelector('textarea[name="user_trace"]');
+                        if (textareaElement && textareaElement.value) {
+                            inputValuesText += ' ' + textareaElement.value.toLowerCase();
+                        }
+                    }
+
+                    // Check if the term is in the main row text, the detail text (excluding traces), OR the input values
+                    if (!rowText.includes(searchTerm) && !detailText.includes(searchTerm) && !inputValuesText.includes(searchTerm)) {
+                        showRow = false;
+                    }
+                }
+            }
+
+            // NEW: Apply the tri-state survey filter logic
+            if (showRow) {
+                const surveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
+                const surveyStatus = surveyCell ? surveyCell.textContent.trim() : '❔'; // Default to unknown if cell not found
+
+                switch (currentSurveyFilterState) {
+                    case SURVEY_FILTER_STATES.ONLY_SURVEYS:
+                        // Show only if status is '✔️'
+                        if (surveyStatus !== '✔️') {
+                            showRow = false;
+                        }
+                        break;
+                    case SURVEY_FILTER_STATES.ONLY_NON_SURVEYS:
+                        // Show only if status is '❌' or '❔'
+                        if (surveyStatus === '✔️') {
+                            showRow = false;
+                        }
+                        break;
+                    // For SURVEY_FILTER_STATES.ALL, showRow remains unchanged (default)
+                }
+            }
+
             // Existing filters (X-Ray, Survey, Approved)
             if (showRow && hideXrayChecked) {
                 const xrayCell = row.querySelector('.editable-status[data-field="is_x_ray"]');
                 if (xrayCell && xrayCell.textContent.trim() === '✔️') {
-                    showRow = false;
-                }
-            }
-            if (showRow && onlySurveyChecked) {
-                const surveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
-                if (surveyCell && surveyCell.textContent.trim() === '❌') {
                     showRow = false;
                 }
             }
@@ -247,13 +363,12 @@ function applyLocalFilters() {
                     showRow = false;
                 }
             }
-
-            // --- Apply NEW PCB/Solder/PCBA Group Filters (Inclusion via OR Logic) ---
-            // Only apply this filter if at least one group is enabled (checked)
-            if (showRow && (showPCBChecked || showSolderChecked || showPCBAChecked)) {
+            
+            if (showRow && (showPCBChecked || showSolderChecked || showPCBAChecked || showOtherChecked)) { // Add showOtherChecked here
                 let hasPCBFeature = false;
                 let hasSolderFeature = false;
                 let hasPCBAFeature = false;
+                let hasOtherFeature = false; // NEW: Add variable for 'Other' group
 
                 // Helper function to check if a paper has ANY '✔️' in a given list of feature fields
                 const hasAnyFeature = (featureFields) => {
@@ -262,8 +377,7 @@ function applyLocalFilters() {
                         return cell && cell.textContent.trim() === '✔️';
                     });
                 };
-
-                // Define feature fields for each group
+                    
                 const pcbFeatures = ['features_tracks', 'features_holes', 'features_bare_pcb_other'];
                 const solderFeatures = [
                     'features_solder_insufficient',
@@ -272,15 +386,16 @@ function applyLocalFilters() {
                     'features_solder_crack',
                     'features_solder_other'
                 ];
-                const pcbaFeatures = [
+                const pcbaFeatures = [ // Remove 'features_other_state' from here
                     'features_orientation',
                     'features_missing_component',
                     'features_wrong_component',
                     'features_component_other',
                     'features_cosmetic',
-                    'features_other_state'
-                ];
-
+                    'features_other_state' // <-- Remove this line
+                ]; 
+                // NEW: Define features for the 'Other' group
+                const otherFeatures = ['features_other_state'];
                 // Check which groups the paper belongs to (has at least one ✔️)
                 if (showPCBChecked) {
                     hasPCBFeature = hasAnyFeature(pcbFeatures);
@@ -291,11 +406,15 @@ function applyLocalFilters() {
                 if (showPCBAChecked) {
                     hasPCBAFeature = hasAnyFeature(pcbaFeatures);
                 }
+                // NEW: Check if the 'Other' group is enabled and the paper has the 'Other' feature
+                if (showOtherChecked) { // Only check if the 'Other' checkbox is enabled
+                    hasOtherFeature = hasAnyFeature(otherFeatures); // Check for 'features_other_state'
+                }
 
                 // The core OR logic:
                 // Hide the row ONLY if it does NOT belong to ANY of the enabled groups.
                 // In other words, show the row if it belongs to at least one enabled group.
-                if (!(hasPCBFeature || hasSolderFeature || hasPCBAFeature)) {
+                if (!(hasPCBFeature || hasSolderFeature || hasPCBAFeature || hasOtherFeature)) { // Add hasOtherFeature here
                     showRow = false;
                 }
             }
@@ -335,11 +454,13 @@ function applyLocalFilters() {
             }
         });
 
-        applyAlternatingShading();
-        applyDuplicateShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
+        if (document.body.id !== 'html-export') {
+            applyAlternatingShading();
+            applyDuplicateShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
+            applyButton.style.opacity = '0';
+            applyButton.style.pointerEvents = 'none';
+        }
         updateCounts();
-        applyButton.style.opacity = '0';
-        applyButton.style.pointerEvents = 'none';
         setTimeout(() => {
             document.documentElement.classList.remove('busyCursor');
         }, 150); // doesn't really work since the contents are completely replaced eliminating the animation. Not worth fixing.
@@ -438,33 +559,25 @@ function sortTable(){
     }, 20); // Initial defer for adding busy cursor (can keep this small or match rAF timing ~16ms)
 }
 
-function showApplyButton(){  applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; }
-
 document.addEventListener('DOMContentLoaded', function () {
-    hideOfftopicCheckbox.addEventListener('change', applyServerSideFilters);
     hideXrayCheckbox.addEventListener('change', applyLocalFilters);
     hideApprovedCheckbox.addEventListener('change', applyLocalFilters);
-    onlySurveyCheckbox.addEventListener('change', applyLocalFilters);
+    onlySurveyCheckbox.addEventListener('click', cycleSurveyFilterState); // Use 'click' to handle cycling
     showPCBcheckbox.addEventListener('change', applyLocalFilters);
     showSolderCheckbox.addEventListener('change', applyLocalFilters);
     showPCBAcheckbox.addEventListener('change', applyLocalFilters);
     noFeaturesCheckbox.addEventListener('change', applyLocalFilters);
+    showOtherCheckbox.addEventListener('change', applyLocalFilters);
 
-    yearFromInput.addEventListener('change', showApplyButton);
-    yearToInput.addEventListener('change', showApplyButton);
-    minPageCountInput.addEventListener('change', showApplyButton);
 
-    applyButton.addEventListener('click', applyServerSideFilters);
-
-    document.getElementById('search-input').addEventListener('input', function () {
-        clearTimeout(filterTimeoutId);
-        filterTimeoutId = setTimeout(() => {
-            applyServerSideFilters();
-        }, 300);  //additional debounce for typing
+    document.getElementById('clear-search-btn').addEventListener('click', function() {
+        searchInput.value = ''; // Clear the input value
+        searchInput.dispatchEvent(new Event('input'));
     });
-    
+
     headers.forEach(header => { header.addEventListener('click', sortTable);   });
-    applyLocalFilters(); //apply initial filtering    
+    applyLocalFilters(); //apply initial filtering   
+    updateSurveyCheckboxUI();     // Initialize the checkbox UI on page load
 
     // 2. After initial filters are applied (which includes the initial sortTable call
     //    if triggered by applyLocalFilters, but we'll override it),
