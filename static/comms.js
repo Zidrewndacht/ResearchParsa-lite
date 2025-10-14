@@ -1,7 +1,24 @@
 // static/comms.js
-/** For detail row retrieval and functionality that writes to the server (DB updates, etc). */
+/** For detail row retrieval and any functionality that reads/writes to the server (DB query/updates, etc). 
+ * Some functions here are reimplemented as a client-side version in ghpages.js for the HTML export.
+ * */
 // --- New Global Variables for Batch Status ---
 let isBatchRunning = false; // Simple flag to prevent multiple simultaneous batches
+
+
+// --- Status Cycling Logic ---
+const STATUS_CYCLE = {
+    '❔': { next: '✔️', value: 'true' },
+    '✔️': { next: '❌', value: 'false' },
+    '❌': { next: '❔', value: 'unknown' }
+};
+const VERIFIED_BY_CYCLE = {
+    '👤': { next: '❔', value: 'unknown' }, 
+    '❔': { next: '👤', value: 'user' },   
+    // If user sees Computer (🖥️), next is User:
+    // We assume the user wants to override/review it, not set it to computer.
+    '🖥️': { next: '👤', value: 'user' } 
+};
 
 /**
  * Helper to update a cell's status symbol based on boolean/null value.
@@ -603,7 +620,62 @@ function fetchDetailRowLists(){
     })
 }
 
+
+/** Functionality below is exclusive to server-based implementation (e.g, not HTML exports) */
+//globals.js
+const batchModal = document.getElementById("batchModal");
+const importModal = document.getElementById("importModal");
+const exportModal = document.getElementById("exportModal");
+
+//Checkboxes:  
+
+const minPageCountInput = document.getElementById('min-page-count');
+const yearFromInput = document.getElementById('year-from');
+const yearToInput = document.getElementById('year-to');
+const applyButton = document.getElementById('apply-serverside-filters');
+// const totalPapersCountCell = document.getElementById('total-papers-count');
+
+
+// --- Batch Action Button Event Listeners ---
+const parçaToolsBtn = document.getElementById('parça-tools-btn');
+const classifyAllBtn = document.getElementById('classify-all-btn');
+const classifyRemainingBtn = document.getElementById('classify-remaining-btn');
+const verifyAllBtn = document.getElementById('verify-all-btn');
+const verifyRemainingBtn = document.getElementById('verify-remaining-btn');
+const batchStatusMessage = document.getElementById('batch-status-message');
+const backupStatusMessage = document.getElementById('backup-status-message');
+
+const importActionsBtn = document.getElementById('import-btn');
+const exportActionsBtn = document.getElementById('export-btn');
+
+const backupBtn = document.getElementById('backup-btn');
+const restoreBtn = document.getElementById('restore-btn');
+
+//show/hide modals:
+
+function showBatchActions(){
+    batchModal.offsetHeight;
+    batchModal.classList.add('modal-active');
+}
+function closeBatchModal() { batchModal.classList.remove('modal-active'); }
+
+function showImportActions(){
+    importModal.offsetHeight;
+    importModal.classList.add('modal-active');
+}
+function closeImportModal() { importModal.classList.remove('modal-active'); }
+
+function showExportActions(){
+    exportModal.offsetHeight;
+    exportModal.classList.add('modal-active');   
+    backupStatusMessage.innerHTML = 'Backups include the database, original and annotated PDFs, HTML export and a XLSX spreadsheet.<br><br>Restoring from a backup overwrites all existing data!';
+    backupStatusMessage.style.color = '';
+}
+function closeExporthModal() { exportModal.classList.remove('modal-active'); }
+
 function showApplyButton(){  applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; }
+
+
 
 document.addEventListener('DOMContentLoaded', function () {
     

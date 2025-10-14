@@ -1626,9 +1626,9 @@ def get_stats():
             # Get 'model' name text
             technique_model_text = paper.get('technique', {}).get('model', '')
             if technique_model_text and isinstance(technique_model_text, str):
-                # Split by semicolon if multiple models are listed, otherwise treat as one item
+                # Split by COMMA if multiple models are listed, otherwise treat as one item
                 # Strip whitespace and filter out empty strings after splitting
-                model_names_list = [model.strip() for model in technique_model_text.split(';') if model.strip()]
+                model_names_list = [model.strip() for model in technique_model_text.split(',') if model.strip()]
                 model_names_counter.update(model_names_list)
             # If technique_model_text is not a string (e.g., None, dict), it's ignored
 

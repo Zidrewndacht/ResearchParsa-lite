@@ -97,7 +97,7 @@
                     <th class="inferred-header" id="inferred-header-title" colspan="29">
                         <div>
                             <span>Inferred data</span>
-                            <div style="font-size: 7pt; font-family: 'Arial Narrow'; text-shadow: var(--light-shadow); transform:scale(2.2) translateY(-1px);">
+                            <div style="font-size: 7pt; font-family: 'Arial Narrow'; text-shadow: var(--light-shadow); transform:scale(2.2) translateY(-2px);">
                                 <span style="font-weight: 400; opacity: 0.7;">Research</span><span style="font-weight: 600; opacity: 0.85;">Parça</span>
                             </div>                            
                             <div style="margin:0; padding:0">
@@ -116,14 +116,21 @@
                     </th>
                 </tr>
                 <tr>
-                    <th class="inferred-header ontop-header" colspan="1"><input type="checkbox" id="hide-offtopic-checkbox" {% if hide_offtopic == true %}checked disabled title="Can't unhide offtopic papers. File was exported only with ontopic papers"{% endif %}></th>
+                    <th class="inferred-header ontop-header" colspan="1">
+                        <div>
+                            <input type="checkbox" id="hide-offtopic-checkbox" {% if hide_offtopic == true %}checked disabled title="Can't unhide offtopic papers. File was exported only with ontopic papers"{% endif %}></th>
+                        </div>
                     <th class="inferred-header ontop-header" colspan="1"></th>
                     <th class="inferred-header ontop-header" colspan="1">
-                        <input type="checkbox" title="Enable to only show Surveys" id="only-survey-checkbox">
+                        <div>
+                            <input type="checkbox" title="Enable to only show Surveys" id="only-survey-checkbox">
+                        </div>
                     </th>
                     <th class="inferred-header ontop-header" colspan="2"></th>
                     <th class="inferred-header ontop-header" colspan="1">
-                        <input type="checkbox" title="Enable to Hide X-Ray" id="hide-xray-checkbox" checked>    <!-- client-side, default enabled -->
+                        <div>
+                            <input type="checkbox" title="Enable to Hide X-Ray" id="hide-xray-checkbox" checked>    <!-- client-side, default enabled -->
+                        </div>
                     </th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="3">
                         <div>

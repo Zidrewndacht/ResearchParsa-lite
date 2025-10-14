@@ -1,14 +1,7 @@
 // static/filtering.js
-/** everything left here should be mostly ready for direct reuse in GH export.
- * Finish refactoring later. 
+/** This file contains client-side filtering code, shared between server-based full page and client-only HTML export.
  */
 
-/**
- * Applies alternating row shading to visible main rows.
- * Ensures detail rows follow their main row's shading.
- * Each "paper group" (main row + detail row) gets a single alternating color.
- * Should be pure client-side to be reused for HTML export
- */
 
 //Hardocoded cells - used for multiple scripts:
 const pdfCellIndex = 0;
@@ -53,25 +46,51 @@ const SYMBOL_PDF_WEIGHTS = {
 };
 
 
-function applyAlternatingShading() {   
-    // Select only visible main rows
-    const visibleMainRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
+/**
+ * Applies alternating row shading to visible main rows.
+ * Ensures detail rows follow their main row's shading.
+ * Each "paper group" (main row + detail row) gets a single alternating color.
+ * Should be pure client-side to be reused for HTML export
+ */
+function applyAlternatingShading() {
+    // Select ALL main rows (not just visible ones)
+    const allMainRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
 
-    // Iterate through the visible main rows. The index 'index' now represents the paper group index.
-    visibleMainRows.forEach((mainRow, groupIndex) => {
-        // Determine the shade class based on the paper group index (groupIndex)
-        // This ensures each paper group (main + detail) gets one color, alternating per group.
-        const shadeClass = (groupIndex % 2 === 0) ? 'alt-shade-1' : 'alt-shade-2';
+    let visibleGroupIndex = 0; // Counter for visible paper groups
 
-        // Remove any existing alternating shade classes from the main row
-        mainRow.classList.remove('alt-shade-1', 'alt-shade-2');
-        mainRow.classList.add(shadeClass);
+    allMainRows.forEach((mainRow) => {
+        // Check if the current main row itself is visible
+        const isMainRowVisible = !mainRow.classList.contains('filter-hidden');
 
-        // --- Handle Detail Row Shading ---
-        mainRow.nextElementSibling.classList.remove('alt-shade-1', 'alt-shade-2');
-        mainRow.nextElementSibling.classList.add(shadeClass);
-        // Note: Ensure CSS .detail-row has background-color: inherit; or no background-color set
-        // so it uses the one from the .alt-shade-* class.
+        if (isMainRowVisible) {
+            // Determine the shade class based on the current visible group index
+            const shadeClass = (visibleGroupIndex % 2 === 0) ? 'alt-shade-1' : 'alt-shade-2';
+
+            // Apply shade to the visible main row
+            mainRow.classList.remove('alt-shade-1', 'alt-shade-2');
+            mainRow.classList.add(shadeClass);
+
+            // Apply the SAME shade to its associated detail row
+            const detailRow = mainRow.nextElementSibling;
+            if (detailRow) { // Ensure detail row exists
+                detailRow.classList.remove('alt-shade-1', 'alt-shade-2');
+                detailRow.classList.add(shadeClass);
+                // Note: Ensure CSS .detail-row has background-color: inherit; or no background-color set
+                // so it uses the one from the .alt-shade-* class.
+            }
+
+            // Only increment the group index when we process a *visible* main row
+            visibleGroupIndex++;
+        } else {
+            // If the main row is hidden, its detail row is also hidden.
+            // Remove shading classes from both the hidden main and detail row
+            // to avoid potential issues if they become visible later with old shading.
+            mainRow.classList.remove('alt-shade-1', 'alt-shade-2');
+            const detailRow = mainRow.nextElementSibling;
+            if (detailRow) {
+                 detailRow.classList.remove('alt-shade-1', 'alt-shade-2');
+            }
+        }
     });
 }
 
@@ -240,7 +259,8 @@ function applyLocalFilters() {
             let showRow = true;
             let detailRow = row.nextElementSibling; // Get the associated detail row
 
-            if (document.body.id === 'html-export') {   //full-client-side implementation for GH pages:
+            /** full-client-side reimplementations for GH pages. Here to simplify variable passing: */
+            if (document.body.id === 'html-export') {   
                 const hideOfftopicChecked = hideOfftopicCheckbox.checked;
                 
                 if (showRow && hideOfftopicChecked) {
@@ -454,8 +474,8 @@ function applyLocalFilters() {
             }
         });
 
+        applyAlternatingShading();
         if (document.body.id !== 'html-export') {
-            applyAlternatingShading();
             applyDuplicateShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
             applyButton.style.opacity = '0';
             applyButton.style.pointerEvents = 'none';
@@ -538,9 +558,9 @@ function sortTable(){
         // --- Schedule UI Updates after DOM change ---
         // Use requestAnimationFrame to align with browser repaint
         requestAnimationFrame(() => {
+            applyAlternatingShading();
             if (document.body.id !== 'html-export') {
-                applyAlternatingShading();
-                applyDuplicateShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
+                if (document.body.id !== "html-export") applyDuplicateShading(document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)'));
             }
             updateCounts();
         });

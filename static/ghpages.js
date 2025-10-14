@@ -137,17 +137,15 @@ function fetchDetailRowLists() {    //this function is specific to GH Export! Sa
         // --- New Logic for Model Names ---
         const detailRowForModelName = row.nextElementSibling;
         if (detailRowForModelName && detailRowForModelName.classList.contains('detail-row')) {
-            const modelNameInput = detailRowForModelName.querySelector('.detail-edit input[name="model_name"]');
+            const modelNameInput = detailRowForModelName.querySelector('.detail-edit input[name="model_name"]'); // Adjust selector if necessary
             if (modelNameInput) {
                 const modelNameText = modelNameInput.value.trim();
                 if (modelNameText) {
-                    // Assuming model names might also be separated by ';' (adjust if needed)
-                    const modelNamesList = modelNameText.split(';')
-                        .map(m => m.trim())
-                        .filter(m => m.length > 0);
+                    // Split by comma or semicolon, trim whitespace, filter out empty strings
+                    const modelNamesList = modelNameText.split(/[,;]/).map(m => m.trim()).filter(m => m.length > 0);
                     modelNamesList.forEach(modelName => {
-                        // Count occurrences of each model name string
-                        stats.modelNames[modelName] = (stats.modelNames[modelName] || 0) + 1;
+                        // Count occurrences of each individual model name string
+                        stats.modelNames[modelName] = (stats.modelNames[modelName] || 0) + 1; // Fixed: Added space around ||
                     });
                 }
             }
@@ -273,19 +271,10 @@ function fetchDetailRowLists() {    //this function is specific to GH Export! Sa
     // return stats;
 }
 
-function displayAbout(){
-    setTimeout(() => {
-        modalSmall.offsetHeight;
-        modalSmall.classList.add('modal-active');
-    }, 20);
-}
-function closeModal() { modal.classList.remove('modal-active'); }
-function closeSmallModal() { modalSmall.classList.remove('modal-active'); }
-
 
 document.addEventListener('DOMContentLoaded', function () {
-
-    searchInput.addEventListener('input', applyLocalFilters);
+    //These listeners are specific to GH Export:
+    searchInput.addEventListener('input', applyLocalFilters);           //client-side search
     hideOfftopicCheckbox.addEventListener('change', applyLocalFilters);
     minPageCountInput.addEventListener('input', applyLocalFilters);
     minPageCountInput.addEventListener('change', applyLocalFilters);
@@ -294,26 +283,5 @@ document.addEventListener('DOMContentLoaded', function () {
     yearFromInput.addEventListener('change', applyLocalFilters);
     yearToInput.addEventListener('input', applyLocalFilters);
     yearToInput.addEventListener('change', applyLocalFilters);
-    
-    headers.forEach(header => { header.addEventListener('click', sortTable); });
-    statsBtn.addEventListener('click', function () {
-        document.documentElement.classList.add('busyCursor');
-        setTimeout(() => {
-            displayStats();
-            document.documentElement.classList.remove('busyCursor');
-        }, 10);
-    });
-    aboutBtn.addEventListener('click', displayAbout);
-    
-    // --- Close Modal
-    spanClose.addEventListener('click', closeModal);
-    smallClose.addEventListener('click', closeSmallModal);
-    document.addEventListener('keydown', function (event) {
-        // Check if the pressed key is 'Escape' and if the modal is currently active
-        if (event.key === 'Escape') { closeModal(); closeSmallModal(); }
-    });
-    window.addEventListener('click', function (event) {
-        if (event.target === modal || event.target === modalSmall) { closeModal(); closeSmallModal(); }
-    });
 });
 

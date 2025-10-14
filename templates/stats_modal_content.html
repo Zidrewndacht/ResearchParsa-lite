@@ -35,7 +35,13 @@
         
 <div class="stats-charts">
     <div class="stats-section">
-        <h3><strong>Techniques</strong> Distribution </h3>
+        <h3><strong>Techniques</strong> Distribution             
+            <span style="font-size:0.6em;padding-left: 30px;position: absolute; right: 6px;top: 16px;">
+                <label style="padding: 10px;margin: 10px;">
+                    Pie<input type="checkbox" id="pieToggle" style="transform: scale(2) translate(5px,-0.5px);">
+                </label>
+            </span>
+        </h3>
         <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto;">
             <canvas id="techniquesPieChart"></canvas>
         </div>
@@ -56,11 +62,11 @@
         <h3><strong>Techniques</strong> per Year 
             <span style="font-size:0.6em"> — Click on a label to show/hide its data and reflow the chart </span>
             <span style="font-size:0.6em;padding-left: 30px;position: absolute;right: 40px;top: 16px;">
-                <label style="padding: 10px;margin: 10px;">
-                    <input type="checkbox" id="stackingToggle" style="transform: scale(2) translate(-5px,-0.5px);">Stacked
-                </label>
                 <label>
-                    <input type="checkbox" id="cumulativeToggle" style="transform: scale(2) translate(-5px,-0.5px);">Cumulative
+                    Cumulative<input type="checkbox" id="cumulativeToggle" style="transform: scale(2) translate(5px,-0.5px);">
+                </label>
+                <label style="padding: 0 20px;margin: 10px;">
+                    Stacked<input type="checkbox" id="stackingToggle" style="transform: scale(2) translate(5px,-0.5px);">
                 </label>
             </span>
         </h3>

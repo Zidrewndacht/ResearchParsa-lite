@@ -7,7 +7,6 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
 
     <script src="{{ url_for('static', filename='chart.js') }}"></script>
-    <script src="{{ url_for('static', filename='globals.js') }}" defer></script>
     <script src="{{ url_for('static', filename='stats.js') }}" defer></script>
     <script src="{{ url_for('static', filename='comms.js') }}" defer></script>
     <script src="{{ url_for('static', filename='filtering.js') }}" defer></script>
@@ -55,7 +54,7 @@
                 <col style="width: 27px; min-width: 27px; max-width: 27px;"> <!-- Other -->
                 <col style="width: 27px; min-width: 27px; max-width: 27px;"> <!-- Hybrid -->
                 <col style="width: 27px; min-width: 27px; max-width: 27px;"> <!-- Datasets  -->
-                <!-- Columns 31-36: Other Data (Mixed Sizes) -->
+                
                 <col style="width: 56px; min-width: 56px; max-width: 56px;"> <!-- Last Changed -->
                 <col style="width: 40px; min-width: 40px; max-width: 40px;"> <!-- Changed By -->
                 <col style="width: 27px; min-width: 27px; max-width: 27px;"> <!-- Verified -->
@@ -150,18 +149,18 @@
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="5">
                         <div>
                             <span>Solder</span>
-                            <input type="checkbox" title="Enable to include (or limit to if it's the only checkbox enabled) papers about solder features" id="show-solder-checkbox">
+                            <input type="checkbox" checked title="Enable to include (or limit to if it's the only checkbox enabled) papers about solder features" id="show-solder-checkbox">
                         </div>
                     </th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="5">
                         <div>
                             <span>PCBA / Other</span>
-                            <input type="checkbox" title="Enable to include (or limit to if it's the only checkbox enabled) papers about PCBA features" id="show-pcba-checkbox">    
+                            <input type="checkbox" checked title="Enable to include (or limit to if it's the only checkbox enabled) papers about PCBA features" id="show-pcba-checkbox">    
                         </div>
                     </th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="1">
                         <div>
-                            <input type="checkbox" title="Enable to include (or limit to if it's the only checkbox enabled) papers about PCBA features" id="show-other-checkbox">    
+                            <input type="checkbox" checked title="Enable to include (or limit to if it's the only checkbox enabled) papers about PCBA features" id="show-other-checkbox">    
                         </div>
                     </th>
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="8">Techniques</th>

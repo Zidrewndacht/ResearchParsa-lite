@@ -791,7 +791,7 @@ tr.filter-hidden {
 
 .modal-content {
     width: calc(100vw - 60px);
-    min-width: calc(var(--min-width) - 12px);
+    min-width: calc(var(--min-width) + 70px);
     height: calc(100vh - 12px);
     grid-template-columns: 640px 1fr;
 }
