@@ -515,7 +515,7 @@ document.addEventListener('click', function(event) {
 });
 
 
-function fetchDetailRowLists(){
+function fetchDetailRowLists(callback){
         // --- Fetch Server Stats (for other lists) ---
     const urlParams = new URLSearchParams(window.location.search);
     const statsUrl = `/get_stats?${urlParams.toString()}`;
@@ -613,6 +613,12 @@ function fetchDetailRowLists(){
             populateListFromServer('researchAreaStatsList', serverStatsData.research_areas);
             populateAllListFromServer('otherDetectedFeaturesStatsList', serverStatsData.other_features_all);
             populateAllListFromServer('modelNamesStatsList', serverStatsData.model_names_all);
+                    
+            // ---- now the lists exist; build cloud if switch is on ----
+            if (document.getElementById('cloudToggle').checked) {
+                toggleCloud();                     // first render
+            }
+            if (callback) callback(); // Call the callback function after populating lists
         } else {
             // Handle potential fetch error - still populate client-side lists if possible
             console.error("Failed to fetch server stats:", data);

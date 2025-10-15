@@ -31,7 +31,7 @@ import automate_classification
 import verify_classification
 
 # Define default year range - For this app:
-DEFAULT_YEAR_FROM = 2020
+DEFAULT_YEAR_FROM = 2011
 DEFAULT_YEAR_TO = 2025
 DEFAULT_MIN_PAGE_COUNT = 4
 
@@ -668,16 +668,24 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
     fonts_css_content = ""
     style_css_content = ""
     chart_js_content = ""
+    d3_js_content = ""
+    d3_cloud_js_content = ""
     ghpages_js_content = ""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     static_dir = os.path.join(script_dir, 'static')
     try:
+        with open(os.path.join(static_dir, 'libs/chart.min.js'), 'r', encoding='utf-8') as f:
+            chart_js_content = f.read()
+        with open(os.path.join(static_dir, 'libs/d3.min.js'), 'r', encoding='utf-8') as f:
+            d3_js_content = f.read()
+        with open(os.path.join(static_dir, 'libs/d3-cloud.min.js'), 'r', encoding='utf-8') as f:
+            d3_cloud_js_content = f.read()
+
+
         with open(os.path.join(static_dir, 'fonts.css'), 'r', encoding='utf-8') as f:
             fonts_css_content = f.read()
         with open(os.path.join(static_dir, 'style.css'), 'r', encoding='utf-8') as f:
             style_css_content = f.read()
-        with open(os.path.join(static_dir, 'chart.js'), 'r', encoding='utf-8') as f:
-            chart_js_content = f.read()
         with open(os.path.join(static_dir, 'ghpages.js'), 'r', encoding='utf-8') as f:
             ghpages_js_content = f.read()
         with open(os.path.join(static_dir, 'stats.js'), 'r', encoding='utf-8') as f:
@@ -691,10 +699,14 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
 
     fonts_css_content = rcssmin.cssmin(fonts_css_content)
     style_css_content = rcssmin.cssmin(style_css_content)
+    
     chart_js_content = rjsmin.jsmin(chart_js_content)
-    ghpages_js_content = rjsmin.jsmin(ghpages_js_content)
+    d3_js_content = rjsmin.jsmin(d3_js_content)
+    d3_cloud_js_content = rjsmin.jsmin(d3_cloud_js_content)
+
     stats_js_content = rjsmin.jsmin(stats_js_content)
     filtering_js_content = rjsmin.jsmin(filtering_js_content)
+    ghpages_js_content = rjsmin.jsmin(ghpages_js_content)
 
     # --- Render the static export template ---
     papers_table_static_export = render_template(
@@ -720,10 +732,14 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
         # --- Pass potentially minified static content ---
         fonts_css_content=Markup(fonts_css_content), # Markup was already applied if needed, or content is minified
         style_css_content=Markup(style_css_content),
+        
         chart_js_content=Markup(chart_js_content),
-        ghpages_js_content=Markup(ghpages_js_content),
+        d3_js_content=Markup(d3_js_content),
+        d3_cloud_js_content=Markup(d3_cloud_js_content),
+
         filtering_js_content=Markup(filtering_js_content),
-        stats_js_content=Markup(stats_js_content)
+        stats_js_content=Markup(stats_js_content),
+        ghpages_js_content=Markup(ghpages_js_content)
     )
 
     # --- Compress the full HTML content ---
@@ -733,7 +749,7 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
 
     pako_js_content = ""
     try:
-        with open(os.path.join(static_dir, 'pako.min.js'), 'r', encoding='utf-8') as f:
+        with open(os.path.join(static_dir, 'libs/pako.min.js'), 'r', encoding='utf-8') as f:
             pako_js_content = f.read()
     except FileNotFoundError as e:
         print(f"Warning: pako.min.js not found during HTML export generation: {e}")
@@ -1603,7 +1619,7 @@ def get_stats():
         # --- Filter counts > 1 and sort (matching client-side logic) ---
         def filter_and_sort(counter):
             # Filter items with count > 1
-            filtered_items = {item: count for item, count in counter.items() if count > 1}
+            filtered_items = {item: count for item, count in counter.items() if count >= 1}
             # Sort by count descending, then by name ascending
             sorted_items = sorted(filtered_items.items(), key=lambda x: (-x[1], x[0]))
             # Convert back to a list of dictionaries for JSON serialization

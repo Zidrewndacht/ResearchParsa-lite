@@ -11,6 +11,7 @@ let latestYearlyData = {}; // NEW: Store yearly data for charts
 let isStacked = false; // Default state
 let isCumulative = false; // Default state
 let showPieCharts = false; // Default to bar charts
+let showKeywordCloud = false; // NEW: State for keyword cloud toggle
 
 const statsBtn = document.getElementById('stats-btn');
 const aboutBtn = document.getElementById('about-btn');
@@ -385,10 +386,10 @@ function calculateJournalConferenceStats() {
     });
     // Sort and filter results (count >= 2)
     const sortedJournals = Object.entries(journalCounts)
-        .filter(([name, count]) => count >= 2) // Filter after counting
+        .filter(([name, count]) => count >= 1) // Filter after counting
         .sort((a, b) => b[1] - a[1]); // Sort by count descending
     const sortedConferences = Object.entries(conferenceCounts)
-        .filter(([name, count]) => count >= 2) // Filter after counting
+        .filter(([name, count]) => count >= 1) // Filter after counting
         .sort((a, b) => b[1] - a[1]); // Sort by count descending
     return {
         journals: sortedJournals.map(([name, count]) => ({ name, count })),
@@ -453,6 +454,11 @@ function cumulativeLegendLabels(chart) {
   });
   return labels;
 }
+
+
+
+
+
 
 function displayStats() {
     document.documentElement.classList.add('busyCursor');
@@ -1057,7 +1063,7 @@ function displayStats() {
         //comms.s or ghpages.js (different functions depending on source!)  
         //This fetches data from server on full implementation (no detail row readily available)
         //or directly from detail row contents on HTML exports
-        fetchDetailRowLists(); 
+        // fetchDetailRowLists(); 
     
         // --- Populate Client-side Journal/Conference Lists ---
         function populateListFromClient(listElementId, dataArray) { //for items with count >=2
@@ -1100,6 +1106,72 @@ function displayStats() {
         }
         populateListFromClient('journalStatsList', journals);
         populateListFromClient('conferenceStatsList', conferences); // Use the new ID
+
+        // --- Populate Metrics Table (Updated Logic) ---
+        // Assume server lists (keywords, authors, etc.) are already populated
+        // by an initial call to fetchDetailRowLists() before displayStats() is run for the first time
+        // or when filters change.
+        // This function calculates metrics based on current state.
+        function populateMetricsTableDirectly() { // Renamed for clarity
+            const tableElement = document.getElementById('metricsTableStatsList');
+            if (!tableElement) {
+                console.error("Metrics table element with ID 'metricsTableStatsList' not found.");
+                return;
+            }
+
+            // Clear previous content
+            tableElement.innerHTML = '';
+
+            // Calculate metrics based on latestCounts and the lists already assumed to be populated
+            const filteredPapersCount = latestCounts['pdf_present'] || 0;
+            const distinctJournalsCount = journals.length; // Client-side calculation
+            const distinctConferencesCount = conferences.length; // Client-side calculation
+
+            // Count distinct authors from the author list (assuming it's already populated by fetchDetailRowLists)
+            // This is the critical part: this function assumes authorStatsList is already up-to-date.
+            const authorListElement = document.getElementById('authorStatsList');
+            let distinctAuthorsCount = 0;
+            if (authorListElement) {
+                // Count the <li> elements inside the author list *after* it's populated by fetchDetailRowLists
+                distinctAuthorsCount = authorListElement.querySelectorAll('li').length;
+                // console.log("Authors counted in displayStats:", distinctAuthorsCount); // Debug log
+            } else {
+                console.warn("Author stats list element with ID 'authorStatsList' not found for counting authors.");
+            }
+
+            // Count papers providing datasets
+            const papersWithDatasetCount = latestCounts['technique_available_dataset'] || 0;
+
+            // Create table rows - Modified to support HTML in the label
+            const createRow = (labelHtml, value) => {
+                const row = document.createElement('tr');
+                const labelCell = document.createElement('td');
+                labelCell.innerHTML = labelHtml; // Use innerHTML for formatted labels
+                const valueCell = document.createElement('td');
+                valueCell.innerHTML = '<strong>' + value + '</strong>'; // Use innerHTML for bold value
+                labelCell.className = 'metric-label';
+                valueCell.className = 'metric-value';
+                row.appendChild(labelCell);
+                row.appendChild(valueCell);
+                return row;
+            };
+
+            // Append rows to the table
+            tableElement.appendChild(createRow('Total <strong>filtered</strong> articles:', filteredPapersCount));
+            tableElement.appendChild(createRow('Total unique <strong>journals</strong>:', distinctJournalsCount));
+            tableElement.appendChild(createRow('Total unique <strong>conferences</strong>:', distinctConferencesCount));
+            tableElement.appendChild(createRow('Total unique <strong>authors</strong>:', distinctAuthorsCount)); // Relies on pre-populated list
+            tableElement.appendChild(createRow('Articles mentioning <strong>available dataset</strong>:', papersWithDatasetCount));
+        }
+
+        // Call the direct population function here
+        populateMetricsTableDirectly();
+
+        // ---- now the lists exist; build cloud if switch is on ----
+        if (document.getElementById('cloudToggle').checked) {
+            toggleCloud();                     // first render
+        }
+
         // Trigger reflow to ensure styles are applied before adding the active class
         // This helps ensure the transition plays correctly on the first open
         modal.offsetHeight;
@@ -1120,23 +1192,133 @@ function closeSmallModal() { modalSmall.classList.remove('modal-active'); }
 
 function closeModal() { modal.classList.remove('modal-active'); } //for stats modal:
 
+function buildKeywordCloud() {
+    /* ----------  grab & clamp data ---------- */
+    const liNodes = document.querySelectorAll('#keywordStatsList li');
+    const raw = Array.from(liNodes).map(li => ({
+        text: li.querySelector('.name').textContent.trim(),
+        size: +li.querySelector('.count').textContent
+    }));
+    raw.sort((a, b) => b.size - a.size);
+    const top_k = raw.slice(0, 50);
+
+    /* ----------  canvas setup for hiDPI ---------- */
+    const canvas = document.querySelector('#keywordCloudCanvas canvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+
+    const displayWidth = canvas.parentElement.clientWidth;   // CSS pixels
+    const displayHeight = 280;                               // CSS px (matches markup)
+
+    canvas.width = displayWidth * dpr;                       // physical px
+    canvas.height = displayHeight * dpr;
+    canvas.style.width = displayWidth + 'px';
+    canvas.style.height = displayHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);                // auto-scale draws
+
+    ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+    /* ----------  font scale ---------- */
+    const sizeScale = d3.scaleLinear()
+                        .domain([top_k[top_k.length - 1].size, top_k[0].size])
+                        .range([8, 40]);
+
+    /* ----------  cloud layout ---------- */
+    const layout = d3.layout.cloud()
+        .size([displayWidth, displayHeight])
+        .words(top_k.map(d => ({...d, size: sizeScale(d.size)})))
+        .padding(4)
+        .rotate(() => (Math.random() - 0.5) * 0)
+        .font('sans-serif')
+        .fontSize(d => d.size)
+        .on('end', draw);
+
+    layout.start();
+
+    function draw(words) {
+        ctx.save();
+        ctx.translate(displayWidth / 2, displayHeight / 2);
+        words.forEach(w => {
+            ctx.save();
+            ctx.translate(w.x, w.y);
+            ctx.rotate(w.rotate * Math.PI / 180);
+            ctx.font = `${w.size}px sans-serif`;
+            ctx.fillStyle = techniquesBorderColors[w.text.length % techniquesBorderColors.length];
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(w.text, 0, 0);
+            ctx.restore();
+        });
+        ctx.restore();
+    }
+}
+
+
+function toggleCloud() {
+	const list   = document.getElementById('keywordStatsList');
+	const canvas = document.getElementById('keywordCloudCanvas');
+	const on     = document.getElementById('cloudToggle').checked;
+
+	list.style.display   = on ? 'none' : 'block';
+	canvas.style.display = on ? 'block' : 'none';
+
+	if (on) buildKeywordCloud();   // build only when opened
+}
 
 
 document.addEventListener('DOMContentLoaded', function () {
+
     const stackingToggle = document.getElementById('stackingToggle');
     const cumulativeToggle = document.getElementById('cumulativeToggle');
-    const pieToggle = document.getElementById('pieToggle'); // Add reference to the pie toggle
+    const pieToggle = document.getElementById('pieToggle');
+    const cloudToggle = document.getElementById('cloudToggle');
+
     stackingToggle.checked = false;
     cumulativeToggle.checked = false;
     pieToggle.checked = false;
+    cloudToggle.checked = false; // NEW: Initialize the cloud toggle state
 
     statsBtn.addEventListener('click', function () {
         document.documentElement.classList.add('busyCursor');
         setTimeout(() => {
-            displayStats();
-            document.documentElement.classList.remove('busyCursor');
-        }, 10);
+            // NEW: Call fetchDetailRowLists only once when opening the modal,
+            // or whenever filters change significantly.
+            // Move the call OUTSIDE of displayStats and only call it here initially,
+            // OR call it whenever search/filter results update.
+            // For now, let's assume it should run when the modal opens IF the lists are stale/empty.
+            // A simple approach: Call it once on first open, or if a flag indicates refresh is needed.
+
+            // Option A: Always fetch on open (less efficient if data rarely changes)
+            // fetchDetailRowLists(() => displayStats()); // Pass displayStats as the callback
+
+            // Option B: Fetch once initially, then only when filters change significantly (e.g., search)
+            // This requires a variable to track if data needs refreshing.
+            // Let's implement Option B for better performance.
+
+            // Assume a flag or check might be needed later to decide if refetch is necessary
+            // For now, since filters (like search) likely trigger updateCounts and maybe a general refresh,
+            // we might call fetchDetailRowLists from the search/filter logic.
+            // For the button click, just call displayStats, assuming data is fresh enough or fetched elsewhere.
+            // UNLESS it's the very first time the modal is opened.
+
+            // Let's add a simple flag to fetch once on first open of the stats modal.
+            if (typeof window.detailRowsFetched === 'undefined' || !window.detailRowsFetched) {
+                fetchDetailRowLists(() => {
+                    window.detailRowsFetched = true; // Set the flag after fetching
+                    displayStats(); // Now display stats with potentially updated lists
+                });
+            } else {
+                // If lists were already fetched, just display stats directly
+                displayStats();
+            }
+
+            // OR, if you want to ensure the most up-to-date lists every time the modal opens
+            // (accepting the potential latency), use:
+            // fetchDetailRowLists(() => displayStats());
+
+        }, 10); // Keep the initial timeout
     });
+
 
     stackingToggle.addEventListener('change', function() {
         isStacked = this.checked; // Update the state variable
@@ -1220,6 +1402,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (event.key === 'Escape') { closeModal(); closeSmallModal(); 
             if (document.body.id !== "html-export") {closeBatchModal(); closeExporthModal(); closeImportModal()} }
     });
+
+    cloudToggle.addEventListener('change', toggleCloud);
+
+    cloudToggle.checked = true;          // 1. UI match
+    showKeywordCloud = true;             // 2. keep state in sync
     
     window.addEventListener('click', function (event) {
         if (event.target === modal || event.target === modalSmall) {

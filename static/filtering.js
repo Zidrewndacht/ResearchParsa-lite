@@ -190,7 +190,8 @@ const SURVEY_FILTER_STATES = {
 };
 
 // Store the current state of the survey filter
-let currentSurveyFilterState = SURVEY_FILTER_STATES.ALL; // Start with showing all
+// let currentSurveyFilterState = SURVEY_FILTER_STATES.ALL; // Start with showing all
+let currentSurveyFilterState = SURVEY_FILTER_STATES.ONLY_NON_SURVEYS; 
 
 // Function to cycle the checkbox's visual state and update the title
 function updateSurveyCheckboxUI() {
@@ -481,6 +482,21 @@ function applyLocalFilters() {
             applyButton.style.pointerEvents = 'none';
         }
         updateCounts();
+
+        // --- NEW: Fetch updated server-side lists after counts are updated ---
+        // This ensures the lists (keywords, authors, etc.) reflect the filtered set.
+        // It should only run if stats.js is loaded (relevant for HTML export vs server page).
+        // Check if the function exists before calling it.
+        if (typeof fetchDetailRowLists === 'function') {
+            // Note: fetchDetailRowLists might take time. The busy cursor is removed shortly after,
+            // potentially before fetchDetailRowLists completes. This is generally acceptable,
+            // as the main filtering and counting (the heavy part of applyLocalFilters) is done.
+            // If it's critical the cursor stays until fetchDetailRowLists finishes, more complex
+            // state management is needed.
+            fetchDetailRowLists(); // Call without callback, as displayStats handles its own lists independently now.
+        }
+        // --- END NEW ---
+
         setTimeout(() => {
             document.documentElement.classList.remove('busyCursor');
         }, 150); // doesn't really work since the contents are completely replaced eliminating the animation. Not worth fixing.

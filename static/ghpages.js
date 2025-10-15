@@ -23,7 +23,7 @@ function toggleDetails(element) {   //this function is specific to GH Export! Sa
     }
 }
 
-function fetchDetailRowLists() {    //this function is specific to GH Export! Same name function is different in comms.js for the server-based version.
+function fetchDetailRowLists(callback) {    //this function is specific to GH Export! Same name function is different in comms.js for the server-based version.
     const stats = {
         journals: {}, // Will store journal names and counts
         conferences: {}, // NEW: Will store conference names and counts
@@ -163,7 +163,7 @@ function fetchDetailRowLists() {    //this function is specific to GH Export! Sa
         listElement.innerHTML = '';
 
         const sortedEntries = Object.entries(dataObj)
-            .filter(([name, count]) => count > 1) // Keep only entries with count > 1
+            .filter(([name, count]) => count >= 1) // Keep only entries with count > 1
             .sort((a, b) => {
                 if (b[1] !== a[1]) {
                     return b[1] - a[1];
@@ -264,10 +264,16 @@ function fetchDetailRowLists() {    //this function is specific to GH Export! Sa
 
     populateSimpleList('otherDetectedFeaturesStatsList', stats.otherDetectedFeatures);
     populateSimpleList('modelNamesStatsList', stats.modelNames);
+    
+    // ---- now the lists exist; build cloud if switch is on ----
+    if (document.getElementById('cloudToggle').checked) {
+        toggleCloud();                     // first render
+    }
+    if (callback) callback(); // Call the callback function after populating lists
 
     // Trigger reflow and add modal-active class after charts are drawn and lists are populated
-    modal.offsetHeight; // Trigger reflow
-    modal.classList.add('modal-active');
+    // modal.offsetHeight; // Trigger reflow
+    // modal.classList.add('modal-active');
     // return stats;
 }
 

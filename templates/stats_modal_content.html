@@ -9,27 +9,40 @@
         <h3>Repeating <strong>Conferences</strong> <span style="font-size:0.6em">↓</span></h3>
         <ul id="conferenceStatsList" class="stats-list-multicolumn-2"></ul> 
     </div>
-    <div class="stats-section">
-        <h3>Repeating <strong>Keywords</strong> <span style="font-size:0.6em">↓</span></h3>
-        <ul id="keywordStatsList" class="stats-list-multicolumn-short"></ul>        
+    <div class="stats-section" style="grid-column: 1/3;">
+        <h3>Repeating <strong>Keywords</strong> <span style="font-size:0.6em">↓</span>
+            <span style="font-size:0.6em;padding-left: 30px;position: absolute; right: 30px;top: 16px;">
+                <label style="margin-left:10px;">
+                    Cloud <input checked type="checkbox" id="cloudToggle" style="transform: scale(2) translate(5px,-0.5px);">
+                </label>
+            </span>
+        </h3>
+        <ul id="keywordStatsList" class="stats-list-multicolumn-short"></ul>     
+        <div id="keywordCloudCanvas"
+            style="display: block; margin: auto; width: 100%; height: 285px;border-right: 2px solid var(--stats-primary-ui-color);box-sizing: border-box;">
+            <canvas width="640" height="280"></canvas>
+        </div>
     </div>
     <div class="stats-section">
         <h3>Repeating <strong>Authors</strong> <span style="font-size:0.6em">↓</span></h3>
-        <ul id="authorStatsList" class="stats-list-multicolumn-short"></ul>
+        <ul id="authorStatsList" class="stats-list-multicolumn-2"></ul>
     </div>
     <div class="stats-section" style="display: none;">
         <h3>Repeating <strong>Research Areas</strong> <span style="font-size:0.6em">↓</span></h3>
-        <ul id="researchAreaStatsList" class="stats-list-multicolumn-short"></ul>
+        <ul id="researchAreaStatsList" class="stats-list-multicolumn-2"></ul>
     </div>
     <div class="stats-section">
-        <h3>Inferred <strong>other features</strong> <span style="font-size:0.6em">↓</span></h3>
-        <ul id="otherDetectedFeaturesStatsList" class="stats-list-multicolumn-short"></ul>
-        <!-- show every non-blank instance of paper.features.other here. TBD. Can't be done client-side because detail row is lazy-loaded-->
+        <h3>Mentioned <strong>Models</strong> <span style="font-size:0.6em">↓</span></h3>
+        <ul id="modelNamesStatsList" class="stats-list-multicolumn-2"></ul>
     </div>
     <div class="stats-section">
-        <h3>Inferred <strong>Models</strong> <span style="font-size:0.6em">↓</span></h3>
-        <ul id="modelNamesStatsList" class="stats-list-multicolumn-short"></ul>
-        <!-- show every non-blank instance of paper.features.other here. TBD. Can't be done client-side because detail row is lazy-loaded-->
+        <h3>Mentioned <strong>other features</strong> <span style="font-size:0.6em">↓</span></h3>
+        <ul id="otherDetectedFeaturesStatsList" class="stats-list-multicolumn-2"></ul>
+    </div>
+    <!-- <div class="stats-section" style="grid-column: 1/3;"> -->
+    <div class="stats-section">
+        <h3><strong>Other</strong> Metrics</h3>
+        <table id="metricsTableStatsList" class="stats-table"></table>
     </div>
 </div>
         
