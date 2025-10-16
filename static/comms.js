@@ -353,12 +353,12 @@ function applyServerSideFilters() {     //moved from filtering as it has server-
         urlParams.delete('min_page_count');
     }
 
-    const searchValue = document.getElementById('search-input').value.trim();
-    if (searchValue !== '') {
-        urlParams.set('search_query', searchValue);
-    } else {
-        urlParams.delete('search_query');
-    }
+    // const searchValue = document.getElementById('search-input').value.trim();
+    // if (searchValue !== '') {
+    //     urlParams.set('search_query', searchValue);
+    // } else {
+    //     urlParams.delete('search_query');
+    // }
     // Construct the URL for the /load_table endpoint with current parameters
     const loadTableUrl = `/load_table?${urlParams.toString()}`;
     fetch(loadTableUrl)
@@ -515,118 +515,6 @@ document.addEventListener('click', function(event) {
 });
 
 
-function fetchDetailRowLists(callback){
-        // --- Fetch Server Stats (for other lists) ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const statsUrl = `/get_stats?${urlParams.toString()}`;
-    fetch(statsUrl).then(response => {
-        return response.json();
-    }).then(data => {
-        if (data.status === 'success' && data.data) {
-            const serverStatsData = data.data;
-            function populateListFromServer(listElementId, dataArray) { //for items with count >=2
-                const listElement = document.getElementById(listElementId);
-                listElement.innerHTML = '';
-                if (!dataArray || dataArray.length === 0) {
-                    listElement.innerHTML = '<li>No items with count > 1.</li>';
-                    return;
-                }
-                dataArray.forEach(item => {
-                    const listItem = document.createElement('li');
-                    const escapedName = (item.name || '').toString()
-                        .replace(/&/g, "&amp;").replace(/</g, "<")
-                        .replace(/>/g, ">").replace(/"/g, "&quot;")
-                        .replace(/'/g, "&#39;");
-                    // --- Preserve Original Structure ---
-                    const countSpan = document.createElement('span');
-                    countSpan.className = 'count';
-                    countSpan.textContent = item.count;
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'name';
-                    nameSpan.textContent = escapedName;
-                    // --- NEW: Create search button element ---
-                    const searchButton = document.createElement('button');
-                    searchButton.type = 'button'; // Important to prevent form submission if inside one
-                    searchButton.className = 'search-item-btn'; // Add a specific class for styling/listening
-                    searchButton.title = `Search for "${item.name}"`;
-                    searchButton.textContent = '🔍'; // Or use an icon image
-                    // --- NEW: Add click event listener to the button ---
-                    searchButton.addEventListener('click', function(event) {
-                        event.stopPropagation(); // Prevent triggering other click listeners on the <li>
-                        searchInput.value = item.name; // Set the search input value
-                        closeModal(); // Close the stats modal
-                        // Trigger the existing search mechanism (which includes debouncing)
-                        const inputEvent = new Event('input', { bubbles: true });
-                        searchInput.dispatchEvent(inputEvent);
-                    });
-                    // --- Append elements preserving the original structure ---
-                    listItem.appendChild(countSpan);
-                    listItem.appendChild(searchButton); 
-                    listItem.appendChild(nameSpan);
-                    listElement.appendChild(listItem);
-                });
-            }
-            function populateAllListFromServer(listElementId, dataArray) { //for ALL items, not just repeating ones
-                const listElement = document.getElementById(listElementId);
-                listElement.innerHTML = '';
-                if (!dataArray || dataArray.length === 0) {
-                    listElement.innerHTML = '<li>No non-empty items found.</li>';
-                    return;
-                }
-                dataArray.forEach(item => {
-                    const listItem = document.createElement('li');
-                    const escapedName = (item.name || '').toString()
-                        .replace(/&/g, "&amp;").replace(/</g, "<")
-                        .replace(/>/g, ">").replace(/"/g, "&quot;")
-                        .replace(/'/g, "&#39;");
-                    // --- Preserve Original Structure ---
-                    const countSpan = document.createElement('span');
-                    countSpan.className = 'count';
-                    countSpan.textContent = item.count;
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'name';
-                    nameSpan.textContent = escapedName;
-                    // --- NEW: Create search button element ---
-                    const searchButton = document.createElement('button');
-                    searchButton.type = 'button';
-                    searchButton.className = 'search-item-btn';
-                    searchButton.title = `Search for "${item.name}"`;
-                    searchButton.textContent = '🔍';
-                    // --- NEW: Add click event listener to the button ---
-                    searchButton.addEventListener('click', function(event) {
-                        event.stopPropagation();
-                        searchInput.value = item.name;
-                        closeModal();
-                        const inputEvent = new Event('input', { bubbles: true });
-                        searchInput.dispatchEvent(inputEvent);
-                    });
-                    // --- Append elements preserving the original structure ---
-                    listItem.appendChild(countSpan);
-                    listItem.appendChild(searchButton);
-                    listItem.appendChild(nameSpan);
-                    listElement.appendChild(listItem);
-                });
-            }
-            // Populate Server Lists (Keywords, Authors, etc.)
-            populateListFromServer('keywordStatsList', serverStatsData.keywords);
-            populateListFromServer('authorStatsList', serverStatsData.authors);
-            populateListFromServer('researchAreaStatsList', serverStatsData.research_areas);
-            populateAllListFromServer('otherDetectedFeaturesStatsList', serverStatsData.other_features_all);
-            populateAllListFromServer('modelNamesStatsList', serverStatsData.model_names_all);
-                    
-            // ---- now the lists exist; build cloud if switch is on ----
-            if (document.getElementById('cloudToggle').checked) {
-                toggleCloud();                     // first render
-            }
-            if (callback) callback(); // Call the callback function after populating lists
-        } else {
-            // Handle potential fetch error - still populate client-side lists if possible
-            console.error("Failed to fetch server stats:", data);
-        }
-    })
-}
-
-
 /** Functionality below is exclusive to server-based implementation (e.g, not HTML exports) */
 //globals.js
 const batchModal = document.getElementById("batchModal");
@@ -691,12 +579,15 @@ document.addEventListener('DOMContentLoaded', function () {
     hideOfftopicCheckbox.addEventListener('change', applyServerSideFilters);
 
     applyButton.addEventListener('click', applyServerSideFilters);
-    document.getElementById('search-input').addEventListener('input', function () {
-        clearTimeout(filterTimeoutId);
-        filterTimeoutId = setTimeout(() => {
-            applyServerSideFilters();
-        }, 300);  //additional debounce for typing
-    });
+
+    //server-side search disabled for now as FTS is broken. Using full-client-side search instead:
+
+    // document.getElementById('search-input').addEventListener('input', function () {
+    //     clearTimeout(filterTimeoutId);
+    //     filterTimeoutId = setTimeout(() => {
+    //         applyServerSideFilters();
+    //     }, 300);  //additional debounce for typing
+    // });
 
     // Click Handler for Editable Status Cells
     document.addEventListener('click', function (event) {
@@ -1029,152 +920,136 @@ document.addEventListener('DOMContentLoaded', function () {
     const importBibtexBtn = document.getElementById('import-bibtex-btn');
     const bibtexFileInput = document.getElementById('bibtex-file-input');
 
-    if (importBibtexBtn && bibtexFileInput) {
-        // Clicking the button triggers the hidden file input
-        importBibtexBtn.addEventListener('click', () => {
-            bibtexFileInput.click();
-        });
+    // Clicking the button triggers the hidden file input
+    importBibtexBtn.addEventListener('click', () => {
+        bibtexFileInput.click();
+    });
 
-        // Handle file selection and upload
-        bibtexFileInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                if (!file.name.toLowerCase().endsWith('.bib')) {
-                    alert('Please select a .bib file.');
+    // Handle file selection and upload
+    bibtexFileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            if (!file.name.toLowerCase().endsWith('.bib')) {
+                alert('Please select a .bib file.');
+                bibtexFileInput.value = ''; // Clear the input
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to import '${file.name}'?`)) {
                     bibtexFileInput.value = ''; // Clear the input
                     return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Disable button and show status
+            importBibtexBtn.disabled = true;
+            importBibtexBtn.textContent = 'Importing...';
+            if (batchStatusMessage) {
+                batchStatusMessage.textContent = `Uploading and importing '${file.name}'...`;
+                batchStatusMessage.style.color = ''; // Reset color
+            }
+
+            fetch('/upload_bibtex', {
+                method: 'POST',
+                body: formData // Use FormData for file uploads
+                // Don't set Content-Type header, let browser set it with boundary
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errData => {
+                        throw new Error(errData.message || `HTTP error! status: ${response.status}`);
+                    }).catch(() => {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    });
                 }
-
-                if (!confirm(`Are you sure you want to import '${file.name}'?`)) {
-                     bibtexFileInput.value = ''; // Clear the input
-                     return;
-                }
-
-                const formData = new FormData();
-                formData.append('file', file);
-
-                // Disable button and show status
-                importBibtexBtn.disabled = true;
-                importBibtexBtn.textContent = 'Importing...';
-                if (batchStatusMessage) {
-                    batchStatusMessage.textContent = `Uploading and importing '${file.name}'...`;
-                    batchStatusMessage.style.color = ''; // Reset color
-                }
-
-                fetch('/upload_bibtex', {
-                    method: 'POST',
-                    body: formData // Use FormData for file uploads
-                    // Don't set Content-Type header, let browser set it with boundary
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(errData => {
-                            throw new Error(errData.message || `HTTP error! status: ${response.status}`);
-                        }).catch(() => {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status === 'success') {
-                        console.log(data.message);
-                        if (batchStatusMessage) {
-                            batchStatusMessage.textContent = data.message;
-                            batchStatusMessage.style.color = 'green'; // Success color
-                        }
-                        // Optional: Reload the page or fetch new data to show imported papers
-                        // window.location.reload(); // Simple reload
-                        // Or, fetch updated papers list (requires more JS logic)
-                         setTimeout(() => { window.location.reload(); }, 1500); // Reload after delay
-                    } else {
-                        console.error("Import Error:", data.message);
-                        if (batchStatusMessage) {
-                            batchStatusMessage.textContent = `Import Error: ${data.message}`;
-                            batchStatusMessage.style.color = 'red'; // Error color
-                        }
-                        alert(`Import failed: ${data.message}`);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error uploading BibTeX file:', error);
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log(data.message);
                     if (batchStatusMessage) {
-                        batchStatusMessage.textContent = `Upload Error: ${error.message}`;
+                        batchStatusMessage.textContent = data.message;
+                        batchStatusMessage.style.color = 'green'; // Success color
+                    }
+                    // Optional: Reload the page or fetch new data to show imported papers
+                    // window.location.reload(); // Simple reload
+                    // Or, fetch updated papers list (requires more JS logic)
+                        setTimeout(() => { window.location.reload(); }, 1500); // Reload after delay
+                } else {
+                    console.error("Import Error:", data.message);
+                    if (batchStatusMessage) {
+                        batchStatusMessage.textContent = `Import Error: ${data.message}`;
                         batchStatusMessage.style.color = 'red'; // Error color
                     }
-                    alert(`An error occurred during upload: ${error.message}`);
-                })
-                .finally(() => {
-                    // Re-enable button and reset file input
-                    importBibtexBtn.disabled = false;
-                    importBibtexBtn.innerHTML = 'Import <strong>BibTeX</strong>'; // Restore original HTML
-                    bibtexFileInput.value = ''; // Clear the input for next use
-                    // Optionally clear status message after delay
-                    // if (batchStatusMessage) {
-                    //     setTimeout(() => {
-                    //         if (batchStatusMessage.style.color === 'green' || batchStatusMessage.style.color === 'red') {
-                    //              batchStatusMessage.textContent = '';
-                    //              batchStatusMessage.style.color = '';
-                    //         }
-                    //     }, 5000);
-                    // }
-                });
-            }
-        });
-    } else {
-        console.warn("Import BibTeX button or file input not found.");
-    }
+                    alert(`Import failed: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading BibTeX file:', error);
+                if (batchStatusMessage) {
+                    batchStatusMessage.textContent = `Upload Error: ${error.message}`;
+                    batchStatusMessage.style.color = 'red'; // Error color
+                }
+                alert(`An error occurred during upload: ${error.message}`);
+            })
+            .finally(() => {    // Re-enable button and reset file input
+                importBibtexBtn.disabled = false;
+                importBibtexBtn.innerHTML = 'Import <strong>BibTeX</strong>'; // Restore original HTML
+                bibtexFileInput.value = '';
+            });
+        }
+    });
     // --- End BibTeX Import Logic ---
 
     // --- Export HTML Button ---
     const exportHtmlBtn = document.getElementById('export-html-btn');
-    if (exportHtmlBtn) {
-        exportHtmlBtn.addEventListener('click', function() {
-            console.log("Export HTML button clicked");
-            // Gather current filter values from the UI elements
-            const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
-            const yearFromInput = document.getElementById('year-from');
-            const yearToInput = document.getElementById('year-to');
-            const minPageCountInput = document.getElementById('min-page-count');
-            const searchInput = document.getElementById('search-input'); // Get search input
+    exportHtmlBtn.addEventListener('click', function() {
+        console.log("Export HTML button clicked");
+        // Gather current filter values from the UI elements
+        const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
+        const yearFromInput = document.getElementById('year-from');
+        const yearToInput = document.getElementById('year-to');
+        const minPageCountInput = document.getElementById('min-page-count');
+        const searchInput = document.getElementById('search-input'); // Get search input
 
-            let exportUrl = '/static_export?'; // Start building the URL
+        let exportUrl = '/static_export?'; // Start building the URL
 
-            // Add filters to the URL query parameters
-            if (hideOfftopicCheckbox) {
-                exportUrl += `hide_offtopic=${hideOfftopicCheckbox.checked ? '1' : '0'}&`;
-            }
-            if (yearFromInput && yearFromInput.value) {
-                exportUrl += `year_from=${encodeURIComponent(yearFromInput.value)}&`;
-            }
-            if (yearToInput && yearToInput.value) {
-                exportUrl += `year_to=${encodeURIComponent(yearToInput.value)}&`;
-            }
-            if (minPageCountInput && minPageCountInput.value) {
-                exportUrl += `min_page_count=${encodeURIComponent(minPageCountInput.value)}&`;
-            }
-            if (searchInput && searchInput.value) { // Add search query
-                exportUrl += `search_query=${encodeURIComponent(searchInput.value)}&`;
-            }
+        // Add filters to the URL query parameters
+        if (hideOfftopicCheckbox) {
+            exportUrl += `hide_offtopic=${hideOfftopicCheckbox.checked ? '1' : '0'}&`;
+        }
+        if (yearFromInput && yearFromInput.value) {
+            exportUrl += `year_from=${encodeURIComponent(yearFromInput.value)}&`;
+        }
+        if (yearToInput && yearToInput.value) {
+            exportUrl += `year_to=${encodeURIComponent(yearToInput.value)}&`;
+        }
+        if (minPageCountInput && minPageCountInput.value) {
+            exportUrl += `min_page_count=${encodeURIComponent(minPageCountInput.value)}&`;
+        }
+        if (searchInput && searchInput.value) { // Add search query
+            exportUrl += `search_query=${encodeURIComponent(searchInput.value)}&`;
+        }
 
-            // Remove trailing '&' or '?' if present
-            exportUrl = exportUrl.replace(/&$/, '');
+        // Remove trailing '&' or '?' if present
+        exportUrl = exportUrl.replace(/&$/, '');
 
-            console.log("Export URL:", exportUrl);
+        console.log("Export URL:", exportUrl);
 
-            // --- Trigger the download asynchronously ---
-            // Create a temporary invisible anchor element
-            const link = document.createElement('a');
-            link.href = exportUrl;
-            link.style.display = 'none';
-            // The filename will be suggested by the server's Content-Disposition header
-            // link.download = 'PCBPapers_export.html'; // Optional: Suggest a default name if server doesn't set it
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            // Note: The browser's download manager should handle the file save dialog.
-        });
-    }
+        // --- Trigger the download asynchronously ---
+        // Create a temporary invisible anchor element
+        const link = document.createElement('a');
+        link.href = exportUrl;
+        link.style.display = 'none';
+        // The filename will be suggested by the server's Content-Disposition header
+        // link.download = 'PCBPapers_export.html'; // Optional: Suggest a default name if server doesn't set it
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        // Note: The browser's download manager should handle the file save dialog.
+    });
 
     document.getElementById('export-xlsx-btn').addEventListener('click', function() {
         // Reuse the logic from exportStaticBtn or create a specific one
@@ -1324,3 +1199,135 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//deprecated, replaced by full-client-side implementation based on GH export version.
+// The change seems to substantially slow down page manipulation with inspector for some reason, 
+// but it's the easiest solution for stats bugs for now.
+// function fetchDetailRowLists(callback){
+//         // --- Fetch Server Stats (for other lists) ---
+//     const urlParams = new URLSearchParams(window.location.search);
+//     const statsUrl = `/get_stats?${urlParams.toString()}`;
+//     fetch(statsUrl).then(response => {
+//         return response.json();
+//     }).then(data => {
+//         if (data.status === 'success' && data.data) {
+//             const serverStatsData = data.data;
+//             function populateListFromServer(listElementId, dataArray) { //for items with count >=2
+//                 const listElement = document.getElementById(listElementId);
+//                 listElement.innerHTML = '';
+//                 if (!dataArray || dataArray.length === 0) {
+//                     listElement.innerHTML = '<li>No items with count > 1.</li>';
+//                     return;
+//                 }
+//                 dataArray.forEach(item => {
+//                     const listItem = document.createElement('li');
+//                     const escapedName = (item.name || '').toString()
+//                         .replace(/&/g, "&amp;").replace(/</g, "<")
+//                         .replace(/>/g, ">").replace(/"/g, "&quot;")
+//                         .replace(/'/g, "&#39;");
+//                     // --- Preserve Original Structure ---
+//                     const countSpan = document.createElement('span');
+//                     countSpan.className = 'count';
+//                     countSpan.textContent = item.count;
+//                     const nameSpan = document.createElement('span');
+//                     nameSpan.className = 'name';
+//                     nameSpan.textContent = escapedName;
+//                     // --- NEW: Create search button element ---
+//                     const searchButton = document.createElement('button');
+//                     searchButton.type = 'button'; // Important to prevent form submission if inside one
+//                     searchButton.className = 'search-item-btn'; // Add a specific class for styling/listening
+//                     searchButton.title = `Search for "${item.name}"`;
+//                     searchButton.textContent = '🔍'; // Or use an icon image
+//                     // --- NEW: Add click event listener to the button ---
+//                     searchButton.addEventListener('click', function(event) {
+//                         event.stopPropagation(); // Prevent triggering other click listeners on the <li>
+//                         searchInput.value = item.name; // Set the search input value
+//                         closeModal(); // Close the stats modal
+//                         // Trigger the existing search mechanism (which includes debouncing)
+//                         const inputEvent = new Event('input', { bubbles: true });
+//                         searchInput.dispatchEvent(inputEvent);
+//                     });
+//                     // --- Append elements preserving the original structure ---
+//                     listItem.appendChild(countSpan);
+//                     listItem.appendChild(searchButton); 
+//                     listItem.appendChild(nameSpan);
+//                     listElement.appendChild(listItem);
+//                 });
+//             }
+//             function populateAllListFromServer(listElementId, dataArray) { //for ALL items, not just repeating ones
+//                 const listElement = document.getElementById(listElementId);
+//                 listElement.innerHTML = '';
+//                 if (!dataArray || dataArray.length === 0) {
+//                     listElement.innerHTML = '<li>No non-empty items found.</li>';
+//                     return;
+//                 }
+//                 dataArray.forEach(item => {
+//                     const listItem = document.createElement('li');
+//                     const escapedName = (item.name || '').toString()
+//                         .replace(/&/g, "&amp;").replace(/</g, "<")
+//                         .replace(/>/g, ">").replace(/"/g, "&quot;")
+//                         .replace(/'/g, "&#39;");
+//                     // --- Preserve Original Structure ---
+//                     const countSpan = document.createElement('span');
+//                     countSpan.className = 'count';
+//                     countSpan.textContent = item.count;
+//                     const nameSpan = document.createElement('span');
+//                     nameSpan.className = 'name';
+//                     nameSpan.textContent = escapedName;
+//                     // --- NEW: Create search button element ---
+//                     const searchButton = document.createElement('button');
+//                     searchButton.type = 'button';
+//                     searchButton.className = 'search-item-btn';
+//                     searchButton.title = `Search for "${item.name}"`;
+//                     searchButton.textContent = '🔍';
+//                     // --- NEW: Add click event listener to the button ---
+//                     searchButton.addEventListener('click', function(event) {
+//                         event.stopPropagation();
+//                         searchInput.value = item.name;
+//                         closeModal();
+//                         const inputEvent = new Event('input', { bubbles: true });
+//                         searchInput.dispatchEvent(inputEvent);
+//                     });
+//                     // --- Append elements preserving the original structure ---
+//                     listItem.appendChild(countSpan);
+//                     listItem.appendChild(searchButton);
+//                     listItem.appendChild(nameSpan);
+//                     listElement.appendChild(listItem);
+//                 });
+//             }
+//             // Populate Server Lists (Keywords, Authors, etc.)
+//             populateListFromServer('keywordStatsList', serverStatsData.keywords);
+//             populateListFromServer('authorStatsList', serverStatsData.authors);
+//             populateListFromServer('researchAreaStatsList', serverStatsData.research_areas);
+//             populateAllListFromServer('otherDetectedFeaturesStatsList', serverStatsData.other_features_all);
+//             populateAllListFromServer('modelNamesStatsList', serverStatsData.model_names_all);
+                
+//         // ---- now the lists exist; build cloud if switch is on ----
+//         if (document.getElementById('cloudToggle').checked) {
+//             toggleCloud();                     // first render
+//         }
+//             if (callback) callback(); // Call the callback function after populating lists
+//         } else {
+//             // Handle potential fetch error - still populate client-side lists if possible
+//             console.error("Failed to fetch server stats:", data);
+//         }
+//     })
+//                 if (callback) callback(); // Call the callback function after populating lists
+
+// }
+

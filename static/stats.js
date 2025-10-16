@@ -457,6 +457,260 @@ function cumulativeLegendLabels(chart) {
 
 
 
+//Unified full-client-side stats implementation:
+function buildDetailRowLists(callback) {    
+    const stats = {
+        journals: {}, 
+        conferences: {}, 
+        keywords: {},
+        authors: {},
+        researchAreas: {},
+        otherDetectedFeatures: {},
+        modelNames: {}
+    };
+    const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
+    visibleRows.forEach(row => {
+        // --- Get Journal/Conference and Type ---
+        const journalCell = row.cells[journalCellIndex]; // Index 4 (Journal/Conf column)
+        const typeCell = row.cells[typeCellIndex]; // Index 5 (Type column)
+
+        if (journalCell && typeCell) { // Ensure cells exist
+            const journalConfName = journalCell.textContent.trim();
+            const typeValue = (typeCell.getAttribute('title') || typeCell.textContent.trim()).toLowerCase(); // Use title if available, standardize case
+
+            if (journalConfName) {
+                // Determine if it's a journal or conference based on type
+                // Common BibTeX types: 'article' -> journal, 'inproceedings', 'proceedings', 'conference' -> conference
+                if (typeValue === 'article') {
+                    stats.journals[journalConfName] = (stats.journals[journalConfName] || 0) + 1;
+                } else if (typeValue === 'inproceedings' || typeValue === 'proceedings' || typeValue === 'conference') {
+                    stats.conferences[journalConfName] = (stats.conferences[journalConfName] || 0) + 1;
+                } else {
+                    // Optional: Handle other types or log them if needed
+                    // console.log(`Unrecognized type for ${journalConfName}: ${typeValue}`);
+                    // You could add them to a 'miscellaneous' category if desired
+                }
+            }
+        }
+
+        // --- Existing Logic for Keywords, Authors, etc. ---
+        // (Keep the rest of the loop body unchanged)
+        const detailRow = row.nextElementSibling;
+        if (detailRow && detailRow.classList.contains('detail-row')) {
+            const keywordsPara = detailRow.querySelector('.detail-metadata p strong');
+            if (keywordsPara && keywordsPara.textContent.trim() === 'Keywords:') {
+                const keywordsParent = keywordsPara.parentElement;
+                if (keywordsParent) {
+                    let keywordsText = keywordsParent.textContent.trim();
+                    const prefix = "Keywords:";
+                    if (keywordsText.startsWith(prefix)) {
+                        keywordsText = keywordsText.substring(prefix.length).trim();
+                    }
+                    const keywordsList = keywordsText.split(';')
+                        .map(kw => kw.trim())
+                        .filter(kw => kw.length > 0);
+                    keywordsList.forEach(keyword => {
+                        stats.keywords[keyword] = (stats.keywords[keyword] || 0) + 1;
+                    });
+                }
+            }
+        }
+        let authorsList = [];
+        const detailRowForAuthors = row.nextElementSibling;
+        if (detailRowForAuthors && detailRowForAuthors.classList.contains('detail-row')) {
+            const authorsPara = Array.from(detailRowForAuthors.querySelectorAll('.detail-metadata p')).find(p => {
+                const strongTag = p.querySelector('strong');
+                return strongTag && strongTag.textContent.trim() === 'Full Authors:';
+            });
+            if (authorsPara) {
+                let authorsText = authorsPara.textContent.trim();
+                const prefix = "Full Authors:";
+                if (authorsText.startsWith(prefix)) {
+                    authorsText = authorsText.substring(prefix.length).trim();
+                }
+                if (authorsText) {
+                    authorsList = authorsText.split(';')
+                        .map(author => author.trim())
+                        .filter(author => author.length > 0);
+                } else {
+                    console.warn("Found 'Full Authors:' paragraph but no author text following it.", row);
+                }
+            }
+        }
+        authorsList.forEach(author => {
+            stats.authors = stats.authors || {};
+            stats.authors[author] = (stats.authors[author] || 0) + 1;
+        });
+        const detailRowForResearchArea = row.nextElementSibling;
+        if (detailRowForResearchArea && detailRowForResearchArea.classList.contains('detail-row')) {
+            const researchAreaInput = detailRowForResearchArea.querySelector('.detail-edit input[name="research_area"]');
+            if (researchAreaInput) {
+                const researchArea = researchAreaInput.value.trim();
+                if (researchArea) {
+                    stats.researchAreas[researchArea] = (stats.researchAreas[researchArea] || 0) + 1;
+                }
+            }
+        }
+        // --- New Logic for Other Detected Features ---
+        const detailRowForOtherFeature = row.nextElementSibling;
+        if (detailRowForOtherFeature && detailRowForOtherFeature.classList.contains('detail-row')) {
+            const otherFeatureInput = detailRowForOtherFeature.querySelector('.detail-edit input[name="features_other"]');
+            if (otherFeatureInput) {
+                const otherFeatureText = otherFeatureInput.value.trim();
+                if (otherFeatureText) {
+                    // Split by semicolon, trim, filter out empty strings
+                    const featuresList = otherFeatureText.split(';')
+                        .map(f => f.trim())
+                        .filter(f => f.length > 0);
+                    featuresList.forEach(feature => {
+                        // Count occurrences of each feature string
+                        stats.otherDetectedFeatures[feature] = (stats.otherDetectedFeatures[feature] || 0) + 1;
+                    });
+                }
+            }
+        }
+        // --- New Logic for Model Names ---
+        const detailRowForModelName = row.nextElementSibling;
+        if (detailRowForModelName && detailRowForModelName.classList.contains('detail-row')) {
+            const modelNameInput = detailRowForModelName.querySelector('.detail-edit input[name="model_name"]'); // Adjust selector if necessary
+            if (modelNameInput) {
+                const modelNameText = modelNameInput.value.trim();
+                if (modelNameText) {
+                    // Split by comma or semicolon, trim whitespace, filter out empty strings
+                    const modelNamesList = modelNameText.split(/[,;]/).map(m => m.trim()).filter(m => m.length > 0);
+                    modelNamesList.forEach(modelName => {
+                        // Count occurrences of each individual model name string
+                        stats.modelNames[modelName] = (stats.modelNames[modelName] || 0) + 1; // Fixed: Added space around ||
+                    });
+                }
+            }
+        }
+    });
+    
+
+    // Function to populate lists where items must appear more than once (count > 1)
+    function populateList(listElementId, dataObj) {
+        const listElement = document.getElementById(listElementId);
+        if (!listElement) {
+            console.warn(`List element with ID ${listElementId} not found.`);
+            return;
+        }
+        listElement.innerHTML = '';
+
+        const sortedEntries = Object.entries(dataObj)
+            .filter(([name, count]) => count >= 1) // Keep only entries with count > 1
+            .sort((a, b) => {
+                if (b[1] !== a[1]) {
+                    return b[1] - a[1];
+                }
+                return a[0].localeCompare(b[0]);
+            });
+
+        if (sortedEntries.length === 0) {
+            listElement.innerHTML = '<li>No items with count > 1.</li>';
+            return;
+        }
+
+        sortedEntries.forEach(([name, count]) => {
+            const listItem = document.createElement('li');
+            // Escape HTML to prevent XSS if data contains special characters
+            const escapedName = name.replace(/&/g, "&amp;").replace(/</g, "<").replace(/>/g, ">");
+            const escapedNameForTitle = escapedName.replace(/"/g, "&quot;"); // Escape quotes for title attribute
+
+            // Create the list item content with count, search button, and name
+            listItem.innerHTML = `<span class="count">${count}</span><button type="button" class="search-item-btn" title="Search for &quot;${escapedNameForTitle}&quot;">🔍</button><span class="name">${escapedName}</span>`;
+
+            listElement.appendChild(listItem);
+        });
+
+        // Add event listeners to the newly created search buttons
+        listElement.querySelectorAll('.search-item-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const listItem = this.closest('li');
+                const nameSpan = listItem.querySelector('.name');
+                if (nameSpan) {
+                    const searchTerm = nameSpan.textContent.trim();
+                    searchInput.value = searchTerm; // Set the search input value
+                    closeModal(); // Close the stats modal
+                    applyLocalFilters(); // Trigger the filter update
+                }
+            });
+        });
+    }
+    // --- New Function Call to Populate Lists with Search Buttons ---
+    // Function to populate lists where items *can* appear only once (no > 1 filter)
+    function populateSimpleList(listElementId, dataObj) {
+        const listElement = document.getElementById(listElementId);
+        if (!listElement) {
+            console.warn(`List element with ID ${listElementId} not found.`);
+            return;
+        }
+        listElement.innerHTML = '';
+
+        // Sort entries: primarily by count (descending), then alphabetically (ascending) for ties
+        const sortedEntries = Object.entries(dataObj)
+            .sort((a, b) => {
+                if (b[1] !== a[1]) {
+                    return b[1] - a[1]; // Sort by count descending
+                }
+                return a[0].localeCompare(b[0]); // Sort alphabetically ascending if counts are equal
+            });
+
+        if (sortedEntries.length === 0) {
+            listElement.innerHTML = '<li>No items found.</li>';
+            return;
+        }
+
+        sortedEntries.forEach(([name, count]) => {
+            const listItem = document.createElement('li');
+            // Escape HTML to prevent XSS if data contains special characters
+            const escapedName = name.replace(/&/g, "&amp;").replace(/</g, "<").replace(/>/g, ">");
+            const escapedNameForTitle = escapedName.replace(/"/g, "&quot;"); // Escape quotes for title attribute
+
+            // Create the list item content with count, search button, and name
+            listItem.innerHTML = `<span class="count">${count}</span><button type="button" class="search-item-btn" title="Search for &quot;${escapedNameForTitle}&quot;">🔍</button><span class="name">${escapedName}</span>`;
+
+            listElement.appendChild(listItem);
+        });
+
+        // Add event listeners to the newly created search buttons
+        listElement.querySelectorAll('.search-item-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const listItem = this.closest('li');
+                const nameSpan = listItem.querySelector('.name');
+                if (nameSpan) {
+                    const searchTerm = nameSpan.textContent.trim();
+                    searchInput.value = searchTerm; // Set the search input value
+                    closeModal(); // Close the stats modal
+                    applyLocalFilters(); // Trigger the filter update
+                }
+            });
+        });
+    }
+
+    // Populate the new lists using the new helper functions
+    // Populate Journals (only items with type 'article')
+    // populateList('journalStatsList', stats.journals); // Uses stats.journals object
+    // Populate Conferences (only items with type 'inproceedings', 'proceedings', 'conference')
+    // populateList('conferenceStatsList', stats.conferences); // NEW: Uses stats.conferences object
+    populateList('keywordStatsList', stats.keywords);
+    populateList('authorStatsList', stats.authors);
+    populateList('researchAreaStatsList', stats.researchAreas);
+
+    populateSimpleList('otherDetectedFeaturesStatsList', stats.otherDetectedFeatures);
+    populateSimpleList('modelNamesStatsList', stats.modelNames);
+    
+    // ---- now the lists exist; build cloud if switch is on ----
+    if (document.getElementById('cloudToggle').checked) {
+        toggleCloud();                     // first render
+    }
+    if (callback) callback(); // Call the callback function after populating lists
+
+    // Trigger reflow and add modal-active class after charts are drawn and lists are populated
+    // modal.offsetHeight; // Trigger reflow
+    // modal.classList.add('modal-active');
+    // return stats;
+}
 
 
 
@@ -738,8 +992,8 @@ function displayStats() {
                     {
                         label: 'Implementation Papers',
                         data: implCountsFinal, // Use final data array
-                        borderColor: 'hsl(347, 70%, 49%)', // Red
-                        backgroundColor: 'hsla(347, 50%, 69%, 0.95)',
+                        borderColor: 'hsla(38, 70%, 49%, 1.00)', // Red
+                        backgroundColor: 'hsla(53, 50%, 69%, 0.95)',
                         fill: isStacked, // Fill is controlled by stacked option below
                         tension: 0.25
                     }
@@ -1063,7 +1317,7 @@ function displayStats() {
         //comms.s or ghpages.js (different functions depending on source!)  
         //This fetches data from server on full implementation (no detail row readily available)
         //or directly from detail row contents on HTML exports
-        // fetchDetailRowLists(); 
+        // buildDetailRowLists(); 
     
         // --- Populate Client-side Journal/Conference Lists ---
         function populateListFromClient(listElementId, dataArray) { //for items with count >=2
@@ -1109,7 +1363,7 @@ function displayStats() {
 
         // --- Populate Metrics Table (Updated Logic) ---
         // Assume server lists (keywords, authors, etc.) are already populated
-        // by an initial call to fetchDetailRowLists() before displayStats() is run for the first time
+        // by an initial call to buildDetailRowLists() before displayStats() is run for the first time
         // or when filters change.
         // This function calculates metrics based on current state.
         function populateMetricsTableDirectly() { // Renamed for clarity
@@ -1127,12 +1381,12 @@ function displayStats() {
             const distinctJournalsCount = journals.length; // Client-side calculation
             const distinctConferencesCount = conferences.length; // Client-side calculation
 
-            // Count distinct authors from the author list (assuming it's already populated by fetchDetailRowLists)
+            // Count distinct authors from the author list (assuming it's already populated by buildDetailRowLists)
             // This is the critical part: this function assumes authorStatsList is already up-to-date.
             const authorListElement = document.getElementById('authorStatsList');
             let distinctAuthorsCount = 0;
             if (authorListElement) {
-                // Count the <li> elements inside the author list *after* it's populated by fetchDetailRowLists
+                // Count the <li> elements inside the author list *after* it's populated by buildDetailRowLists
                 distinctAuthorsCount = authorListElement.querySelectorAll('li').length;
                 // console.log("Authors counted in displayStats:", distinctAuthorsCount); // Debug log
             } else {
@@ -1155,9 +1409,12 @@ function displayStats() {
                 row.appendChild(valueCell);
                 return row;
             };
-
+            
+            // Select only VISIBLE main rows for counting '✔️' and calculating visible count
+            const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
+            const visiblePaperCount = visibleRows.length;
             // Append rows to the table
-            tableElement.appendChild(createRow('Total <strong>filtered</strong> articles:', filteredPapersCount));
+            tableElement.appendChild(createRow('Total <strong>filtered</strong> articles:', visiblePaperCount));
             tableElement.appendChild(createRow('Total unique <strong>journals</strong>:', distinctJournalsCount));
             tableElement.appendChild(createRow('Total unique <strong>conferences</strong>:', distinctConferencesCount));
             tableElement.appendChild(createRow('Total unique <strong>authors</strong>:', distinctAuthorsCount)); // Relies on pre-populated list
@@ -1193,18 +1450,33 @@ function closeSmallModal() { modalSmall.classList.remove('modal-active'); }
 function closeModal() { modal.classList.remove('modal-active'); } //for stats modal:
 
 function buildKeywordCloud() {
-    /* ----------  grab & clamp data ---------- */
+    const canvas = document.querySelector('#keywordCloudCanvas canvas');
+    const ctx    = canvas?.getContext('2d');
+    if (!ctx) return;
+
     const liNodes = document.querySelectorAll('#keywordStatsList li');
-    const raw = Array.from(liNodes).map(li => ({
-        text: li.querySelector('.name').textContent.trim(),
-        size: +li.querySelector('.count').textContent
-    }));
-    raw.sort((a, b) => b.size - a.size);
+    const raw = Array.from(liNodes)
+                     .map(li => {
+                         const nameEl  = li.querySelector('.name');
+                         const countEl = li.querySelector('.count');
+                         if (!nameEl || !countEl) return null;
+                         return {
+                             text: nameEl.textContent.trim(),
+                             size: +countEl.textContent
+                         };
+                     })
+                     .filter(Boolean);
+
+    /*  NEW: empty list → wipe canvas and stop  */
+    if (!raw.length) {
+        const dpr = window.devicePixelRatio || 1;
+        ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+        return;
+    }
+
     const top_k = raw.slice(0, 50);
 
     /* ----------  canvas setup for hiDPI ---------- */
-    const canvas = document.querySelector('#keywordCloudCanvas canvas');
-    const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
 
     const displayWidth = canvas.parentElement.clientWidth;   // CSS pixels
@@ -1255,16 +1527,20 @@ function buildKeywordCloud() {
 
 
 function toggleCloud() {
-	const list   = document.getElementById('keywordStatsList');
-	const canvas = document.getElementById('keywordCloudCanvas');
-	const on     = document.getElementById('cloudToggle').checked;
+    const list   = document.getElementById('keywordStatsList');
+    const canvas = document.getElementById('keywordCloudCanvas');
+    const on     = document.getElementById('cloudToggle').checked;
 
-	list.style.display   = on ? 'none' : 'block';
-	canvas.style.display = on ? 'block' : 'none';
+    list.style.display   = on ? 'none' : 'block';
+    canvas.style.display = on ? 'block' : 'none';
 
-	if (on) buildKeywordCloud();   // build only when opened
+    if (!on) return; // ← don’t build if turning off
+
+    const liNodes = list.querySelectorAll('li');
+    if (liNodes.length === 0) return; // ← don’t build if no keywords
+
+    buildKeywordCloud(); // ← safe to build
 }
-
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -1281,7 +1557,7 @@ document.addEventListener('DOMContentLoaded', function () {
     statsBtn.addEventListener('click', function () {
         document.documentElement.classList.add('busyCursor');
         setTimeout(() => {
-            // NEW: Call fetchDetailRowLists only once when opening the modal,
+            // NEW: Call buildDetailRowLists only once when opening the modal,
             // or whenever filters change significantly.
             // Move the call OUTSIDE of displayStats and only call it here initially,
             // OR call it whenever search/filter results update.
@@ -1289,7 +1565,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // A simple approach: Call it once on first open, or if a flag indicates refresh is needed.
 
             // Option A: Always fetch on open (less efficient if data rarely changes)
-            // fetchDetailRowLists(() => displayStats()); // Pass displayStats as the callback
+            // buildDetailRowLists(() => displayStats()); // Pass displayStats as the callback
 
             // Option B: Fetch once initially, then only when filters change significantly (e.g., search)
             // This requires a variable to track if data needs refreshing.
@@ -1297,13 +1573,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Assume a flag or check might be needed later to decide if refetch is necessary
             // For now, since filters (like search) likely trigger updateCounts and maybe a general refresh,
-            // we might call fetchDetailRowLists from the search/filter logic.
+            // we might call buildDetailRowLists from the search/filter logic.
             // For the button click, just call displayStats, assuming data is fresh enough or fetched elsewhere.
             // UNLESS it's the very first time the modal is opened.
 
             // Let's add a simple flag to fetch once on first open of the stats modal.
             if (typeof window.detailRowsFetched === 'undefined' || !window.detailRowsFetched) {
-                fetchDetailRowLists(() => {
+                buildDetailRowLists(() => {
                     window.detailRowsFetched = true; // Set the flag after fetching
                     displayStats(); // Now display stats with potentially updated lists
                 });
@@ -1314,7 +1590,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // OR, if you want to ensure the most up-to-date lists every time the modal opens
             // (accepting the potential latency), use:
-            // fetchDetailRowLists(() => displayStats());
+            // buildDetailRowLists(() => displayStats());
 
         }, 10); // Keep the initial timeout
     });

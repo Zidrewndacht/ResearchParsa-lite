@@ -83,7 +83,33 @@
     </tr>
     <tr class="detail-row">
         <td colspan="42">
-            <div class="detail-content-placeholder"> 
+            <div class="detail-content-placeholder">        
+                <!-- prefilled data to convert stats to a single full=client-side implementation 
+                 (changed due to stats list building complexity, check notes)
+                 This seems to substantially slow down page manipulation with inspector for some reason, but it's the easiest solution for stats bugs for now
+                 -->         
+                <div class="detail-flex-container">
+                    <div class="detail-content detail-metadata">
+                        <p><strong>Keywords:</strong> {{ paper.keywords }}</p>
+                        <p><strong>Full Authors:</strong> {{ paper.authors }}</p>
+                    </div>
+                    <div class="edit-section detail-edit">
+                        <form id="form-{{ paper.id }}" data-paper-id="{{ paper.id }}">
+                            <label>Research Area:
+                                <input type="text" class="editable" name="research_area" value="{{ paper.research_area or '' }}" disabled>
+                            </label>
+                            <label>Model Name:
+                                <input type="text" class="editable" name="model_name" value="{{ paper.technique.model or '' }}" disabled>
+                            </label>
+                            <label>Other defects:
+                                <input type="text" class="editable" name="features_other" value="{{ paper.features.other or '' }}" disabled>
+                            </label>
+                            <label>User comments:
+                                <textarea class="editable" name="user_trace" disabled>{{ paper.user_trace or '' }}</textarea>
+                            </label>
+                        </form>
+                    </div>
+                </div>
             </div>
         </td>
     </tr>

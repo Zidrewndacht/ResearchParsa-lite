@@ -51,7 +51,7 @@ def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_
         year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
         year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
         min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
-        # --- NEW: Determine search query value ---
+        # --- BROKEN: Determine search query value ---
         search_query_value = search_query_param if search_query_param is not None else ""
 
         # Fetch papers with ALL the filters applied, including the new search query
@@ -60,7 +60,7 @@ def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_
             year_from=year_from_value,
             year_to=year_to_value,
             min_page_count=min_page_count_value,
-            search_query=search_query_value # Pass the search query
+            search_query=search_query_value # currently unused by the client: FTS is broken.
         )
 
         # Render the table template fragment, passing the search query value for the input field
@@ -86,7 +86,7 @@ def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_
         return "<p>Error loading table.</p>" # Basic error display
 
 # DB functions:
-
+#FTS implementation is currently broken! Can't search inside JSON text like "in-house" at all!
 def ensure_fts_tables(conn):
     """
     Creates FTS5 virtual tables for searchable JSON text if they don't exist
@@ -94,6 +94,9 @@ def ensure_fts_tables(conn):
     This should ideally be called once at startup or when data changes.
     Handles potential NULLs and datatype mismatches robustly.
     """
+    print("FTS is currently broken and disabled.")
+    return
+
     cursor = conn.cursor()
     
     # Check if FTS tables exist by checking for their docsize tables (internal to FTS)
@@ -1551,130 +1554,6 @@ def load_table():
     )
     return table_html
 
-@app.route('/get_stats', methods=['GET'])
-def get_stats():
-    """Endpoint to fetch statistics (repeating journals, keywords, authors, research areas) based on current filters."""
-    
-    # --- Get filter parameters from the request (same as /load_table) ---
-    hide_offtopic_param = request.args.get('hide_offtopic')
-    year_from_param = request.args.get('year_from')
-    year_to_param = request.args.get('year_to')
-    min_page_count_param = request.args.get('min_page_count')
-    search_query_param = request.args.get('search_query')
-
-    try:
-        # --- Determine filter values, using defaults if not provided or invalid ---
-        # Replicating logic from render_papers_table for consistency
-        hide_offtopic = True # Default
-        if hide_offtopic_param is not None:
-            hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
-
-        year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
-        year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
-        min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
-        search_query_value = search_query_param if search_query_param is not None else ""
-
-        # --- Fetch papers based on these filters ---
-        papers = fetch_papers(
-            hide_offtopic=hide_offtopic,
-            year_from=year_from_value,
-            year_to=year_to_value,
-            min_page_count=min_page_count_value,
-            search_query=search_query_value
-        )
-
-        # --- Calculate Stats from Fetched Papers ---
-        journal_counter = Counter()
-        keyword_counter = Counter()
-        author_counter = Counter()
-        research_area_counter = Counter()
-
-        for paper in papers:
-            # --- Journal/Conf ---
-            journal = paper.get('journal')
-            if journal:
-                journal_counter[journal] += 1
-
-            # --- Keywords ---
-            # Keywords are stored as a single string, split by ';'
-            keywords_str = paper.get('keywords', '')
-            if keywords_str:
-                 # Split robustly, handling potential extra spaces
-                 keywords_list = [kw.strip() for kw in keywords_str.split(';') if kw.strip()]
-                 keyword_counter.update(keywords_list)
-
-            # --- Authors ---
-            # Authors are stored as a single string, split by ';'
-            authors_str = paper.get('authors', '')
-            if authors_str:
-                # Split robustly, handling potential extra spaces
-                authors_list = [author.strip() for author in authors_str.split(';') if author.strip()]
-                author_counter.update(authors_list)
-
-            # --- Research Area ---
-            research_area = paper.get('research_area')
-            if research_area:
-                research_area_counter[research_area] += 1
-
-        # --- Filter counts > 1 and sort (matching client-side logic) ---
-        def filter_and_sort(counter):
-            # Filter items with count > 1
-            filtered_items = {item: count for item, count in counter.items() if count >= 1}
-            # Sort by count descending, then by name ascending
-            sorted_items = sorted(filtered_items.items(), key=lambda x: (-x[1], x[0]))
-            # Convert back to a list of dictionaries for JSON serialization
-            return [{'name': name, 'count': count} for name, count in sorted_items]
-
-        # --- NEW CODE: Collect all non-empty 'other' features and 'model' names ---
-        other_features_counter = Counter()
-        model_names_counter = Counter()
-
-        for paper in papers:
-            # Get 'other' feature text
-            features_other_text = paper.get('features', {}).get('other', '')
-            if features_other_text and isinstance(features_other_text, str):
-                # Split by semicolon if multiple features are listed, otherwise treat as one item
-                # Strip whitespace and filter out empty strings after splitting
-                other_features_list = [feat.strip() for feat in features_other_text.split(';') if feat.strip()]
-                other_features_counter.update(other_features_list)
-            # If features_other_text is not a string (e.g., None, dict), it's ignored
-
-            # Get 'model' name text
-            technique_model_text = paper.get('technique', {}).get('model', '')
-            if technique_model_text and isinstance(technique_model_text, str):
-                # Split by COMMA if multiple models are listed, otherwise treat as one item
-                # Strip whitespace and filter out empty strings after splitting
-                model_names_list = [model.strip() for model in technique_model_text.split(',') if model.strip()]
-                model_names_counter.update(model_names_list)
-            # If technique_model_text is not a string (e.g., None, dict), it's ignored
-
-        # Convert Counters to lists of {'name': item, 'count': count} dictionaries
-        # Include ALL items, not just repeating ones (> 1)
-        def counter_to_list_all(counter):
-            # Sort by count descending, then alphabetically ascending for ties
-            sorted_items = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
-            return [{'name': name, 'count': count} for name, count in sorted_items]
-
-        # --- END NEW CODE ---
-
-        # --- Modified stats_data preparation ---
-        stats_data = {
-            # Existing repeating stats
-            'journals': filter_and_sort(journal_counter),
-            'keywords': filter_and_sort(keyword_counter),
-            'authors': filter_and_sort(author_counter),
-            'research_areas': filter_and_sort(research_area_counter),
-            # NEW: All non-empty features.other and technique.model
-            'other_features_all': counter_to_list_all(other_features_counter), # Changed key name for clarity
-            'model_names_all': counter_to_list_all(model_names_counter)       # Changed key name for clarity
-        }
-
-        return jsonify({'status': 'success', 'data': stats_data})
-
-    except Exception as e:
-        print(f"Error calculating stats: {e}")
-        return jsonify({'status': 'error', 'message': 'Failed to calculate statistics'}), 500
-
 # Data import/update routes (data writing):
 @app.route('/update_paper', methods=['POST'])
 def update_paper():
@@ -1910,14 +1789,14 @@ if __name__ == '__main__':
    # --- NEW: Pre-populate FTS tables on startup ---
     # This ensures they are ready before the first search request.
     # It might take a moment on the first run or with a large DB.
-    try:
-        print("Ensuring FTS tables are ready...")
-        conn = get_db_connection() # This will trigger ensure_fts_tables
-        conn.close()
-        print("FTS tables are ready.")
-    except Exception as e:
-        print(f"Warning: Could not pre-populate FTS tables on startup: {e}")
-        sys.exit(1) # FTS is mandatory
+    # try:
+    #     print("Ensuring FTS tables are ready...")
+    #     conn = get_db_connection() # This will trigger ensure_fts_tables
+    #     conn.close()
+    #     print("FTS tables are ready.")
+    # except Exception as e:
+    #     print(f"Warning: Could not pre-populate FTS tables on startup: {e}")
+    #     sys.exit(1) # FTS is mandatory
 
     print(f"Starting server, database: {DATABASE}")
 
@@ -1943,3 +1822,141 @@ if __name__ == '__main__':
     if not os.path.exists('static'):
         os.makedirs('static')
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+# deprecated, stats are built fully client-side for now.
+# @app.route('/get_stats', methods=['GET'])
+# def get_stats():
+#     """Endpoint to fetch statistics (repeating journals, keywords, authors, research areas) based on current filters."""
+    
+#     # --- Get filter parameters from the request (same as /load_table) ---
+#     hide_offtopic_param = request.args.get('hide_offtopic')
+#     year_from_param = request.args.get('year_from')
+#     year_to_param = request.args.get('year_to')
+#     min_page_count_param = request.args.get('min_page_count')
+#     search_query_param = request.args.get('search_query')
+
+#     try:
+#         # --- Determine filter values, using defaults if not provided or invalid ---
+#         # Replicating logic from render_papers_table for consistency
+#         hide_offtopic = True # Default
+#         if hide_offtopic_param is not None:
+#             hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
+
+#         year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
+#         year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
+#         min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
+#         search_query_value = search_query_param if search_query_param is not None else ""
+
+#         # --- Fetch papers based on these filters ---
+#         papers = fetch_papers(
+#             hide_offtopic=hide_offtopic,
+#             year_from=year_from_value,
+#             year_to=year_to_value,
+#             min_page_count=min_page_count_value,
+#             search_query=search_query_value
+#         )
+
+#         # --- Calculate Stats from Fetched Papers ---
+#         journal_counter = Counter()
+#         keyword_counter = Counter()
+#         author_counter = Counter()
+#         research_area_counter = Counter()
+
+#         for paper in papers:
+#             # --- Journal/Conf ---
+#             journal = paper.get('journal')
+#             if journal:
+#                 journal_counter[journal] += 1
+
+#             # --- Keywords ---
+#             # Keywords are stored as a single string, split by ';'
+#             keywords_str = paper.get('keywords', '')
+#             if keywords_str:
+#                  # Split robustly, handling potential extra spaces
+#                  keywords_list = [kw.strip() for kw in keywords_str.split(';') if kw.strip()]
+#                  keyword_counter.update(keywords_list)
+
+#             # --- Authors ---
+#             # Authors are stored as a single string, split by ';'
+#             authors_str = paper.get('authors', '')
+#             if authors_str:
+#                 # Split robustly, handling potential extra spaces
+#                 authors_list = [author.strip() for author in authors_str.split(';') if author.strip()]
+#                 author_counter.update(authors_list)
+
+#             # --- Research Area ---
+#             research_area = paper.get('research_area')
+#             if research_area:
+#                 research_area_counter[research_area] += 1
+
+#         # --- Filter counts > 1 and sort (matching client-side logic) ---
+#         def filter_and_sort(counter):
+#             # Filter items with count > 1
+#             filtered_items = {item: count for item, count in counter.items() if count >= 1}
+#             # Sort by count descending, then by name ascending
+#             sorted_items = sorted(filtered_items.items(), key=lambda x: (-x[1], x[0]))
+#             # Convert back to a list of dictionaries for JSON serialization
+#             return [{'name': name, 'count': count} for name, count in sorted_items]
+
+#         # --- NEW CODE: Collect all non-empty 'other' features and 'model' names ---
+#         other_features_counter = Counter()
+#         model_names_counter = Counter()
+
+#         for paper in papers:
+#             # Get 'other' feature text
+#             features_other_text = paper.get('features', {}).get('other', '')
+#             if features_other_text and isinstance(features_other_text, str):
+#                 # Split by semicolon if multiple features are listed, otherwise treat as one item
+#                 # Strip whitespace and filter out empty strings after splitting
+#                 other_features_list = [feat.strip() for feat in features_other_text.split(';') if feat.strip()]
+#                 other_features_counter.update(other_features_list)
+#             # If features_other_text is not a string (e.g., None, dict), it's ignored
+
+#             # Get 'model' name text
+#             technique_model_text = paper.get('technique', {}).get('model', '')
+#             if technique_model_text and isinstance(technique_model_text, str):
+#                 # Split by COMMA if multiple models are listed, otherwise treat as one item
+#                 # Strip whitespace and filter out empty strings after splitting
+#                 model_names_list = [model.strip() for model in technique_model_text.split(',') if model.strip()]
+#                 model_names_counter.update(model_names_list)
+#             # If technique_model_text is not a string (e.g., None, dict), it's ignored
+
+#         # Convert Counters to lists of {'name': item, 'count': count} dictionaries
+#         # Include ALL items, not just repeating ones (> 1)
+#         def counter_to_list_all(counter):
+#             # Sort by count descending, then alphabetically ascending for ties
+#             sorted_items = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
+#             return [{'name': name, 'count': count} for name, count in sorted_items]
+
+#         # --- END NEW CODE ---
+
+#         # --- Modified stats_data preparation ---
+#         stats_data = {
+#             # Existing repeating stats
+#             'journals': filter_and_sort(journal_counter),
+#             'keywords': filter_and_sort(keyword_counter),
+#             'authors': filter_and_sort(author_counter),
+#             'research_areas': filter_and_sort(research_area_counter),
+#             # NEW: All non-empty features.other and technique.model
+#             'other_features_all': counter_to_list_all(other_features_counter), # Changed key name for clarity
+#             'model_names_all': counter_to_list_all(model_names_counter)       # Changed key name for clarity
+#         }
+
+#         return jsonify({'status': 'success', 'data': stats_data})
+
+#     except Exception as e:
+#         print(f"Error calculating stats: {e}")
+#         return jsonify({'status': 'error', 'message': 'Failed to calculate statistics'}), 500

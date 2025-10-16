@@ -305,50 +305,49 @@ function applyLocalFilters() {
                         }
                     }
                 }
-
-                // 4. Search Term - added model name, etc. values search.
-                const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
-                if (showRow && searchTerm) {
-                    let rowText = (row.textContent || '').toLowerCase();
-                    let detailText = '';
-                    let inputValuesText = ''; // NEW: To store values from input fields
-
-                    if (detailRow) {
-                        const detailClone = detailRow.cloneNode(true);
-                        // Exclude traces from search if desired (as in original)
-                        detailClone.querySelector('.detail-evaluator-trace .trace-content')?.remove();
-                        detailClone.querySelector('.detail-verifier-trace .trace-content')?.remove();
-                        detailText = (detailClone.textContent || '').toLowerCase();
-
-                        // NEW: Extract values from specific input fields in the detail row
-                        const inputSelectors = [
-                            'input[name="research_area"]',
-                            'input[name="model_name"]',
-                            'input[name="features_other"]',
-                            'input[name="user_trace"]' // Also include user comments if desired
-                        ];
-
-                        inputSelectors.forEach(selector => {
-                            const inputElement = detailRow.querySelector(selector);
-                            if (inputElement && inputElement.value) {
-                                inputValuesText += ' ' + inputElement.value.toLowerCase();
-                            }
-                        });
-
-                        // NEW: Also check textarea values if needed, e.g., user_trace
-                        const textareaElement = detailRow.querySelector('textarea[name="user_trace"]');
-                        if (textareaElement && textareaElement.value) {
-                            inputValuesText += ' ' + textareaElement.value.toLowerCase();
-                        }
-                    }
-
-                    // Check if the term is in the main row text, the detail text (excluding traces), OR the input values
-                    if (!rowText.includes(searchTerm) && !detailText.includes(searchTerm) && !inputValuesText.includes(searchTerm)) {
-                        showRow = false;
-                    }
-                }
             }
 
+            // 4. Search Term - added model name, etc. values search.
+            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            if (showRow && searchTerm) {
+                let rowText = (row.textContent || '').toLowerCase();
+                let detailText = '';
+                let inputValuesText = ''; // NEW: To store values from input fields
+
+                if (detailRow) {
+                    const detailClone = detailRow.cloneNode(true);
+                    // Exclude traces from search:
+                    detailClone.querySelector('.detail-evaluator-trace .trace-content')?.remove();
+                    detailClone.querySelector('.detail-verifier-trace .trace-content')?.remove();
+                    detailText = (detailClone.textContent || '').toLowerCase();
+
+                    // NEW: Extract values from specific input fields in the detail row
+                    const inputSelectors = [
+                        'input[name="research_area"]',
+                        'input[name="model_name"]',
+                        'input[name="features_other"]',
+                        'input[name="user_trace"]' // Also include user comments if desired
+                    ];
+
+                    inputSelectors.forEach(selector => {
+                        const inputElement = detailRow.querySelector(selector);
+                        if (inputElement && inputElement.value) {
+                            inputValuesText += ' ' + inputElement.value.toLowerCase();
+                        }
+                    });
+
+                    // NEW: Also check textarea values if needed, e.g., user_trace
+                    const textareaElement = detailRow.querySelector('textarea[name="user_trace"]');
+                    if (textareaElement && textareaElement.value) {
+                        inputValuesText += ' ' + textareaElement.value.toLowerCase();
+                    }
+                }
+
+                // Check if the term is in the main row text, the detail text (excluding traces), OR the input values
+                if (!rowText.includes(searchTerm) && !detailText.includes(searchTerm) && !inputValuesText.includes(searchTerm)) {
+                    showRow = false;
+                }
+            }
             // NEW: Apply the tri-state survey filter logic
             if (showRow) {
                 const surveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
@@ -487,13 +486,13 @@ function applyLocalFilters() {
         // This ensures the lists (keywords, authors, etc.) reflect the filtered set.
         // It should only run if stats.js is loaded (relevant for HTML export vs server page).
         // Check if the function exists before calling it.
-        if (typeof fetchDetailRowLists === 'function') {
-            // Note: fetchDetailRowLists might take time. The busy cursor is removed shortly after,
-            // potentially before fetchDetailRowLists completes. This is generally acceptable,
+        if (typeof buildDetailRowLists === 'function') {
+            // Note: buildDetailRowLists might take time. The busy cursor is removed shortly after,
+            // potentially before buildDetailRowLists completes. This is generally acceptable,
             // as the main filtering and counting (the heavy part of applyLocalFilters) is done.
-            // If it's critical the cursor stays until fetchDetailRowLists finishes, more complex
+            // If it's critical the cursor stays until buildDetailRowLists finishes, more complex
             // state management is needed.
-            fetchDetailRowLists(); // Call without callback, as displayStats handles its own lists independently now.
+            buildDetailRowLists(); // Call without callback, as displayStats handles its own lists independently now.
         }
         // --- END NEW ---
 
@@ -502,6 +501,7 @@ function applyLocalFilters() {
         }, 150); // doesn't really work since the contents are completely replaced eliminating the animation. Not worth fixing.
     }, FILTER_DEBOUNCE_DELAY);
 }
+
 
 function sortTable(){
     document.documentElement.classList.add('busyCursor');
@@ -606,6 +606,9 @@ document.addEventListener('DOMContentLoaded', function () {
     noFeaturesCheckbox.addEventListener('change', applyLocalFilters);
     showOtherCheckbox.addEventListener('change', applyLocalFilters);
 
+
+    //server-side search disabled for now as FTS is broken. Using full-client-side search instead:
+    searchInput.addEventListener('input', applyLocalFilters);
 
     document.getElementById('clear-search-btn').addEventListener('click', function() {
         searchInput.value = ''; // Clear the input value

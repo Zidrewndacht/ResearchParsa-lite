@@ -149,13 +149,21 @@ OK      Add solder_other, pcb_other, etc. boolean fields;
 OK      Add 'search this' buttons on every statistics list item;
 OK      Separate journal count from conference count in the stats;
 
-OK		Add tri-state checkbox for off-topic papers;
+OK	Add tri-state checkbox for off-topic papers;
 
-OK		Add stacked/cumulative charts;
+OK	Add stacked/cumulative charts;
 
-		Re-factor JS to remove duplicated code from ghpages.js: keep only actual export-specific code
-OK			Refactor filtering.js
-OK			Refactor stats.js
+OK	Re-factor JS to remove duplicated code from ghpages.js: keep only actual export-specific code
+OK		Refactor filtering.js
+OK		Refactor stats.js
+
+OK      Add keyword cloud
+OK      Fix filtering/stats generation: unified client-side logic for now.
+OK              deprecated fetchDetailRowLists()
+OK              deprecated /get_stats
+OK              deprecated FTS search
+        Currently search doesn't read abstracts (not in preloaded detail row to reduce excess bloat). Should it?
+
 
         Refactor browse_db.py (too large)?
                 Moving SQLite logic to a separate file for DB operations may cause 
