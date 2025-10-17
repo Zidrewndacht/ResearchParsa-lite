@@ -570,6 +570,57 @@ function closeExporthModal() { exportModal.classList.remove('modal-active'); }
 function showApplyButton(){  applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; }
 
 
+function runBatchAction(mode, actionType) { // actionType: 'classify' or 'verify'
+    if (isBatchRunning) {
+        alert(`A ${actionType} batch is already running.`);
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to ${actionType} ${mode === 'all' ? 'ALL' : 'REMAINING'} papers? This might take a while.`)) {
+        return;
+    }
+
+    isBatchRunning = true;
+    const btnToDisable = mode === 'all' ? (actionType === 'classify' ? classifyAllBtn : verifyAllBtn) :
+                                            (actionType === 'classify' ? classifyRemainingBtn : verifyRemainingBtn);
+    const otherBtns = [classifyAllBtn, classifyRemainingBtn, verifyAllBtn, verifyRemainingBtn].filter(btn => btn !== btnToDisable);
+
+    if (btnToDisable) btnToDisable.disabled = true;
+    otherBtns.forEach(btn => btn.disabled = true);
+    if (batchStatusMessage) batchStatusMessage.textContent = `Starting ${actionType} (${mode})...`;
+
+    const endpoint = actionType === 'classify' ? '/classify' : '/verify';
+
+    fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ mode: mode })
+    })
+    .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.message || `HTTP error! status: ${response.status}`);
+                }).catch(() => {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+    })
+    .then(data => {
+        batchStatusMessage.textContent = data.message;
+    })
+    .catch(error => {
+        console.error(`Error initiating batch ${actionType} (${mode}):`, error);
+        alert(`Failed to start ${actionType} (${mode}): ${error.message}`);
+        isBatchRunning = false;
+        if (btnToDisable) btnToDisable.disabled = false;
+        otherBtns.forEach(btn => btn.disabled = false);
+        if (batchStatusMessage) batchStatusMessage.textContent = '';
+    });
+}
+
 
 document.addEventListener('DOMContentLoaded', function () {
     
@@ -580,14 +631,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     applyButton.addEventListener('click', applyServerSideFilters);
 
-    //server-side search disabled for now as FTS is broken. Using full-client-side search instead:
-
-    // document.getElementById('search-input').addEventListener('input', function () {
-    //     clearTimeout(filterTimeoutId);
-    //     filterTimeoutId = setTimeout(() => {
-    //         applyServerSideFilters();
-    //     }, 300);  //additional debounce for typing
-    // });
+    //server-side search removed for now as FTS is broken. Using full-client-side search instead (filtering.js, shared with HTML export):
 
     // Click Handler for Editable Status Cells
     document.addEventListener('click', function (event) {
@@ -690,74 +734,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // 3. Send AJAX request
         sendAjaxRequest(cell, dataToSend, currentSymbol, row, paperId, field);
     });
-    function runBatchAction(mode, actionType) { // actionType: 'classify' or 'verify'
-        if (isBatchRunning) {
-            alert(`A ${actionType} batch is already running.`);
-            return;
-        }
-
-        if (!confirm(`Are you sure you want to ${actionType} ${mode === 'all' ? 'ALL' : 'REMAINING'} papers? This might take a while.`)) {
-            return;
-        }
-
-        isBatchRunning = true;
-        const btnToDisable = mode === 'all' ? (actionType === 'classify' ? classifyAllBtn : verifyAllBtn) :
-                                              (actionType === 'classify' ? classifyRemainingBtn : verifyRemainingBtn);
-        const otherBtns = [classifyAllBtn, classifyRemainingBtn, verifyAllBtn, verifyRemainingBtn].filter(btn => btn !== btnToDisable);
-
-        if (btnToDisable) btnToDisable.disabled = true;
-        otherBtns.forEach(btn => btn.disabled = true);
-        if (batchStatusMessage) batchStatusMessage.textContent = `Starting ${actionType} (${mode})...`;
-
-        const endpoint = actionType === 'classify' ? '/classify' : '/verify';
-
-        fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ mode: mode })
-        })
-        .then(response => {
-             if (!response.ok) {
-                 return response.json().then(errData => {
-                     throw new Error(errData.message || `HTTP error! status: ${response.status}`);
-                 }).catch(() => {
-                     throw new Error(`HTTP error! status: ${response.status}`);
-                 });
-             }
-             return response.json();
-        })
-        .then(data => {
-            if (data.status === 'started') {
-                if (batchStatusMessage) batchStatusMessage.textContent = data.message;
-                // Batch started, it's running in the background.
-                // To re-enable buttons after a short delay or assume user knows it's running
-                //  setTimeout(() => {
-                //      isBatchRunning = false; // Allow new batches after a short time
-                //      if (btnToDisable) btnToDisable.disabled = false;
-                //      otherBtns.forEach(btn => btn.disabled = false);
-                //     //  if (batchStatusMessage) batchStatusMessage.textContent += " (Background task running)";
-                //  }, 2000); // Assume it started successfully after 2s
-            } else {
-                 // This shouldn't happen for batch actions, but handle if it does
-                 console.error(`Unexpected response for batch ${actionType}:`, data);
-                 if (batchStatusMessage) batchStatusMessage.textContent = `Error initiating ${actionType} (${mode}).`;
-                 isBatchRunning = false;
-                 if (btnToDisable) btnToDisable.disabled = false;
-                 otherBtns.forEach(btn => btn.disabled = false);
-            }
-        })
-        .catch(error => {
-            console.error(`Error initiating batch ${actionType} (${mode}):`, error);
-            alert(`Failed to start ${actionType} (${mode}): ${error.message}`);
-            isBatchRunning = false;
-            if (btnToDisable) btnToDisable.disabled = false;
-            otherBtns.forEach(btn => btn.disabled = false);
-            if (batchStatusMessage) batchStatusMessage.textContent = '';
-        });
-    }
-
+    
     parçaToolsBtn.addEventListener('click', showBatchActions);
     classifyAllBtn.addEventListener('click', () => runBatchAction('all', 'classify'));
     classifyRemainingBtn.addEventListener('click', () => runBatchAction('remaining', 'classify'));
@@ -1199,135 +1176,3 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//deprecated, replaced by full-client-side implementation based on GH export version.
-// The change seems to substantially slow down page manipulation with inspector for some reason, 
-// but it's the easiest solution for stats bugs for now.
-// function fetchDetailRowLists(callback){
-//         // --- Fetch Server Stats (for other lists) ---
-//     const urlParams = new URLSearchParams(window.location.search);
-//     const statsUrl = `/get_stats?${urlParams.toString()}`;
-//     fetch(statsUrl).then(response => {
-//         return response.json();
-//     }).then(data => {
-//         if (data.status === 'success' && data.data) {
-//             const serverStatsData = data.data;
-//             function populateListFromServer(listElementId, dataArray) { //for items with count >=2
-//                 const listElement = document.getElementById(listElementId);
-//                 listElement.innerHTML = '';
-//                 if (!dataArray || dataArray.length === 0) {
-//                     listElement.innerHTML = '<li>No items with count > 1.</li>';
-//                     return;
-//                 }
-//                 dataArray.forEach(item => {
-//                     const listItem = document.createElement('li');
-//                     const escapedName = (item.name || '').toString()
-//                         .replace(/&/g, "&amp;").replace(/</g, "<")
-//                         .replace(/>/g, ">").replace(/"/g, "&quot;")
-//                         .replace(/'/g, "&#39;");
-//                     // --- Preserve Original Structure ---
-//                     const countSpan = document.createElement('span');
-//                     countSpan.className = 'count';
-//                     countSpan.textContent = item.count;
-//                     const nameSpan = document.createElement('span');
-//                     nameSpan.className = 'name';
-//                     nameSpan.textContent = escapedName;
-//                     // --- NEW: Create search button element ---
-//                     const searchButton = document.createElement('button');
-//                     searchButton.type = 'button'; // Important to prevent form submission if inside one
-//                     searchButton.className = 'search-item-btn'; // Add a specific class for styling/listening
-//                     searchButton.title = `Search for "${item.name}"`;
-//                     searchButton.textContent = '🔍'; // Or use an icon image
-//                     // --- NEW: Add click event listener to the button ---
-//                     searchButton.addEventListener('click', function(event) {
-//                         event.stopPropagation(); // Prevent triggering other click listeners on the <li>
-//                         searchInput.value = item.name; // Set the search input value
-//                         closeModal(); // Close the stats modal
-//                         // Trigger the existing search mechanism (which includes debouncing)
-//                         const inputEvent = new Event('input', { bubbles: true });
-//                         searchInput.dispatchEvent(inputEvent);
-//                     });
-//                     // --- Append elements preserving the original structure ---
-//                     listItem.appendChild(countSpan);
-//                     listItem.appendChild(searchButton); 
-//                     listItem.appendChild(nameSpan);
-//                     listElement.appendChild(listItem);
-//                 });
-//             }
-//             function populateAllListFromServer(listElementId, dataArray) { //for ALL items, not just repeating ones
-//                 const listElement = document.getElementById(listElementId);
-//                 listElement.innerHTML = '';
-//                 if (!dataArray || dataArray.length === 0) {
-//                     listElement.innerHTML = '<li>No non-empty items found.</li>';
-//                     return;
-//                 }
-//                 dataArray.forEach(item => {
-//                     const listItem = document.createElement('li');
-//                     const escapedName = (item.name || '').toString()
-//                         .replace(/&/g, "&amp;").replace(/</g, "<")
-//                         .replace(/>/g, ">").replace(/"/g, "&quot;")
-//                         .replace(/'/g, "&#39;");
-//                     // --- Preserve Original Structure ---
-//                     const countSpan = document.createElement('span');
-//                     countSpan.className = 'count';
-//                     countSpan.textContent = item.count;
-//                     const nameSpan = document.createElement('span');
-//                     nameSpan.className = 'name';
-//                     nameSpan.textContent = escapedName;
-//                     // --- NEW: Create search button element ---
-//                     const searchButton = document.createElement('button');
-//                     searchButton.type = 'button';
-//                     searchButton.className = 'search-item-btn';
-//                     searchButton.title = `Search for "${item.name}"`;
-//                     searchButton.textContent = '🔍';
-//                     // --- NEW: Add click event listener to the button ---
-//                     searchButton.addEventListener('click', function(event) {
-//                         event.stopPropagation();
-//                         searchInput.value = item.name;
-//                         closeModal();
-//                         const inputEvent = new Event('input', { bubbles: true });
-//                         searchInput.dispatchEvent(inputEvent);
-//                     });
-//                     // --- Append elements preserving the original structure ---
-//                     listItem.appendChild(countSpan);
-//                     listItem.appendChild(searchButton);
-//                     listItem.appendChild(nameSpan);
-//                     listElement.appendChild(listItem);
-//                 });
-//             }
-//             // Populate Server Lists (Keywords, Authors, etc.)
-//             populateListFromServer('keywordStatsList', serverStatsData.keywords);
-//             populateListFromServer('authorStatsList', serverStatsData.authors);
-//             populateListFromServer('researchAreaStatsList', serverStatsData.research_areas);
-//             populateAllListFromServer('otherDetectedFeaturesStatsList', serverStatsData.other_features_all);
-//             populateAllListFromServer('modelNamesStatsList', serverStatsData.model_names_all);
-                
-//         // ---- now the lists exist; build cloud if switch is on ----
-//         if (document.getElementById('cloudToggle').checked) {
-//             toggleCloud();                     // first render
-//         }
-//             if (callback) callback(); // Call the callback function after populating lists
-//         } else {
-//             // Handle potential fetch error - still populate client-side lists if possible
-//             console.error("Failed to fetch server stats:", data);
-//         }
-//     })
-//                 if (callback) callback(); // Call the callback function after populating lists
-
-// }
-

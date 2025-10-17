@@ -210,12 +210,12 @@ function updateSurveyCheckboxUI() {
         case SURVEY_FILTER_STATES.ONLY_SURVEYS:
             checkbox.checked = true; // Visually checked
             checkbox.indeterminate = false;
-            checkbox.title = 'Currently showing only Surveys. Click to show only implementation (non-survey) papers';
+            checkbox.title = 'Currently showing only Surveys. Click to show only primary (non-survey) papers';
             break;
         case SURVEY_FILTER_STATES.ONLY_NON_SURVEYS:
             checkbox.checked = false; // Visually unchecked
             checkbox.indeterminate = true; // Use indeterminate to show the third state
-            checkbox.title = 'Currently showing only implementation (non-survey) papers. Click to show All papers';
+            checkbox.title = 'Currently showing only primary (non-survey) papers. Click to show All papers';
             break;
     }
 }
@@ -241,7 +241,7 @@ function cycleSurveyFilterState() {
 function applyLocalFilters() {
     clearTimeout(filterTimeoutId);
     document.documentElement.classList.add('busyCursor');    // Set the cursor immediately on user interaction
-    filterTimeoutId = setTimeout(() => {// Debounce the actual filtering
+    filterTimeoutId = setTimeout(() => {
         const tbody = document.querySelector('#papersTable tbody');
         if (!tbody) return;
         const hideXrayChecked = hideXrayCheckbox.checked;
@@ -258,7 +258,7 @@ function applyLocalFilters() {
         const rows = tbody.querySelectorAll('tr[data-paper-id]');
         rows.forEach(row => {
             let showRow = true;
-            let detailRow = row.nextElementSibling; // Get the associated detail row
+            // let detailRow = row.nextElementSibling; // Get the associated detail row // No longer needed for search
 
             /** full-client-side reimplementations for GH pages. Here to simplify variable passing: */
             if (document.body.id === 'html-export') {   
@@ -307,44 +307,23 @@ function applyLocalFilters() {
                 }
             }
 
-            // 4. Search Term - added model name, etc. values search.
+            // 4. Search Term - added model name, etc. values search using hidden cells.
             const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
             if (showRow && searchTerm) {
                 let rowText = (row.textContent || '').toLowerCase();
-                let detailText = '';
-                let inputValuesText = ''; // NEW: To store values from input fields
+                // let detailText = ''; // No longer using detail row text
+                // let inputValuesText = ''; // No longer using detail row input values directly
 
-                if (detailRow) {
-                    const detailClone = detailRow.cloneNode(true);
-                    // Exclude traces from search:
-                    detailClone.querySelector('.detail-evaluator-trace .trace-content')?.remove();
-                    detailClone.querySelector('.detail-verifier-trace .trace-content')?.remove();
-                    detailText = (detailClone.textContent || '').toLowerCase();
+                // NEW: Extract text content from the hidden data cells within the main row
+                const hiddenDataCells = row.querySelectorAll('td.hidden-data-cell'); // Select all hidden data cells in the row
+                let hiddenDataText = '';
 
-                    // NEW: Extract values from specific input fields in the detail row
-                    const inputSelectors = [
-                        'input[name="research_area"]',
-                        'input[name="model_name"]',
-                        'input[name="features_other"]',
-                        'input[name="user_trace"]' // Also include user comments if desired
-                    ];
+                hiddenDataCells.forEach(cell => {
+                    hiddenDataText += ' ' + (cell.textContent || '').toLowerCase(); // Concatenate their text content
+                });
 
-                    inputSelectors.forEach(selector => {
-                        const inputElement = detailRow.querySelector(selector);
-                        if (inputElement && inputElement.value) {
-                            inputValuesText += ' ' + inputElement.value.toLowerCase();
-                        }
-                    });
-
-                    // NEW: Also check textarea values if needed, e.g., user_trace
-                    const textareaElement = detailRow.querySelector('textarea[name="user_trace"]');
-                    if (textareaElement && textareaElement.value) {
-                        inputValuesText += ' ' + textareaElement.value.toLowerCase();
-                    }
-                }
-
-                // Check if the term is in the main row text, the detail text (excluding traces), OR the input values
-                if (!rowText.includes(searchTerm) && !detailText.includes(searchTerm) && !inputValuesText.includes(searchTerm)) {
+                // Check if the term is in the main row text OR the text from the hidden data cells
+                if (!rowText.includes(searchTerm) && !hiddenDataText.includes(searchTerm)) {
                     showRow = false;
                 }
             }
@@ -412,7 +391,7 @@ function applyLocalFilters() {
                     'features_wrong_component',
                     'features_component_other',
                     'features_cosmetic',
-                    'features_other_state' // <-- Remove this line
+                    'features_other_state' // <-- Remove this line if it was previously here
                 ]; 
                 // NEW: Define features for the 'Other' group
                 const otherFeatures = ['features_other_state'];
@@ -469,6 +448,7 @@ function applyLocalFilters() {
 
             // Apply the visibility state
             row.classList.toggle('filter-hidden', !showRow);
+            const detailRow = row.nextElementSibling; // Get the associated detail row for toggling
             if (detailRow) { // Ensure detailRow exists before toggling
                 detailRow.classList.toggle('filter-hidden', !showRow);
             }
@@ -481,27 +461,13 @@ function applyLocalFilters() {
             applyButton.style.pointerEvents = 'none';
         }
         updateCounts();
-
-        // --- NEW: Fetch updated server-side lists after counts are updated ---
-        // This ensures the lists (keywords, authors, etc.) reflect the filtered set.
-        // It should only run if stats.js is loaded (relevant for HTML export vs server page).
-        // Check if the function exists before calling it.
-        if (typeof buildDetailRowLists === 'function') {
-            // Note: buildDetailRowLists might take time. The busy cursor is removed shortly after,
-            // potentially before buildDetailRowLists completes. This is generally acceptable,
-            // as the main filtering and counting (the heavy part of applyLocalFilters) is done.
-            // If it's critical the cursor stays until buildDetailRowLists finishes, more complex
-            // state management is needed.
-            buildDetailRowLists(); // Call without callback, as displayStats handles its own lists independently now.
-        }
-        // --- END NEW ---
-
+        buildDetailRowLists();
+        
         setTimeout(() => {
             document.documentElement.classList.remove('busyCursor');
         }, 150); // doesn't really work since the contents are completely replaced eliminating the animation. Not worth fixing.
     }, FILTER_DEBOUNCE_DELAY);
 }
-
 
 function sortTable(){
     document.documentElement.classList.add('busyCursor');

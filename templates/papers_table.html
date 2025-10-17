@@ -80,36 +80,18 @@
         <td class="status-cell editable-verify" data-field="verified_by">{{ paper.verified_by | render_verified_by }}</td>                 
         <td class="status-cell" data-field="user_comment_state">{{ '✔️' if paper.user_trace and (paper.user_trace|string).strip() else '❌' }}</td> 
         <td class="toggle-btn" onclick="toggleDetails(this)"><span>Show</span></td>
+
+        <!-- Hidden data cells for faster stats retrieval -->
+        <td class="hidden-data-cell" data-field="keywords" style="display: none;">{{ paper.keywords }}</td>
+        <td class="hidden-data-cell" data-field="authors" style="display: none;">{{ paper.authors }}</td>
+        <td class="hidden-data-cell" data-field="research_area" style="display: none;">{{ paper.research_area or '' }}</td>
+        <td class="hidden-data-cell" data-field="model_name" style="display: none;">{{ paper.technique.model or '' }}</td>
+        <td class="hidden-data-cell" data-field="features_other" style="display: none;">{{ paper.features.other or '' }}</td>
+        <td class="hidden-data-cell" data-field="user_trace" style="display: none;">{{ paper.user_trace or '' }}</td>
     </tr>
     <tr class="detail-row">
         <td colspan="42">
-            <div class="detail-content-placeholder">        
-                <!-- prefilled data to convert stats to a single full=client-side implementation 
-                 (changed due to stats list building complexity, check notes)
-                 This seems to substantially slow down page manipulation with inspector for some reason, but it's the easiest solution for stats bugs for now
-                 -->         
-                <div class="detail-flex-container">
-                    <div class="detail-content detail-metadata">
-                        <p><strong>Keywords:</strong> {{ paper.keywords }}</p>
-                        <p><strong>Full Authors:</strong> {{ paper.authors }}</p>
-                    </div>
-                    <div class="edit-section detail-edit">
-                        <form id="form-{{ paper.id }}" data-paper-id="{{ paper.id }}">
-                            <label>Research Area:
-                                <input type="text" class="editable" name="research_area" value="{{ paper.research_area or '' }}" disabled>
-                            </label>
-                            <label>Model Name:
-                                <input type="text" class="editable" name="model_name" value="{{ paper.technique.model or '' }}" disabled>
-                            </label>
-                            <label>Other defects:
-                                <input type="text" class="editable" name="features_other" value="{{ paper.features.other or '' }}" disabled>
-                            </label>
-                            <label>User comments:
-                                <textarea class="editable" name="user_trace" disabled>{{ paper.user_trace or '' }}</textarea>
-                            </label>
-                        </form>
-                    </div>
-                </div>
+            <div class="detail-content-placeholder">
             </div>
         </td>
     </tr>

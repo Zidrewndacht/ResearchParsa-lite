@@ -47,33 +47,42 @@
 </div>
         
 <div class="stats-charts">
+    
     <div class="stats-section">
-        <h3><strong>Techniques</strong> Distribution             
+        <h3><strong>Publ. Type</strong> Distribution
             <span style="font-size:0.6em;padding-left: 30px;position: absolute; right: 6px;top: 16px;">
                 <label style="padding: 10px;margin: 10px;">
                     Pie<input type="checkbox" id="pieToggle" style="transform: scale(2) translate(5px,-0.5px);">
                 </label>
             </span>
         </h3>
-        <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto;">
+        <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto; overflow: hidden;">
+            <canvas id="publTypePieChart"></canvas>
+        </div>
+    </div>
+    <div class="stats-section">
+        <h3><strong>Survey vs Primary</strong> Distribution</h3>
+        <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto; overflow: hidden;">
+            <canvas id="surveyVsImplPieChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="stats-section">
+        <h3><strong>Techniques</strong> Distribution </h3>
+        <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto; overflow: hidden;">
             <canvas id="techniquesPieChart"></canvas>
         </div>
     </div>
     <div class="stats-section">
         <h3><strong>Features</strong> Distribution</h3>
-        <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto;">
+        <div class="chart-container" style="height:calc(100% - 43px); width:305px; max-width: 305px; margin: auto; overflow: hidden;">
             <canvas id="featuresPieChart"></canvas>
         </div>
     </div>
+
+
     <div class="stats-section">                
-        <h3><strong>Publication Types</strong> per Year</h3>
-        <div class="chart-container-fullwidth" style="height: calc(80% - 20px); margin: auto;">
-            <canvas id="pubTypesPerYearLineChart"></canvas>
-        </div>
-    </div>
-    <div class="stats-section">
-        <h3><strong>Techniques</strong> per Year 
-            <span style="font-size:0.6em"> — Click on a label to show/hide its data and reflow the chart </span>
+        <h3><strong>Publication Types</strong> per Year
             <span style="font-size:0.6em;padding-left: 30px;position: absolute;right: 40px;top: 16px;">
                 <label>
                     Cumulative<input type="checkbox" id="cumulativeToggle" style="transform: scale(2) translate(5px,-0.5px);">
@@ -82,22 +91,30 @@
                     Stacked<input type="checkbox" id="stackingToggle" style="transform: scale(2) translate(5px,-0.5px);">
                 </label>
             </span>
+            <span style="font-size:0.6em"> — Click on a label to show/hide its data and reflow the chart </span>
         </h3>
-        <div class="chart-container-fullwidth" style="height:calc(100% - 43px); margin: auto;">
+        <div class="chart-container-fullwidth" style="height: calc(80% - 20px); margin: auto; overflow: hidden;">
+            <canvas id="pubTypesPerYearLineChart"></canvas>
+        </div>
+    </div>
+    <div class="stats-section">
+        <h3><strong>Survey</strong> vs <strong>Primary</strong> Papers per Year  <span style="font-size:0.6em"> — Data in this page is dynamically calculated based on <strong>currently visible</strong> papers.</span></h3>
+        <div class="chart-container-fullwidth" style="height:calc(80% - 20px);  margin: auto; overflow: hidden;">
+            <canvas id="surveyVsImplLineChart"></canvas>
+        </div>
+    </div>
+
+    <div class="stats-section">
+        <h3><strong>Techniques</strong> per Year </h3>
+        <div class="chart-container-fullwidth" style="height:calc(100% - 43px); margin: auto; overflow: hidden;">
             <canvas id="techniquesPerYearLineChart"></canvas>
         </div>
     </div>
 
     <div class="stats-section">
-        <h3><strong>Features</strong> per Year  <span style="font-size:0.6em"> — Data in this page is dynamically calculated based on <strong>currently visible</strong> papers.</span></h3>
-        <div class="chart-container-fullwidth" style="height:calc(100% - 43px); margin: auto;">
+        <h3><strong>Features</strong> per Year </h3>
+        <div class="chart-container-fullwidth" style="height:calc(100% - 43px); margin: auto; overflow: hidden;">
             <canvas id="featuresPerYearLineChart"></canvas>
-        </div>
-    </div>
-    <div class="stats-section">
-        <h3><strong>Survey</strong> vs <strong>Implementation</strong> Papers per Year</h3>
-        <div class="chart-container-fullwidth" style="height:calc(80% - 20px);  margin: auto;">
-            <canvas id="surveyVsImplLineChart"></canvas>
         </div>
     </div>
 </div>

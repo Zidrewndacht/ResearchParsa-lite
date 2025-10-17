@@ -41,146 +41,53 @@ DATABASE = None # Will be set from command line argument
 def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_param=None, min_page_count_param=None, search_query_param=None):
     """Fetches papers based on filters and renders the papers_table.html template. 
        Used for initial render from / and XHR updates."""
-    try:
-        # Determine hide_offtopic state
-        hide_offtopic = True # Default
-        if hide_offtopic_param is not None:
-            hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
+    # Determine hide_offtopic state
+    hide_offtopic = True # Default
+    if hide_offtopic_param is not None:
+        hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
 
-        # Determine filter values, using defaults if not provided or invalid
-        year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
-        year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
-        min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
-        # --- BROKEN: Determine search query value ---
-        search_query_value = search_query_param if search_query_param is not None else ""
+    # Determine filter values, using defaults if not provided or invalid
+    year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
+    year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
+    min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
 
-        # Fetch papers with ALL the filters applied, including the new search query
-        papers = fetch_papers(
-            hide_offtopic=hide_offtopic,
-            year_from=year_from_value,
-            year_to=year_to_value,
-            min_page_count=min_page_count_value,
-            search_query=search_query_value # currently unused by the client: FTS is broken.
-        )
+    # Fetch papers with ALL the filters applied
+    papers = fetch_papers(
+        hide_offtopic=hide_offtopic,
+        year_from=year_from_value,
+        year_to=year_to_value,
+        min_page_count=min_page_count_value,
+    )
 
-        # Render the table template fragment, passing the search query value for the input field
-        rendered_table = render_template(
-            'papers_table.html',
-            papers=papers,
-            type_emojis=globals.TYPE_EMOJIS,
-            default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
-            pdf_emojis=globals.PDF_EMOJIS, # Pass the PDF emojis dictionary
-            hide_offtopic=hide_offtopic,
-            # Pass the *string representations* of the values to the template for input fields
-            year_from_value=str(year_from_value),
-            year_to_value=str(year_to_value),
-            min_page_count_value=str(min_page_count_value),
-            # --- NEW: Pass search query value ---
-            search_query_value=search_query_value
-        )
-        return rendered_table
-    except Exception as e:
-        # Log the error or handle it appropriately
-        print(f"Error rendering papers table: {e}")
-        # Return an error fragment or re-raise if preferred for the main route
-        return "<p>Error loading table.</p>" # Basic error display
+    # Render the table template fragment, passing the search query value for the input field
+    rendered_table = render_template(
+        'papers_table.html',
+        papers=papers,
+        type_emojis=globals.TYPE_EMOJIS,
+        default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
+        pdf_emojis=globals.PDF_EMOJIS, # Pass the PDF emojis dictionary
+        hide_offtopic=hide_offtopic,
+        # Pass the *string representations* of the values to the template for input fields
+        year_from_value=str(year_from_value),
+        year_to_value=str(year_to_value),
+        min_page_count_value=str(min_page_count_value)
+    )
+    return rendered_table
 
 # DB functions:
-#FTS implementation is currently broken! Can't search inside JSON text like "in-house" at all!
-def ensure_fts_tables(conn):
-    """
-    Creates FTS5 virtual tables for searchable JSON text if they don't exist
-    and populates them.
-    This should ideally be called once at startup or when data changes.
-    Handles potential NULLs and datatype mismatches robustly.
-    """
-    print("FTS is currently broken and disabled.")
-    return
-
-    cursor = conn.cursor()
-    
-    # Check if FTS tables exist by checking for their docsize tables (internal to FTS)
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='papers_features_fts_docsize'")
-    features_fts_exists = cursor.fetchone() is not None
-    
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='papers_technique_fts_docsize'")
-    technique_fts_exists = cursor.fetchone() is not None
-
-    if not features_fts_exists:
-        print("Creating FTS table for features JSON text...")
-        # Create FTS table for features text (currently only 'other')
-        # content='papers' links it to the main table, content_rowid='id' specifies the PK
-        # papers_fts is the name, features_text is the column to be searched
-        # Using 'porter' tokenizer can be helpful for matching word variations
-        cursor.execute("""
-            CREATE VIRTUAL TABLE papers_features_fts USING fts5(
-                features_text, 
-                content='papers', 
-                content_rowid='id',
-                tokenize='porter'
-            )
-        """)
-        # Populate the FTS table for features
-        # Extract text from features JSON. Handle potential NULLs/Non-JSON robustly.
-        # COALESCE handles NULL features or NULL json_extract result.
-        # IFNULL is similar to COALESCE in SQLite.
-        # Ensure the final result passed to FTS is TEXT.
-        # Using CAST(... AS TEXT) ensures text type, even if json_extract returns a number or the column is not strictly text.
-        cursor.execute("""
-            INSERT INTO papers_features_fts (rowid, features_text)
-            SELECT id, CAST(COALESCE(json_extract(features, '$.other'), '') AS TEXT)
-            FROM papers
-        """)
-        conn.commit()
-        print("Features FTS table created and populated.")
-
-    if not technique_fts_exists:
-        print("Creating FTS table for technique JSON text...")
-        # Create FTS table for technique text (currently only 'model')
-        cursor.execute("""
-            CREATE VIRTUAL TABLE papers_technique_fts USING fts5(
-                technique_text, 
-                content='papers', 
-                content_rowid='id',
-                tokenize='porter'
-            )
-        """)
-        # Populate the FTS table for technique
-        # Same robust handling for technique JSON and potential NULLs.
-        cursor.execute("""
-            INSERT INTO papers_technique_fts (rowid, technique_text)
-            SELECT id, CAST(COALESCE(json_extract(technique, '$.model'), '') AS TEXT)
-            FROM papers
-        """)
-        conn.commit()
-        print("Technique FTS table created and populated.")
-
 def get_db_connection():
     """Create a connection to the SQLite database and ensure FTS tables."""
     conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row  # Allows accessing columns by name
-    # Ensure FTS tables exist and are populated
-    # Note: For very large DBs or frequent updates, you might want a more sophisticated trigger/update mechanism
-    # For now, checking/creating on every connection is a simple way to ensure they exist.
-    # Consider optimizing this if performance on initial load becomes an issue.
-    try:
-        ensure_fts_tables(conn)
-    except sqlite3.Error as e:
-        print(f"Warning: Could not ensure FTS tables: {e}. Search might be slow or not work as expected for JSON text.")
-        # Depending on requirements, you might want to raise the error or continue
-        # raise # Re-raise if FTS is critical
+    conn.row_factory = sqlite3.Row 
     return conn
 
 def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_count=None, search_query=None):
     """Fetch papers from the database, applying various optional filters."""
     conn = get_db_connection()
-    # Start building the main query parts
-    # We will JOIN with the FTS results if there's a search query
     base_query = "SELECT p.* FROM papers p"
     conditions = []
     params = []
 
-    # --- Existing Filters (remain the same) ---
     if hide_offtopic:
         conditions.append("(p.is_offtopic = 0 OR p.is_offtopic IS NULL)")
     if year_from is not None:
@@ -205,66 +112,12 @@ def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_coun
         except (ValueError, TypeError):
             pass
 
-    # --- MODIFIED: Search Filter using FTS ---
-    fts_join_clause = "" # To hold the JOIN clause if FTS is used
-    if search_query:
-        # Sanitize the search query for FTS. Basic escaping for quotes.
-        # FTS5 handles most things well, but escaping quotes is generally good practice.
-        # Using parameterized queries handles the main injection risk.
-        # For complex FTS queries (phrases, boolean operators), more processing might be needed.
-        
-        # Define the columns to search in the main table (excluding JSON columns now)
-        searchable_columns = [
-            'p.id', 'p.type', 'p.title', 'p.authors', 'p.month', 'p.journal',
-            'p.volume', 'p.pages', 'p.doi', 'p.issn', 'p.abstract', 'p.keywords',
-            'p.research_area', 'p.user_trace' # Include user_trace in search
-        ]
-        
-        # Create a list of LIKE conditions for each searchable column (basic text search)
-        # Alternatively, you could include these in the FTS search if you denormalized them into an FTS table too.
-        search_conditions = []
-        search_term_like = f"%{search_query}%" # For LIKE on non-FTS columns
-        for col in searchable_columns:
-            search_conditions.append(f"LOWER({col}) LIKE LOWER(?)")
-            params.append(search_term_like)
-
-        # --- NEW: Handle JSON text search using FTS ---
-        # We will JOIN the main papers table with the results from FTS searches on the virtual tables.
-        # We'll search both FTS tables and UNION the results to get relevant paper IDs.
-                
-        # Ensure the search query itself is safe for FTS phrase search (mainly about escaping internal quotes)
-        # A simple way is to escape double quotes or remove them, or wrap in single quotes if needed.
-        # For basic robustness against the hyphen issue, phrase search is good.
-        escaped_search_query = search_query.replace('"', '""') # Escape double quotes for FTS phrase syntax
-        fts_search_term = f'"{escaped_search_query}"' # Force phrase matching in FTS
-        # Create a subquery that finds matching rowids from both FTS tables
-        fts_subquery = f"""
-            SELECT rowid FROM papers_features_fts WHERE papers_features_fts MATCH ?
-            UNION
-            SELECT rowid FROM papers_technique_fts WHERE papers_technique_fts MATCH ?
-        """
-        # Add the FTS search term twice (once for each FTS table search)
-        params.append(fts_search_term)
-        params.append(fts_search_term)
-        # Combine the LIKE conditions with the FTS requirement
-        # An paper matches if it matches any non-JSON field (LIKE) OR if it's in the FTS results
-        if search_conditions:
-             # If there are non-JSON fields matched by LIKE
-             non_json_search_condition = " OR ".join(search_conditions)
-             conditions.append(f"(({non_json_search_condition}) OR p.id IN ({fts_subquery}))")
-        else:
-            # If no non-JSON fields are searched, only rely on FTS
-            # This case is less likely given the columns listed, but handle it
-            conditions.append(f"p.id IN ({fts_subquery})")
-
     # --- Build Final Query ---
     # Start with base query
     query_parts = [base_query]
-    
     # Add WHERE clause if conditions exist
     if conditions:
         query_parts.append("WHERE " + " AND ".join(conditions))
-
     # Combine all parts
     query = " ".join(query_parts)
 
@@ -293,7 +146,7 @@ def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_coun
         paper_dict['pdf_filename'] = paper_dict.get('pdf_filename')     # Could be None or a string
         paper_dict['pdf_state'] = paper_dict.get('pdf_state', 'none')   # Default state if not present
         paper_dict['changed_formatted'] = format_changed_timestamp(paper_dict.get('changed'))
-        paper_dict['authors_truncated'] = truncate_authors(paper_dict.get('authors', ''))
+        # paper_dict['authors_truncated'] = truncate_authors(paper_dict.get('authors', ''))
         paper_list.append(paper_dict)
     
     return paper_list
@@ -596,16 +449,6 @@ def fetch_updated_paper_data(paper_id):
     finally:
         conn.close()
 
-#single-use @ /
-def get_total_paper_count():
-    """Get the total number of papers in the database."""
-    conn = get_db_connection()
-    try:
-        count = conn.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
-        return count
-    finally:
-        conn.close()
-
 # --- DB Helper Functions ---
 
 def format_changed_timestamp(changed_str):
@@ -619,19 +462,7 @@ def format_changed_timestamp(changed_str):
         # If parsing fails, return the original string or a placeholder
         return changed_str
 
-def truncate_authors(authors_str, max_authors=2):
-    """Truncate the authors list for the main table view."""
-    if not authors_str:
-        return ""
-    authors_list = [a.strip() for a in authors_str.split(';')]
-    if len(authors_list) > max_authors:
-        return "; ".join(authors_list[:max_authors]) + " et al."
-    else:
-        return authors_str
-
-
-
-# --- Helper Functions for Filtering ---
+# used for HTML and XLSX exports: 
 def get_default_filter_values(hide_offtopic_param, year_from_param, year_to_param, min_page_count_param, search_query_param):
     """Extracts and validates filter parameters, returning default values if invalid/missing."""
     hide_offtopic = True 
@@ -1038,6 +869,10 @@ def render_verified_by_filter(value):
     return Markup(render_verified_by(value)) 
 
 
+
+
+
+
 #Routes: 
 @app.route('/', methods=['GET'])
 def index():
@@ -1049,7 +884,11 @@ def index():
     min_page_count_param = request.args.get('min_page_count')
 
     search_query_param = request.args.get('search_query')
-    total_paper_count = get_total_paper_count()
+        
+    # Get the total number of papers in the database.
+    conn = get_db_connection()
+    total_paper_count = conn.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
+    conn.close()
 
     papers_table_content = render_papers_table(
         hide_offtopic_param=hide_offtopic_param,
@@ -1304,9 +1143,9 @@ def upload_pdf(paper_id):
 @app.route('/serve_pdf/<paper_id>')
 def serve_pdf(paper_id):
     """
-    Serves the correct PDF file (annotated or original) for the PDF.js viewer
+    Serves the correct PDF file (annotated or original) for the PDF.js viewer/annotator
     based on the paper_id. Also updates the pdf_state in the database
-    based on the actual existence of the files.
+    based on the actual existence of the annotated files.
     """
     conn = get_db_connection()
     paper = conn.execute("SELECT pdf_filename, pdf_state FROM papers WHERE id = ?", (paper_id,)).fetchone()
@@ -1367,9 +1206,9 @@ def serve_pdf(paper_id):
 @app.route('/upload_annotated_pdf/<paper_id>', methods=['POST'])
 def upload_annotated_pdf(paper_id):
     """
+    API call for annotator autosaving feature:
     Receives an annotated PDF file associated with a paper_id,
     saves it to the annotated storage directory, and updates the pdf_state.
-    API call for annotator autosaving feature
     """
     if 'pdf_file' not in request.files:
         return jsonify({'status': 'error', 'message': 'No file part in request'}), 400
@@ -1500,7 +1339,7 @@ def export_excel():
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
-# Table/stats generation routes (data reading)
+# Table generation routes
 @app.route('/get_detail_row', methods=['GET'])
 def get_detail_row():
     """Endpoint to fetch and render the detail row content for a specific paper."""
@@ -1572,6 +1411,7 @@ def update_paper():
         print(f"Error updating paper {paper_id}: {e}") # Log error
         return jsonify({'status': 'error', 'message': 'Failed to update database'}), 500
 
+# LLM inference routes (used for both single-paper and batch actions):
 @app.route('/classify', methods=['POST'])
 def classify_paper():
     """Endpoint to handle classification requests (single or batch)."""
@@ -1786,18 +1626,6 @@ if __name__ == '__main__':
         print(f"Error verifying database: {e}")
         sys.exit(1)
 
-   # --- NEW: Pre-populate FTS tables on startup ---
-    # This ensures they are ready before the first search request.
-    # It might take a moment on the first run or with a large DB.
-    # try:
-    #     print("Ensuring FTS tables are ready...")
-    #     conn = get_db_connection() # This will trigger ensure_fts_tables
-    #     conn.close()
-    #     print("FTS tables are ready.")
-    # except Exception as e:
-    #     print(f"Warning: Could not pre-populate FTS tables on startup: {e}")
-    #     sys.exit(1) # FTS is mandatory
-
     print(f"Starting server, database: {DATABASE}")
 
     # --- Open browser only once ---
@@ -1822,141 +1650,3 @@ if __name__ == '__main__':
     if not os.path.exists('static'):
         os.makedirs('static')
     app.run(host='0.0.0.0', port=5000, debug=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-# deprecated, stats are built fully client-side for now.
-# @app.route('/get_stats', methods=['GET'])
-# def get_stats():
-#     """Endpoint to fetch statistics (repeating journals, keywords, authors, research areas) based on current filters."""
-    
-#     # --- Get filter parameters from the request (same as /load_table) ---
-#     hide_offtopic_param = request.args.get('hide_offtopic')
-#     year_from_param = request.args.get('year_from')
-#     year_to_param = request.args.get('year_to')
-#     min_page_count_param = request.args.get('min_page_count')
-#     search_query_param = request.args.get('search_query')
-
-#     try:
-#         # --- Determine filter values, using defaults if not provided or invalid ---
-#         # Replicating logic from render_papers_table for consistency
-#         hide_offtopic = True # Default
-#         if hide_offtopic_param is not None:
-#             hide_offtopic = hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
-
-#         year_from_value = int(year_from_param) if year_from_param is not None else DEFAULT_YEAR_FROM
-#         year_to_value = int(year_to_param) if year_to_param is not None else DEFAULT_YEAR_TO
-#         min_page_count_value = int(min_page_count_param) if min_page_count_param is not None else DEFAULT_MIN_PAGE_COUNT
-#         search_query_value = search_query_param if search_query_param is not None else ""
-
-#         # --- Fetch papers based on these filters ---
-#         papers = fetch_papers(
-#             hide_offtopic=hide_offtopic,
-#             year_from=year_from_value,
-#             year_to=year_to_value,
-#             min_page_count=min_page_count_value,
-#             search_query=search_query_value
-#         )
-
-#         # --- Calculate Stats from Fetched Papers ---
-#         journal_counter = Counter()
-#         keyword_counter = Counter()
-#         author_counter = Counter()
-#         research_area_counter = Counter()
-
-#         for paper in papers:
-#             # --- Journal/Conf ---
-#             journal = paper.get('journal')
-#             if journal:
-#                 journal_counter[journal] += 1
-
-#             # --- Keywords ---
-#             # Keywords are stored as a single string, split by ';'
-#             keywords_str = paper.get('keywords', '')
-#             if keywords_str:
-#                  # Split robustly, handling potential extra spaces
-#                  keywords_list = [kw.strip() for kw in keywords_str.split(';') if kw.strip()]
-#                  keyword_counter.update(keywords_list)
-
-#             # --- Authors ---
-#             # Authors are stored as a single string, split by ';'
-#             authors_str = paper.get('authors', '')
-#             if authors_str:
-#                 # Split robustly, handling potential extra spaces
-#                 authors_list = [author.strip() for author in authors_str.split(';') if author.strip()]
-#                 author_counter.update(authors_list)
-
-#             # --- Research Area ---
-#             research_area = paper.get('research_area')
-#             if research_area:
-#                 research_area_counter[research_area] += 1
-
-#         # --- Filter counts > 1 and sort (matching client-side logic) ---
-#         def filter_and_sort(counter):
-#             # Filter items with count > 1
-#             filtered_items = {item: count for item, count in counter.items() if count >= 1}
-#             # Sort by count descending, then by name ascending
-#             sorted_items = sorted(filtered_items.items(), key=lambda x: (-x[1], x[0]))
-#             # Convert back to a list of dictionaries for JSON serialization
-#             return [{'name': name, 'count': count} for name, count in sorted_items]
-
-#         # --- NEW CODE: Collect all non-empty 'other' features and 'model' names ---
-#         other_features_counter = Counter()
-#         model_names_counter = Counter()
-
-#         for paper in papers:
-#             # Get 'other' feature text
-#             features_other_text = paper.get('features', {}).get('other', '')
-#             if features_other_text and isinstance(features_other_text, str):
-#                 # Split by semicolon if multiple features are listed, otherwise treat as one item
-#                 # Strip whitespace and filter out empty strings after splitting
-#                 other_features_list = [feat.strip() for feat in features_other_text.split(';') if feat.strip()]
-#                 other_features_counter.update(other_features_list)
-#             # If features_other_text is not a string (e.g., None, dict), it's ignored
-
-#             # Get 'model' name text
-#             technique_model_text = paper.get('technique', {}).get('model', '')
-#             if technique_model_text and isinstance(technique_model_text, str):
-#                 # Split by COMMA if multiple models are listed, otherwise treat as one item
-#                 # Strip whitespace and filter out empty strings after splitting
-#                 model_names_list = [model.strip() for model in technique_model_text.split(',') if model.strip()]
-#                 model_names_counter.update(model_names_list)
-#             # If technique_model_text is not a string (e.g., None, dict), it's ignored
-
-#         # Convert Counters to lists of {'name': item, 'count': count} dictionaries
-#         # Include ALL items, not just repeating ones (> 1)
-#         def counter_to_list_all(counter):
-#             # Sort by count descending, then alphabetically ascending for ties
-#             sorted_items = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
-#             return [{'name': name, 'count': count} for name, count in sorted_items]
-
-#         # --- END NEW CODE ---
-
-#         # --- Modified stats_data preparation ---
-#         stats_data = {
-#             # Existing repeating stats
-#             'journals': filter_and_sort(journal_counter),
-#             'keywords': filter_and_sort(keyword_counter),
-#             'authors': filter_and_sort(author_counter),
-#             'research_areas': filter_and_sort(research_area_counter),
-#             # NEW: All non-empty features.other and technique.model
-#             'other_features_all': counter_to_list_all(other_features_counter), # Changed key name for clarity
-#             'model_names_all': counter_to_list_all(model_names_counter)       # Changed key name for clarity
-#         }
-
-#         return jsonify({'status': 'success', 'data': stats_data})
-
-#     except Exception as e:
-#         print(f"Error calculating stats: {e}")
-#         return jsonify({'status': 'error', 'message': 'Failed to calculate statistics'}), 500

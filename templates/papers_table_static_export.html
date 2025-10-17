@@ -85,6 +85,12 @@
         <td class="status-cell editable-verify" data-field="verified_by">{{ paper.verified_by | render_verified_by }}</td>                 
         <td class="status-cell" data-field="user_comment_state">{{ '✔️' if paper.user_trace and (paper.user_trace|string).strip() else '❌' }}</td> 
         <td class="toggle-btn" onclick="toggleDetails(this)"><span>Show</span></td>
+        
+        <td class="hidden-data-cell" data-field="keywords" style="display: none;">{{ paper.keywords }}</td>
+        <td class="hidden-data-cell" data-field="authors" style="display: none;">{{ paper.authors }}</td>
+        <td class="hidden-data-cell" data-field="research_area" style="display: none;">{{ paper.research_area or '' }}</td>
+        <td class="hidden-data-cell" data-field="model_name" style="display: none;">{{ paper.technique.model or '' }}</td>
+        <td class="hidden-data-cell" data-field="features_other" style="display: none;">{{ paper.features.other or '' }}</td>
     </tr>
     <tr class="detail-row">
         <td colspan="42">

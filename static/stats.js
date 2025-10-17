@@ -29,7 +29,7 @@ const techniquesColors = [
     'hsla(180, 32%, 52%, 0.95)',  // Teal - CNN Detector
     'hsla(260, 60%, 66%, 0.95)', // Purple - R-CNN Detector
     'hsla(25, 70%, 63%, 0.95)',  // Orange - Transformer
-    'hsla(0, 0%, 68%, 0.95)',  // Grey - Other DL
+    'hsla(0, 0%, 68%, 0.95)',   // Grey - Other DL
     'hsla(96, 66%, 49%, 0.95)', // Green - Hybrid
 ];
 const techniquesBorderColors = [
@@ -155,6 +155,26 @@ const FIELD_LABELS = {
     'technique_available_dataset': 'Datasets' // Label for Datasets
 };
 
+// --- NEW: Define Mapping for Publication Types ---
+const PUB_TYPE_MAP = {
+    'article': 'Journal',
+    'inproceedings': 'Conference',
+    'proceedings': 'Conference', // Example: map proceedings to Conference as well
+    'conference': 'Conference',    // Example: map conference to Conference as well
+    // Add other BibTeX types if needed, e.g.:
+    'techreport': 'Report',
+    'book': 'Book',
+    'booklet': 'Booklet',
+    'manual': 'Manual',
+    'mastersthesis': 'Thesis (Masters)',
+    'phdthesis': 'Thesis (PhD)',
+    'unpublished': 'Unpublished'
+};
+
+// --- NEW: Helper Function to Map Type ---
+function mapPubType(type) {
+    return PUB_TYPE_MAP[type] || type; // Return mapped value or original if not found
+}
 
 // Define the fields for which we want to count '✔️':
 const COUNT_FIELDS = [
@@ -428,9 +448,8 @@ function reorderDatasetsForStacking() {
             total: ds.data.reduce((a, b) => a + b, 0)
         }));
 
-        /* Sort descending by total */
-        totals.sort((A, B) => B.total - A.total);
-
+        // totals.sort((A, B) => B.total - A.total);        /* Sort descending by total */
+        totals.sort((A, B) => A.total - B.total);            /* Sort ascending by total (smallest first) to put smallest on bottom when stacked */
         /* Re-order only the datasets array (colours/labels stay intact) */
         chart.data.datasets = totals.map(t => datasets[t.idx]);
         chart.update();
@@ -457,11 +476,10 @@ function cumulativeLegendLabels(chart) {
 
 
 
-//Unified full-client-side stats implementation:
-function buildDetailRowLists(callback) {    
+function buildDetailRowLists(callback) {
     const stats = {
-        journals: {}, 
-        conferences: {}, 
+        journals: {},
+        conferences: {},
         keywords: {},
         authors: {},
         researchAreas: {},
@@ -470,14 +488,12 @@ function buildDetailRowLists(callback) {
     };
     const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
     visibleRows.forEach(row => {
-        // --- Get Journal/Conference and Type ---
+        // --- Get Journal/Conference and Type (same as before) ---
         const journalCell = row.cells[journalCellIndex]; // Index 4 (Journal/Conf column)
-        const typeCell = row.cells[typeCellIndex]; // Index 5 (Type column)
-
+        const typeCell = row.cells[typeCellIndex]; // Index 5 (Type column) - Assuming typeCellIndex is defined globally
         if (journalCell && typeCell) { // Ensure cells exist
             const journalConfName = journalCell.textContent.trim();
             const typeValue = (typeCell.getAttribute('title') || typeCell.textContent.trim()).toLowerCase(); // Use title if available, standardize case
-
             if (journalConfName) {
                 // Determine if it's a journal or conference based on type
                 // Common BibTeX types: 'article' -> journal, 'inproceedings', 'proceedings', 'conference' -> conference
@@ -493,100 +509,73 @@ function buildDetailRowLists(callback) {
             }
         }
 
-        // --- Existing Logic for Keywords, Authors, etc. ---
-        // (Keep the rest of the loop body unchanged)
-        const detailRow = row.nextElementSibling;
-        if (detailRow && detailRow.classList.contains('detail-row')) {
-            const keywordsPara = detailRow.querySelector('.detail-metadata p strong');
-            if (keywordsPara && keywordsPara.textContent.trim() === 'Keywords:') {
-                const keywordsParent = keywordsPara.parentElement;
-                if (keywordsParent) {
-                    let keywordsText = keywordsParent.textContent.trim();
-                    const prefix = "Keywords:";
-                    if (keywordsText.startsWith(prefix)) {
-                        keywordsText = keywordsText.substring(prefix.length).trim();
-                    }
-                    const keywordsList = keywordsText.split(';')
-                        .map(kw => kw.trim())
-                        .filter(kw => kw.length > 0);
-                    keywordsList.forEach(keyword => {
-                        stats.keywords[keyword] = (stats.keywords[keyword] || 0) + 1;
-                    });
-                }
-            }
-        }
-        let authorsList = [];
-        const detailRowForAuthors = row.nextElementSibling;
-        if (detailRowForAuthors && detailRowForAuthors.classList.contains('detail-row')) {
-            const authorsPara = Array.from(detailRowForAuthors.querySelectorAll('.detail-metadata p')).find(p => {
-                const strongTag = p.querySelector('strong');
-                return strongTag && strongTag.textContent.trim() === 'Full Authors:';
+        // --- Get data from hidden cells ---
+        // Find the hidden cells by their data-field attribute within the current row
+        const keywordsCell = row.querySelector('td[data-field="keywords"]');
+        const authorsCell = row.querySelector('td[data-field="authors"]');
+        const researchAreaCell = row.querySelector('td[data-field="research_area"]');
+        const modelNameCell = row.querySelector('td[data-field="model_name"]');
+        const featuresOtherCell = row.querySelector('td[data-field="features_other"]');
+        const userTraceCell = row.querySelector('td[data-field="user_trace"]');
+
+        // Extract text content from the found cells
+        const keywordsText = keywordsCell ? keywordsCell.textContent.trim() : '';
+        const authorsText = authorsCell ? authorsCell.textContent.trim() : '';
+        const researchAreaText = researchAreaCell ? researchAreaCell.textContent.trim() : '';
+        const modelNameText = modelNameCell ? modelNameCell.textContent.trim() : '';
+        const featuresOtherText = featuresOtherCell ? featuresOtherCell.textContent.trim() : '';
+        const userTraceText = userTraceCell ? userTraceCell.textContent.trim() : '';
+
+        // --- Process Keywords ---
+        if (keywordsText) {
+            const keywordsList = keywordsText.split(';')
+                .map(kw => kw.trim())
+                .filter(kw => kw.length > 0);
+            keywordsList.forEach(keyword => {
+                stats.keywords[keyword] = (stats.keywords[keyword] || 0) + 1;
             });
-            if (authorsPara) {
-                let authorsText = authorsPara.textContent.trim();
-                const prefix = "Full Authors:";
-                if (authorsText.startsWith(prefix)) {
-                    authorsText = authorsText.substring(prefix.length).trim();
-                }
-                if (authorsText) {
-                    authorsList = authorsText.split(';')
-                        .map(author => author.trim())
-                        .filter(author => author.length > 0);
-                } else {
-                    console.warn("Found 'Full Authors:' paragraph but no author text following it.", row);
-                }
-            }
         }
-        authorsList.forEach(author => {
-            stats.authors = stats.authors || {};
-            stats.authors[author] = (stats.authors[author] || 0) + 1;
-        });
-        const detailRowForResearchArea = row.nextElementSibling;
-        if (detailRowForResearchArea && detailRowForResearchArea.classList.contains('detail-row')) {
-            const researchAreaInput = detailRowForResearchArea.querySelector('.detail-edit input[name="research_area"]');
-            if (researchAreaInput) {
-                const researchArea = researchAreaInput.value.trim();
-                if (researchArea) {
-                    stats.researchAreas[researchArea] = (stats.researchAreas[researchArea] || 0) + 1;
-                }
-            }
+
+        // --- Process Authors ---
+        if (authorsText) {
+            const authorsList = authorsText.split(';')
+                .map(author => author.trim())
+                .filter(author => author.length > 0);
+            authorsList.forEach(author => {
+                stats.authors[author] = (stats.authors[author] || 0) + 1;
+            });
         }
-        // --- New Logic for Other Detected Features ---
-        const detailRowForOtherFeature = row.nextElementSibling;
-        if (detailRowForOtherFeature && detailRowForOtherFeature.classList.contains('detail-row')) {
-            const otherFeatureInput = detailRowForOtherFeature.querySelector('.detail-edit input[name="features_other"]');
-            if (otherFeatureInput) {
-                const otherFeatureText = otherFeatureInput.value.trim();
-                if (otherFeatureText) {
-                    // Split by semicolon, trim, filter out empty strings
-                    const featuresList = otherFeatureText.split(';')
-                        .map(f => f.trim())
-                        .filter(f => f.length > 0);
-                    featuresList.forEach(feature => {
-                        // Count occurrences of each feature string
-                        stats.otherDetectedFeatures[feature] = (stats.otherDetectedFeatures[feature] || 0) + 1;
-                    });
-                }
-            }
+
+        // --- Process Research Area ---
+        if (researchAreaText) {
+            stats.researchAreas[researchAreaText] = (stats.researchAreas[researchAreaText] || 0) + 1;
         }
-        // --- New Logic for Model Names ---
-        const detailRowForModelName = row.nextElementSibling;
-        if (detailRowForModelName && detailRowForModelName.classList.contains('detail-row')) {
-            const modelNameInput = detailRowForModelName.querySelector('.detail-edit input[name="model_name"]'); // Adjust selector if necessary
-            if (modelNameInput) {
-                const modelNameText = modelNameInput.value.trim();
-                if (modelNameText) {
-                    // Split by comma or semicolon, trim whitespace, filter out empty strings
-                    const modelNamesList = modelNameText.split(/[,;]/).map(m => m.trim()).filter(m => m.length > 0);
-                    modelNamesList.forEach(modelName => {
-                        // Count occurrences of each individual model name string
-                        stats.modelNames[modelName] = (stats.modelNames[modelName] || 0) + 1; // Fixed: Added space around ||
-                    });
-                }
-            }
+
+        // --- Process Other Detected Features ---
+        if (featuresOtherText) {
+            const featuresList = featuresOtherText.split(';')
+                .map(f => f.trim())
+                .filter(f => f.length > 0);
+            featuresList.forEach(feature => {
+                stats.otherDetectedFeatures[feature] = (stats.otherDetectedFeatures[feature] || 0) + 1;
+            });
         }
+
+        // --- Process Model Names ---
+        if (modelNameText) {
+            const modelNamesList = modelNameText.split(/[,;]/) // Split by comma or semicolon
+                .map(m => m.trim())
+                .filter(m => m.length > 0);
+            modelNamesList.forEach(modelName => {
+                stats.modelNames[modelName] = (stats.modelNames[modelName] || 0) + 1;
+            });
+        }
+
+        // Note: userTraceText is available if needed later for stats.userComments
     });
-    
+
+    // ... (Keep the rest of the function: populateList, populateSimpleList, toggleCloud, callback, etc.)
+    // The logic for populating lists and calling the callback remains the same.
 
     // Function to populate lists where items must appear more than once (count > 1)
     function populateList(listElementId, dataObj) {
@@ -596,33 +585,27 @@ function buildDetailRowLists(callback) {
             return;
         }
         listElement.innerHTML = '';
-
         const sortedEntries = Object.entries(dataObj)
-            .filter(([name, count]) => count >= 1) // Keep only entries with count > 1
+            .filter(([name, count]) => count >= 1) // Keep only entries with count >= 1 (changed from > 1 if desired)
             .sort((a, b) => {
                 if (b[1] !== a[1]) {
                     return b[1] - a[1];
                 }
                 return a[0].localeCompare(b[0]);
             });
-
         if (sortedEntries.length === 0) {
-            listElement.innerHTML = '<li>No items with count > 1.</li>';
+            listElement.innerHTML = '<li>No items with count >= 1.</li>'; // Changed message
             return;
         }
-
         sortedEntries.forEach(([name, count]) => {
             const listItem = document.createElement('li');
             // Escape HTML to prevent XSS if data contains special characters
             const escapedName = name.replace(/&/g, "&amp;").replace(/</g, "<").replace(/>/g, ">");
             const escapedNameForTitle = escapedName.replace(/"/g, "&quot;"); // Escape quotes for title attribute
-
             // Create the list item content with count, search button, and name
             listItem.innerHTML = `<span class="count">${count}</span><button type="button" class="search-item-btn" title="Search for &quot;${escapedNameForTitle}&quot;">🔍</button><span class="name">${escapedName}</span>`;
-
             listElement.appendChild(listItem);
         });
-
         // Add event listeners to the newly created search buttons
         listElement.querySelectorAll('.search-item-btn').forEach(button => {
             button.addEventListener('click', function() {
@@ -637,8 +620,8 @@ function buildDetailRowLists(callback) {
             });
         });
     }
-    // --- New Function Call to Populate Lists with Search Buttons ---
-    // Function to populate lists where items *can* appear only once (no > 1 filter)
+
+    // Function to populate lists where items *can* appear only once (no >= 1 filter)
     function populateSimpleList(listElementId, dataObj) {
         const listElement = document.getElementById(listElementId);
         if (!listElement) {
@@ -646,7 +629,6 @@ function buildDetailRowLists(callback) {
             return;
         }
         listElement.innerHTML = '';
-
         // Sort entries: primarily by count (descending), then alphabetically (ascending) for ties
         const sortedEntries = Object.entries(dataObj)
             .sort((a, b) => {
@@ -655,24 +637,19 @@ function buildDetailRowLists(callback) {
                 }
                 return a[0].localeCompare(b[0]); // Sort alphabetically ascending if counts are equal
             });
-
         if (sortedEntries.length === 0) {
             listElement.innerHTML = '<li>No items found.</li>';
             return;
         }
-
         sortedEntries.forEach(([name, count]) => {
             const listItem = document.createElement('li');
             // Escape HTML to prevent XSS if data contains special characters
             const escapedName = name.replace(/&/g, "&amp;").replace(/</g, "<").replace(/>/g, ">");
             const escapedNameForTitle = escapedName.replace(/"/g, "&quot;"); // Escape quotes for title attribute
-
             // Create the list item content with count, search button, and name
             listItem.innerHTML = `<span class="count">${count}</span><button type="button" class="search-item-btn" title="Search for &quot;${escapedNameForTitle}&quot;">🔍</button><span class="name">${escapedName}</span>`;
-
             listElement.appendChild(listItem);
         });
-
         // Add event listeners to the newly created search buttons
         listElement.querySelectorAll('.search-item-btn').forEach(button => {
             button.addEventListener('click', function() {
@@ -688,30 +665,23 @@ function buildDetailRowLists(callback) {
         });
     }
 
-    // Populate the new lists using the new helper functions
-    // Populate Journals (only items with type 'article')
-    // populateList('journalStatsList', stats.journals); // Uses stats.journals object
-    // Populate Conferences (only items with type 'inproceedings', 'proceedings', 'conference')
-    // populateList('conferenceStatsList', stats.conferences); // NEW: Uses stats.conferences object
+    // Populate the lists using the new helper functions
     populateList('keywordStatsList', stats.keywords);
     populateList('authorStatsList', stats.authors);
     populateList('researchAreaStatsList', stats.researchAreas);
-
     populateSimpleList('otherDetectedFeaturesStatsList', stats.otherDetectedFeatures);
     populateSimpleList('modelNamesStatsList', stats.modelNames);
-    
+
     // ---- now the lists exist; build cloud if switch is on ----
     if (document.getElementById('cloudToggle').checked) {
         toggleCloud();                     // first render
     }
     if (callback) callback(); // Call the callback function after populating lists
-
     // Trigger reflow and add modal-active class after charts are drawn and lists are populated
     // modal.offsetHeight; // Trigger reflow
     // modal.classList.add('modal-active');
     // return stats;
 }
-
 
 
 function displayStats() {
@@ -841,6 +811,71 @@ function displayStats() {
             }]
         };
 
+
+        // --- NEW: Prepare Survey vs Implementation Distribution Chart Data ---
+        // Use the correct counts from latestCounts and total visible papers
+        const surveyCount = latestCounts['is_survey'] || 0;
+        // Get the total number of currently visible papers directly
+        const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
+        const totalVisiblePaperCount = visibleRows.length;
+        // Calculate implementation count: total visible - survey count
+        const implCount = totalVisiblePaperCount - surveyCount;
+
+        const surveyVsImplDistChartData = {
+            labels: ['Survey', 'Primary'],
+            datasets: [{
+                label: 'Survey vs Primary Distribution',
+                data: [
+                    surveyCount,
+                    implCount
+                ],
+                backgroundColor: [
+                    'hsla(204, 42%, 67%, 0.95)', // Blue (from line chart)
+                    'hsla(53, 50%, 69%, 0.95)' // Red-like (from line chart, adjusted hue/lightness)
+                ],
+                borderColor: "#333",
+                borderWidth: 1,
+                hoverOffset: 4
+            }]
+        };
+
+
+        // --- NEW: Prepare Publication Types Distribution Chart Data (Translated Labels) ---
+        // Get unique types from the yearly data collected in updateCounts
+        const allPubTypesSet = new Set();
+        Object.values(latestYearlyData.pubTypes || {}).forEach(yearData => {
+            Object.keys(yearData).forEach(type => allPubTypesSet.add(type));
+        });
+        const allPubTypes = Array.from(allPubTypesSet).sort(); // Sort for consistent order
+        const pubTypesDistData = allPubTypes.map(type => {
+            let count = 0;
+            Object.values(latestYearlyData.pubTypes || {}).forEach(yearData => {
+                count += yearData[type] || 0;
+            });
+            return count;
+        });
+
+        // Translate labels using the map
+        const pubTypesDistLabels = allPubTypes.map(mapPubType); // NEW: Apply mapping here
+
+        // Generate colors for pub types (similar to line chart logic)
+        const pubTypesDistColors = allPubTypes.map((type, index) => { // Colors still use original type for consistency in generation
+            const hue = (index * 137.508) % 360; // Golden angle approximation for spread
+            return `hsla(${hue}, 30%, 65%, 0.85)`; // Slightly transparent for contrast
+        });
+
+        const pubTypesDistChartData = {
+            labels: pubTypesDistLabels, // Use the translated labels
+            datasets: [{
+                label: 'Publication Types Distribution',
+                data: pubTypesDistData,
+                backgroundColor: pubTypesDistColors,
+                borderColor: "#333",
+                borderWidth: 1,
+                hoverOffset: 4
+            }]
+        };
+
         // --- Destroy existing charts if they exist (important for re-renders) ---
         if (window.featuresBarChartInstance) {
             window.featuresBarChartInstance.destroy();
@@ -867,6 +902,15 @@ function displayStats() {
             delete window.pubTypesPerYearLineChartInstance;
         }
 
+        // --- ADD: Destroy new distribution charts ---
+        if (window.surveyVsImplDistChartInstance) {
+            window.surveyVsImplDistChartInstance.destroy();
+            delete window.surveyVsImplDistChartInstance;
+        }
+        if (window.pubTypesDistChartInstance) {
+            window.pubTypesDistChartInstance.destroy();
+            delete window.pubTypesDistChartInstance;
+        }
         // --- Get Canvas Contexts for ALL charts ---
         const featuresCtx = document.getElementById('featuresPieChart')?.getContext('2d');
         const techniquesCtx = document.getElementById('techniquesPieChart')?.getContext('2d');
@@ -874,6 +918,8 @@ function displayStats() {
         const techniquesPerYearCtx = document.getElementById('techniquesPerYearLineChart')?.getContext('2d');
         const featuresPerYearCtx = document.getElementById('featuresPerYearLineChart')?.getContext('2d');
         const pubTypesPerYearCtx = document.getElementById('pubTypesPerYearLineChart')?.getContext('2d'); // Get context for pub types chart
+        const surveyVsImplDistCtx = document.getElementById('surveyVsImplPieChart')?.getContext('2d');
+        const pubTypesDistCtx = document.getElementById('publTypePieChart')?.getContext('2d');
 
         // --- Render Features Distribution Chart (Bar or Pie) ---
         const featuresChartType = showPieCharts ? 'pie' : 'bar';
@@ -962,6 +1008,93 @@ function displayStats() {
         };
         window.techniquesBarChartInstance = new Chart(techniquesCtx, techniquesChartOptions); // Keep variable name for consistency if needed, or rename to techniquesChartInstance
 
+
+        // --- NEW: Render Survey vs Implementation Distribution Chart (Bar or Pie) ---
+        const surveyVsImplDistChartType = showPieCharts ? 'pie' : 'bar';
+        const surveyVsImplDistChartOptions = {
+            type: surveyVsImplDistChartType,
+            data: surveyVsImplDistChartData,
+            options: {
+                // Conditionally apply indexAxis for bar chart, omit for pie
+                ...(surveyVsImplDistChartType === 'bar' ? { indexAxis: 'y' } : {}),
+                ...(surveyVsImplDistChartType === 'pie' ? { radius: '90%' } : {}), // Adjust '80%' as needed (e.g., '70%', '90%')
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: surveyVsImplDistChartType === 'pie', // Show legend only for pie charts
+                        position: 'top', // Position legend differently for pie
+                        labels: {
+                            usePointStyle: surveyVsImplDistChartType == 'pie', // Use point style for bar chart markers, not pie
+                            pointStyle: 'circle',
+                        }
+                    },
+                    title: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                // Show count for both bar and pie
+                                return `${context.label}: ${context.raw}`;
+                            }
+                        }
+                    }
+                },
+                // Only apply scales for bar chart
+                ...(surveyVsImplDistChartType === 'bar' ? {
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                } : {})
+            }
+        };
+        window.surveyVsImplDistChartInstance = new Chart(surveyVsImplDistCtx, surveyVsImplDistChartOptions);
+
+        // --- NEW: Render Publication Types Distribution Chart (Bar or Pie) ---
+        const pubTypesDistChartType = showPieCharts ? 'pie' : 'bar';
+        const pubTypesDistChartOptions = {
+            type: pubTypesDistChartType,
+            data: pubTypesDistChartData,
+            options: {
+                // Conditionally apply indexAxis for bar chart, omit for pie
+                ...(pubTypesDistChartType === 'bar' ? { indexAxis: 'y' } : {}),
+                ...(pubTypesDistChartType === 'pie' ? { radius: '90%' } : {}), // Adjust '80%' as needed (e.g., '70%', '90%')
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: pubTypesDistChartType === 'pie', // Show legend only for pie charts
+                        position: 'top', // Position legend differently for pie
+                        labels: {
+                            usePointStyle: pubTypesDistChartType == 'pie', // Use point style for bar chart markers, not pie
+                            pointStyle: 'circle',
+                        }
+                    },
+                    title: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                // Show count for both bar and pie
+                                return `${context.label}: ${context.raw}`;
+                            }
+                        }
+                    }
+                },
+                // Only apply scales for bar chart
+                ...(pubTypesDistChartType === 'bar' ? {
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                } : {})
+            }
+        };
+        window.pubTypesDistChartInstance = new Chart(pubTypesDistCtx, pubTypesDistChartOptions);
+
         // --- Render Line Charts ---
         // 1. Survey vs Implementation Papers per Year
         const surveyImplData = latestYearlyData.surveyImpl || {};
@@ -990,10 +1123,10 @@ function displayStats() {
                         tension: 0.25
                     },
                     {
-                        label: 'Implementation Papers',
+                        label: 'Primary Papers',
                         data: implCountsFinal, // Use final data array
                         borderColor: 'hsla(38, 70%, 49%, 1.00)', // Red
-                        backgroundColor: 'hsla(53, 50%, 69%, 0.95)',
+                        backgroundColor: 'hsla(42, 50%, 69%, 0.95)',
                         fill: isStacked, // Fill is controlled by stacked option below
                         tension: 0.25
                     }
@@ -1011,7 +1144,7 @@ function displayStats() {
                             generateLabels: cumulativeLegendLabels   // <-- added
                         }
                     },
-                    title: { display: false, text: 'Survey vs Implementation Papers per Year' },
+                    title: { display: false, text: 'Survey vs Primary Papers per Year' },
                     tooltip: {
                         callbacks: {
                             label: function (context) {
@@ -1213,30 +1346,25 @@ function displayStats() {
             });
         }
 
-        // --- 4. Publication Types per Year ---
+        // --- 4. Publication Types per Year (Translated Labels) ---
         const pubTypesYearlyData = latestYearlyData.pubTypes || {};
         const yearsForPubTypes = Object.keys(pubTypesYearlyData).map(Number).sort((a, b) => a - b);
-        // --- Aggregate data for the chart ---
-        // Get all unique publication types across all years
-        const allPubTypesSet = new Set();
-        Object.values(pubTypesYearlyData).forEach(yearData => {
-            Object.keys(yearData).forEach(type => allPubTypesSet.add(type));
-        });
-        const allPubTypes = Array.from(allPubTypesSet).sort(); // Sort for consistent legend order
 
         // Create datasets for the line chart, one for each publication type
-        const pubTypeLineDatasets = allPubTypes.map((type, index) => {
+        const pubTypeLineDatasets = allPubTypes.map((type, index) => { // Use original types for data fetching
             // Generate a distinct color for each type (simple hue rotation)
             // You might want to use a more sophisticated color palette
             const hue = (index * 137.508) % 360; // Golden angle approximation for spread
             const borderColor = `hsl(${hue}, 40%, 40%)`;
-            const backgroundColor = `hsla(${hue}, 30%, 65%, 0.85)`; 
+            const backgroundColor = `hsla(${hue}, 30%, 65%, 0.85)`;
+
+
             let data = yearsForPubTypes.map(year => pubTypesYearlyData[year]?.[type] || 0);
             if (isCumulative) {
                 data = calculateCumulativeData(data);
             }
             return {
-                label: type, // Use the raw type name as label (or map if needed)
+                label: mapPubType(type), // NEW: Apply mapping here for the dataset label (shown in legend and tooltip)
                 data: data, // Use final data array
                 borderColor: borderColor,
                 backgroundColor: backgroundColor,
@@ -1252,7 +1380,7 @@ function displayStats() {
                 type: 'line',
                 data: {
                     labels: yearsForPubTypes, // Use sorted years
-                    datasets: pubTypeLineDatasets // Use datasets prepared above
+                    datasets: pubTypeLineDatasets // Use datasets prepared above (with mapped labels)
                 },
                 options: {
                     responsive: true,
@@ -1270,6 +1398,7 @@ function displayStats() {
                         tooltip: {
                             callbacks: {
                                 label: function (context) {
+                                    // Tooltip will now show the mapped label (e.g., "Journal", "Conference")
                                     return `${context.dataset.label}: ${context.raw}`;
                                 }
                             }
@@ -1311,7 +1440,6 @@ function displayStats() {
                 }
             });
         }
-
         const { journals, conferences } = calculateJournalConferenceStats();
 
         //comms.s or ghpages.js (different functions depending on source!)  

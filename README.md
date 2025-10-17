@@ -46,3 +46,4 @@ The system is designed to streamline literature reviews by allowing for advanced
     - Start an OpenAI-compatible inference server (e.g., llama.cpp). `/lcpp` folder has sample settings for a supported llama.cpp configuration.
     - From the web UI, you can trigger classification and verification tasks for individual papers or in batches ('all' or 'remaining').
     - Alternatively, manually run classification using `automate_classification.py` and `verify_classification.py.` Both accept `--mode all` and `--mode remaining` operating modes for batch classification.
+

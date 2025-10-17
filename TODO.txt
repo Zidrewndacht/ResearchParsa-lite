@@ -164,6 +164,8 @@ OK              deprecated /get_stats
 OK              deprecated FTS search
         Currently search doesn't read abstracts (not in preloaded detail row to reduce excess bloat). Should it?
 
+        Adapt flatten.py to autoflatten latest version of all relevant code (e.g skipping libraries)
+
 
         Refactor browse_db.py (too large)?
                 Moving SQLite logic to a separate file for DB operations may cause 
