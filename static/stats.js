@@ -6,12 +6,12 @@
 // stats.js
 /** Stats-related Functionality **/
 let latestCounts = {}; // This will store the counts calculated by updateCounts
-let latestYearlyData = {}; // NEW: Store yearly data for charts
+let latestYearlyData = {}; 
 
 let isStacked = false; // Default state
 let isCumulative = false; // Default state
 let showPieCharts = false; // Default to bar charts
-let showKeywordCloud = false; // NEW: State for keyword cloud toggle
+let showKeywordCloud = false; 
 
 const statsBtn = document.getElementById('stats-btn');
 const aboutBtn = document.getElementById('about-btn');
@@ -126,7 +126,7 @@ const featureColorGroups = {
     13: { label: 'Other', fields: [] }
 };
 
-// Map NEW field names (data-field values / structure keys) to user-friendly labels (based on your table headers)
+// Map field names (data-field values / structure keys) to user-friendly labels (based on your table headers)
 const FIELD_LABELS = {
     // Features
     'features_tracks': 'Tracks',
@@ -155,7 +155,7 @@ const FIELD_LABELS = {
     'technique_available_dataset': 'Datasets' // Label for Datasets
 };
 
-// --- NEW: Define Mapping for Publication Types ---
+// --- Define Mapping for Publication Types ---
 const PUB_TYPE_MAP = {
     'article': 'Journal',
     'inproceedings': 'Conference',
@@ -170,8 +170,6 @@ const PUB_TYPE_MAP = {
     'phdthesis': 'Thesis (PhD)',
     'unpublished': 'Unpublished'
 };
-
-// --- NEW: Helper Function to Map Type ---
 function mapPubType(type) {
     return PUB_TYPE_MAP[type] || type; // Return mapped value or original if not found
 }
@@ -203,15 +201,10 @@ function updateCounts() {
     const yearlyTechniques = {}; // { year: { technique_field: count, ... } }
     const yearlyFeatures =   {}; // { year: { feature_field: count, ... } }
     const yearlyPubTypes = {}; // { year: { pubtype1: count, pubtype2: count, ... } }
-    // --- NEW: Store yearly model counts ---
     const yearlyModels = {}; // { year: { modelName: count, ... } }
 
     // Initialize counts for all defined fields
     COUNT_FIELDS.forEach(field => counts[field] = 0);
-
-    // NEW: Initialize model counts separately if needed for distribution
-    // Or just let counts['model'] hold the total number of *model mentions*
-    // counts['model'] will now count individual model names, not rows
 
     // Select only VISIBLE main rows for counting '✔️' and calculating visible count
     const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
@@ -239,15 +232,13 @@ function updateCounts() {
         }
 
         COUNT_FIELDS.forEach(field => {
-            // Skip the newly added PDF fields as they are handled separately above
+            // Skip the PDF fields as they are handled separately above
             if (field === 'pdf_present' || field === 'pdf_annotated') {
                  return; // Skip to the next field
             }
 
             const cell = row.querySelector(`[data-field="${field}"]`);
             const cellText = cell ? cell.textContent.trim() : '';
-
-            // --- NEW LOGIC FOR 'model' FIELD ---
             if (field === 'model') {
                 if (cellText && cellText !== '') { // Check if there's content
                     // Split the content by comma and trim whitespace
@@ -272,7 +263,6 @@ function updateCounts() {
                 // After processing the model field, return to avoid the default '✔️' check below
                 return;
             }
-            // --- END NEW LOGIC FOR 'model' FIELD ---
 
             if (field === 'changed_by' || field === 'verified_by') {
                 if (cellText === '👤') {
@@ -345,7 +335,6 @@ function updateCounts() {
         techniques: yearlyTechniques,
         features: yearlyFeatures,
         pubTypes: yearlyPubTypes,
-        // --- ADD yearlyModels to latestYearlyData ---
         models: yearlyModels
     };
 
@@ -428,7 +417,6 @@ function calculateCumulativeData(originalDataArray) {
     return cumulativeData;
 }
 /* ----------  AUTO-ORDER DATASETS WHEN STACKED  ---------- */
-/* Correct for cumulative + stacked together.                */
 function reorderDatasetsForStacking() {
     if (!isStacked) return;                // nothing to do when un-stacked
     const charts = [
@@ -474,9 +462,7 @@ function cumulativeLegendLabels(chart) {
   return labels;
 }
 
-
-
-function buildDetailRowLists(callback) {
+function buildStatsLists(callback) {
     const stats = {
         journals: {},
         conferences: {},
@@ -516,7 +502,6 @@ function buildDetailRowLists(callback) {
         const researchAreaCell = row.querySelector('td[data-field="research_area"]');
         const modelNameCell = row.querySelector('td[data-field="model_name"]');
         const featuresOtherCell = row.querySelector('td[data-field="features_other"]');
-        const userTraceCell = row.querySelector('td[data-field="user_trace"]');
 
         // Extract text content from the found cells
         const keywordsText = keywordsCell ? keywordsCell.textContent.trim() : '';
@@ -524,7 +509,6 @@ function buildDetailRowLists(callback) {
         const researchAreaText = researchAreaCell ? researchAreaCell.textContent.trim() : '';
         const modelNameText = modelNameCell ? modelNameCell.textContent.trim() : '';
         const featuresOtherText = featuresOtherCell ? featuresOtherCell.textContent.trim() : '';
-        const userTraceText = userTraceCell ? userTraceCell.textContent.trim() : '';
 
         // --- Process Keywords ---
         if (keywordsText) {
@@ -570,12 +554,7 @@ function buildDetailRowLists(callback) {
                 stats.modelNames[modelName] = (stats.modelNames[modelName] || 0) + 1;
             });
         }
-
-        // Note: userTraceText is available if needed later for stats.userComments
     });
-
-    // ... (Keep the rest of the function: populateList, populateSimpleList, toggleCloud, callback, etc.)
-    // The logic for populating lists and calling the callback remains the same.
 
     // Function to populate lists where items must appear more than once (count > 1)
     function populateList(listElementId, dataObj) {
@@ -606,7 +585,6 @@ function buildDetailRowLists(callback) {
             listItem.innerHTML = `<span class="count">${count}</span><button type="button" class="search-item-btn" title="Search for &quot;${escapedNameForTitle}&quot;">🔍</button><span class="name">${escapedName}</span>`;
             listElement.appendChild(listItem);
         });
-        // Add event listeners to the newly created search buttons
         listElement.querySelectorAll('.search-item-btn').forEach(button => {
             button.addEventListener('click', function() {
                 const listItem = this.closest('li');
@@ -650,7 +628,6 @@ function buildDetailRowLists(callback) {
             listItem.innerHTML = `<span class="count">${count}</span><button type="button" class="search-item-btn" title="Search for &quot;${escapedNameForTitle}&quot;">🔍</button><span class="name">${escapedName}</span>`;
             listElement.appendChild(listItem);
         });
-        // Add event listeners to the newly created search buttons
         listElement.querySelectorAll('.search-item-btn').forEach(button => {
             button.addEventListener('click', function() {
                 const listItem = this.closest('li');
@@ -665,7 +642,6 @@ function buildDetailRowLists(callback) {
         });
     }
 
-    // Populate the lists using the new helper functions
     populateList('keywordStatsList', stats.keywords);
     populateList('authorStatsList', stats.authors);
     populateList('researchAreaStatsList', stats.researchAreas);
@@ -676,13 +652,11 @@ function buildDetailRowLists(callback) {
     if (document.getElementById('cloudToggle').checked) {
         toggleCloud();                     // first render
     }
-    if (callback) callback(); // Call the callback function after populating lists
-    // Trigger reflow and add modal-active class after charts are drawn and lists are populated
-    // modal.offsetHeight; // Trigger reflow
-    // modal.classList.add('modal-active');
-    // return stats;
+    if (callback) callback();
 }
 
+// static/stats.js
+// ... (previous code remains unchanged until the displayStats function)
 
 function displayStats() {
     document.documentElement.classList.add('busyCursor');
@@ -690,7 +664,6 @@ function displayStats() {
         updateCounts(); // Run updateCounts to get the latest data for visible rows
         TECHNIQUE_FIELDS_FOR_YEARLY.forEach((field, index) => { TECHNIQUE_FIELD_COLOR_MAP[field] = index; });
         FEATURE_FIELDS_FOR_YEARLY.forEach((field, index) => { FEATURE_FIELD_INDEX_MAP[field] = index; });
-
         // Populate the groups with the actual feature fields
         FEATURE_FIELDS_FOR_YEARLY.forEach(field => {
             const originalIndex = FEATURE_FIELD_INDEX_MAP[field];
@@ -710,7 +683,6 @@ function displayStats() {
                 console.warn(`Could not find matching base color for feature ${field}`);
             }
         });
-
         // --- Read Counts from Footer Cells ---
         // We read the counts directly from the cells updated by updateCounts()
         function getCountFromFooter(fieldId) {
@@ -723,6 +695,50 @@ function displayStats() {
             return 0;
         }
 
+        // --- Calculate SMT vs THT Data ---
+        const smtCount = latestCounts['is_smt'] || 0;
+        const thtCount = latestCounts['is_through_hole'] || 0;
+        const smtVsThtDistChartData = {
+            labels: ['SMT', 'THT'],
+            datasets: [{
+                label: 'SMT vs THT Distribution',
+                data: [smtCount, thtCount],
+                backgroundColor: [
+                    'hsla(180, 32%, 52%, 0.95)', // Teal (from techniques)
+                    'hsla(260, 60%, 66%, 0.95)'  // Purple (from techniques)
+                ],
+                borderColor: "#333",
+                borderWidth: 1,
+                hoverOffset: 4
+            }]
+        };
+
+        // --- Calculate Offtopic (Scope) Data ---
+        // Get the total number of currently visible papers directly
+        const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
+        const totalVisiblePaperCount = visibleRows.length;
+        // Get the total number of *all* papers from the footer cell
+        const totalPaperCountCell = document.getElementById('total-papers-count');
+        const totalAllPaperCount = totalPaperCountCell ? parseInt(totalPaperCountCell.textContent.trim(), 10) : 0;
+        // const offtopicCount = latestCounts['is_offtopic'] || 0;
+        const offtopicCount = totalAllPaperCount;
+        // On-topic count is visible papers minus off-topic papers
+        const ontopicCount = totalVisiblePaperCount;
+        const scopeDistChartData = {
+            labels: ['Filtered', 'Total'],
+            datasets: [{
+                label: 'Dataset Scope (On-topic vs Off-topic)',
+                data: [ontopicCount, offtopicCount],
+                backgroundColor: [
+                    'hsla(96, 66%, 49%, 0.95)', // Green (from techniques)
+                    'hsla(347, 60%, 69%, 0.95)'  // Red (from techniques)
+                ],
+                borderColor: "#333",
+                borderWidth: 1,
+                hoverOffset: 4
+            }]
+        };
+
         // --- Prepare Features Distribution Chart Data (Original or Grouped) ---
         let featuresChartData;
         if (showPieCharts) {
@@ -732,25 +748,21 @@ function displayStats() {
             const groupedValues = [];
             const groupedBackgroundColors = [];
             // const groupedBorderColors = [];
-
             // Iterate through the defined groups
             Object.keys(featureColorGroups).forEach(baseColorIndex => {
                 const group = featureColorGroups[baseColorIndex];
                 groupedLabels.push(group.label); // Use the group's label (e.g., 'PCB Features')
-
                 // Sum the counts for all features within this group
                 let groupSum = 0;
                 group.fields.forEach(field => {
                     groupSum += getCountFromFooter(field);
                 });
                 groupedValues.push(groupSum);
-
                 // Use the color associated with the base index for this group
                 const colorIndex = parseInt(baseColorIndex);
                 groupedBackgroundColors.push(featuresColorsOriginalOrder[colorIndex]);
                 // groupedBorderColors.push(featuresBorderColorsOriginalOrder[colorIndex]);
             });
-
             featuresChartData = {
                 labels: groupedLabels,
                 datasets: [{
@@ -768,7 +780,6 @@ function displayStats() {
             const featuresValues = FEATURE_FIELDS.map(field => getCountFromFooter(field));
             const featuresBackgroundColors = featuresColorsOriginalOrder; // Use original colors
             // const featuresBorderColors = featuresBorderColorsOriginalOrder; // Use original border colors
-
             featuresChartData = {
                 labels: featuresLabels,
                 datasets: [{
@@ -797,8 +808,7 @@ function displayStats() {
         const sortedTechniquesValues = techniquesData.map(item => item.value);
         // Map the sorted order back to the original colors using the stored originalIndex
         const sortedTechniquesBackgroundColors = techniquesData.map(item => techniquesColors[item.originalIndex] || 'rgba(0,0,0,0.1)');
-        const sortedTechniquesBorderColors = techniquesData.map(item => techniquesBorderColors[item.originalIndex] || 'rgba(0,0,0,1)');
-
+        // const sortedTechniquesBorderColors = techniquesData.map(item => techniquesBorderColors[item.originalIndex] || 'rgba(0,0,0,1)');
         const techniquesChartData = {
             labels: sortedTechniquesLabels,
             datasets: [{
@@ -811,16 +821,11 @@ function displayStats() {
             }]
         };
 
-
-        // --- NEW: Prepare Survey vs Implementation Distribution Chart Data ---
+        // ---  Prepare Survey vs Implementation Distribution Chart Data ---
         // Use the correct counts from latestCounts and total visible papers
         const surveyCount = latestCounts['is_survey'] || 0;
-        // Get the total number of currently visible papers directly
-        const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
-        const totalVisiblePaperCount = visibleRows.length;
         // Calculate implementation count: total visible - survey count
         const implCount = totalVisiblePaperCount - surveyCount;
-
         const surveyVsImplDistChartData = {
             labels: ['Survey', 'Primary'],
             datasets: [{
@@ -839,8 +844,7 @@ function displayStats() {
             }]
         };
 
-
-        // --- NEW: Prepare Publication Types Distribution Chart Data (Translated Labels) ---
+        // --- Prepare Publication Types Distribution Chart Data (Translated Labels) ---
         // Get unique types from the yearly data collected in updateCounts
         const allPubTypesSet = new Set();
         Object.values(latestYearlyData.pubTypes || {}).forEach(yearData => {
@@ -854,16 +858,13 @@ function displayStats() {
             });
             return count;
         });
-
         // Translate labels using the map
-        const pubTypesDistLabels = allPubTypes.map(mapPubType); // NEW: Apply mapping here
-
+        const pubTypesDistLabels = allPubTypes.map(mapPubType);
         // Generate colors for pub types (similar to line chart logic)
         const pubTypesDistColors = allPubTypes.map((type, index) => { // Colors still use original type for consistency in generation
             const hue = (index * 137.508) % 360; // Golden angle approximation for spread
             return `hsla(${hue}, 30%, 65%, 0.85)`; // Slightly transparent for contrast
         });
-
         const pubTypesDistChartData = {
             labels: pubTypesDistLabels, // Use the translated labels
             datasets: [{
@@ -875,6 +876,58 @@ function displayStats() {
                 hoverOffset: 4
             }]
         };
+
+        // --- Prepare Relevance Histogram Data ---
+        // Assuming relevance data is collected in updateCounts or similar logic
+        // For now, let's assume it's collected similarly to yearly data in an object like latestYearlyData
+        // We need to collect relevance scores for *visible* papers
+        const relevanceCounts = Array(11).fill(0); // Index 0-10 for scores 0-10
+        visibleRows.forEach(row => {
+            const relevanceCell = row.cells[relevanceCellIndex]; // Assume relevanceCellIndex is defined globally
+            if (relevanceCell) {
+                const relevanceText = relevanceCell.textContent.trim();
+                const relevanceScore = parseInt(relevanceText, 10);
+                if (!isNaN(relevanceScore) && relevanceScore >= 0 && relevanceScore <= 10) {
+                    relevanceCounts[relevanceScore]++;
+                }
+            }
+        });
+        const relevanceHistogramData = {
+            labels: Array.from({length: 11}, (_, i) => i.toString()), // Labels "0", "1", ..., "10"
+            datasets: [{
+                label: 'Relevance Histogram',
+                data: relevanceCounts,
+                backgroundColor: 'hsla(204, 62%, 57%, 0.95)', // Blue (from techniques)
+                borderColor: 'hsla(204, 82%, 28%, 0.75)', // Darker Blue border
+                borderWidth: 1
+            }]
+        };
+
+        // --- Prepare Estimated Score Histogram Data ---
+        // Assuming estScore data is collected in updateCounts or similar logic
+        // We need to collect estScore values for *visible* papers
+        const estScoreCounts = Array(11).fill(0); // Index 0-10 for scores 0-10
+        visibleRows.forEach(row => {
+            const estScoreCell = row.cells[estScoreCellIndex]; // Assume estScoreCellIndex is defined globally
+            if (estScoreCell) {
+                const estScoreText = estScoreCell.textContent.trim();
+                const estScore = parseInt(estScoreText, 10);
+                if (!isNaN(estScore) && estScore >= 0 && estScore <= 10) {
+                    estScoreCounts[estScore]++;
+                }
+            }
+        });
+        const estScoreHistogramData = {
+            labels: Array.from({length: 11}, (_, i) => i.toString()), // Labels "0", "1", ..., "10"
+            datasets: [{
+                label: 'Estimated Score Histogram',
+                data: estScoreCounts,
+                backgroundColor: 'hsla(52, 80%, 47%, 0.95)', // Yellow (from techniques)
+                borderColor: 'hsla(42, 100%, 28%, 0.75)', // Darker Yellow border
+                borderWidth: 1
+            }]
+        };
+
 
         // --- Destroy existing charts if they exist (important for re-renders) ---
         if (window.featuresBarChartInstance) {
@@ -901,8 +954,6 @@ function displayStats() {
             window.pubTypesPerYearLineChartInstance.destroy();
             delete window.pubTypesPerYearLineChartInstance;
         }
-
-        // --- ADD: Destroy new distribution charts ---
         if (window.surveyVsImplDistChartInstance) {
             window.surveyVsImplDistChartInstance.destroy();
             delete window.surveyVsImplDistChartInstance;
@@ -911,6 +962,25 @@ function displayStats() {
             window.pubTypesDistChartInstance.destroy();
             delete window.pubTypesDistChartInstance;
         }
+        // --- Destroy NEW charts if they exist ---
+        if (window.smtVsThtDistChartInstance) {
+            window.smtVsThtDistChartInstance.destroy();
+            delete window.smtVsThtDistChartInstance;
+        }
+        if (window.scopeDistChartInstance) {
+            window.scopeDistChartInstance.destroy();
+            delete window.scopeDistChartInstance;
+        }
+        if (window.relevanceHistogramInstance) {
+            window.relevanceHistogramInstance.destroy();
+            delete window.relevanceHistogramInstance;
+        }
+        if (window.estScoreHistogramInstance) {
+            window.estScoreHistogramInstance.destroy();
+            delete window.estScoreHistogramInstance;
+        }
+
+
         // --- Get Canvas Contexts for ALL charts ---
         const featuresCtx = document.getElementById('featuresPieChart')?.getContext('2d');
         const techniquesCtx = document.getElementById('techniquesPieChart')?.getContext('2d');
@@ -920,6 +990,11 @@ function displayStats() {
         const pubTypesPerYearCtx = document.getElementById('pubTypesPerYearLineChart')?.getContext('2d'); // Get context for pub types chart
         const surveyVsImplDistCtx = document.getElementById('surveyVsImplPieChart')?.getContext('2d');
         const pubTypesDistCtx = document.getElementById('publTypePieChart')?.getContext('2d');
+        // --- Get Canvas Contexts for NEW charts ---
+        const smtVsThtCtx = document.getElementById('SMTvsTHTPieChart')?.getContext('2d');
+        const relevanceHistogramCtx = document.getElementById('RelevanceHistogram')?.getContext('2d');
+        const estScoreHistogramCtx = document.getElementById('estScoreHistogram')?.getContext('2d');
+        const scopeCtx = document.getElementById('OffTopicPieChart')?.getContext('2d');
 
         // --- Render Features Distribution Chart (Bar or Pie) ---
         const featuresChartType = showPieCharts ? 'pie' : 'bar';
@@ -931,10 +1006,9 @@ function displayStats() {
                 ...(featuresChartType === 'bar' ? { indexAxis: 'y' } : {}),
                 ...(featuresChartType === 'pie' ? { radius: '90%' } : {}), // Adjust '80%' as needed (e.g., '70%', '90%')
                 responsive: true,
-                maintainAspectRatio: false,               
-
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: { 
+                    legend: {
                         display: featuresChartType === 'pie', // Show legend only for pie charts
                         position: 'top', // Position legend differently for pie
                         labels: {
@@ -972,12 +1046,12 @@ function displayStats() {
             data: techniquesChartData, // Uses sortedTechniques* with mapped colors
             options: {
                 // Conditionally apply indexAxis for bar chart, omit for pie
-                ...(techniquesChartType === 'bar' ? { indexAxis: 'y' } : {}),               
+                ...(techniquesChartType === 'bar' ? { indexAxis: 'y' } : {}),
                 ...(featuresChartType === 'pie' ? { radius: '90%' } : {}), // Adjust '80%' as needed (e.g., '70%', '90%')
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { 
+                    legend: {
                         display: featuresChartType === 'pie', // Show legend only for pie charts
                         position: 'top', // Position legend differently for pie
                         labels: {
@@ -995,7 +1069,7 @@ function displayStats() {
                         }
                     }
                 },
-                 // Only apply scales for bar chart
+                // Only apply scales for bar chart
                 ...(techniquesChartType === 'bar' ? {
                     scales: {
                         x: {
@@ -1008,8 +1082,7 @@ function displayStats() {
         };
         window.techniquesBarChartInstance = new Chart(techniquesCtx, techniquesChartOptions); // Keep variable name for consistency if needed, or rename to techniquesChartInstance
 
-
-        // --- NEW: Render Survey vs Implementation Distribution Chart (Bar or Pie) ---
+        // --- Render Survey vs Implementation Distribution Chart (Bar or Pie) ---
         const surveyVsImplDistChartType = showPieCharts ? 'pie' : 'bar';
         const surveyVsImplDistChartOptions = {
             type: surveyVsImplDistChartType,
@@ -1052,7 +1125,7 @@ function displayStats() {
         };
         window.surveyVsImplDistChartInstance = new Chart(surveyVsImplDistCtx, surveyVsImplDistChartOptions);
 
-        // --- NEW: Render Publication Types Distribution Chart (Bar or Pie) ---
+        // --- Render Publication Types Distribution Chart (Bar or Pie) ---
         const pubTypesDistChartType = showPieCharts ? 'pie' : 'bar';
         const pubTypesDistChartOptions = {
             type: pubTypesDistChartType,
@@ -1095,20 +1168,169 @@ function displayStats() {
         };
         window.pubTypesDistChartInstance = new Chart(pubTypesDistCtx, pubTypesDistChartOptions);
 
+        // --- Render SMT vs THT Distribution Chart (Bar or Pie) ---
+        const smtVsThtDistChartType = showPieCharts ? 'pie' : 'bar';
+        const smtVsThtDistChartOptions = {
+            type: smtVsThtDistChartType,
+            data: smtVsThtDistChartData,
+            options: {
+                // Conditionally apply indexAxis for bar chart, omit for pie
+                ...(smtVsThtDistChartType === 'bar' ? { indexAxis: 'y' } : {}),
+                ...(smtVsThtDistChartType === 'pie' ? { radius: '90%' } : {}), // Adjust '80%' as needed (e.g., '70%', '90%')
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: smtVsThtDistChartType === 'pie', // Show legend only for pie charts
+                        position: 'top', // Position legend differently for pie
+                        labels: {
+                            usePointStyle: smtVsThtDistChartType == 'pie', // Use point style for bar chart markers, not pie
+                            pointStyle: 'circle',
+                        }
+                    },
+                    title: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                // Show count for both bar and pie
+                                return `${context.label}: ${context.raw}`;
+                            }
+                        }
+                    }
+                },
+                // Only apply scales for bar chart
+                ...(smtVsThtDistChartType === 'bar' ? {
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                } : {})
+            }
+        };
+        window.smtVsThtDistChartInstance = new Chart(smtVsThtCtx, smtVsThtDistChartOptions);
+
+        // --- Render Scope (Offtopic) Distribution Chart (Bar or Pie) ---
+        const scopeDistChartType = showPieCharts ? 'pie' : 'bar';
+        const scopeDistChartOptions = {
+            type: scopeDistChartType,
+            data: scopeDistChartData,
+            options: {
+                // Conditionally apply indexAxis for bar chart, omit for pie
+                ...(scopeDistChartType === 'bar' ? { indexAxis: 'y' } : {}),
+                ...(scopeDistChartType === 'pie' ? { radius: '90%' } : {}), // Adjust '80%' as needed (e.g., '70%', '90%')
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: scopeDistChartType === 'pie', // Show legend only for pie charts
+                        position: 'top', // Position legend differently for pie
+                        labels: {
+                            usePointStyle: scopeDistChartType == 'pie', // Use point style for bar chart markers, not pie
+                            pointStyle: 'circle',
+                        }
+                    },
+                    title: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                // Show count for both bar and pie
+                                return `${context.label}: ${context.raw}`;
+                            }
+                        }
+                    }
+                },
+                // Only apply scales for bar chart
+                ...(scopeDistChartType === 'bar' ? {
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                } : {})
+            }
+        };
+        window.scopeDistChartInstance = new Chart(scopeCtx, scopeDistChartOptions);
+
+        // --- Render Relevance Histogram ---
+        const relevanceHistogramOptions = {
+            type: 'bar',
+            data: relevanceHistogramData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false, text: 'Relevance Histogram' }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: false,
+                            text: 'Relevance Score'
+                        },
+                        ticks: { precision: 0 }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Frequency'
+                        },
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        };
+        window.relevanceHistogramInstance = new Chart(relevanceHistogramCtx, relevanceHistogramOptions);
+
+        // --- Render Estimated Score Histogram ---
+        const estScoreHistogramOptions = {
+            type: 'bar',
+            data: estScoreHistogramData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false, text: 'Estimated Score Histogram' }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: false,
+                            text: 'Estimated Score'
+                        },
+                        ticks: { precision: 0 }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Frequency'
+                        },
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        };
+        window.estScoreHistogramInstance = new Chart(estScoreHistogramCtx, estScoreHistogramOptions);
+
+
         // --- Render Line Charts ---
         // 1. Survey vs Implementation Papers per Year
         const surveyImplData = latestYearlyData.surveyImpl || {};
         const yearsForSurveyImpl = Object.keys(surveyImplData).map(Number).sort((a, b) => a - b);
         const surveyCounts = yearsForSurveyImpl.map(year => surveyImplData[year].surveys || 0);
         const implCounts = yearsForSurveyImpl.map(year => surveyImplData[year].impl || 0);
-
         let surveyCountsFinal = surveyCounts;
         let implCountsFinal = implCounts;
         if (isCumulative) {
             surveyCountsFinal = calculateCumulativeData(surveyCounts);
             implCountsFinal = calculateCumulativeData(implCounts);
         }
-
         window.surveyVsImplLineChartInstance = new Chart(surveyVsImplCtx, {
             type: 'line',
             data: {
@@ -1154,12 +1376,12 @@ function displayStats() {
                     }
                 },
                 scales: {
-                    y: { 
-                        beginAtZero: true, 
+                    y: {
+                        beginAtZero: true,
                         ticks: { precision: 0 },
                         stacked: isStacked // Apply stacking to Y-axis
                     },
-                    x: { 
+                    x: {
                         ticks: { precision: 0 },
                         stacked: isStacked // Apply stacking to X-axis if needed (usually not for line charts, but for bar compatibility)
                     }
@@ -1191,7 +1413,6 @@ function displayStats() {
                 tension: 0.25
             };
         });
-
         if (techniquesPerYearCtx && techniqueLineDatasets.length > 0) {
             window.techniquesPerYearLineChartInstance = new Chart(techniquesPerYearCtx, {
                 type: 'line',
@@ -1221,12 +1442,12 @@ function displayStats() {
                         }
                     },
                     scales: {
-                        y: { 
-                            beginAtZero: true, 
+                        y: {
+                            beginAtZero: true,
                             ticks: { precision: 0 },
                             stacked: isStacked // Apply stacking to Y-axis
                         },
-                        x: { 
+                        x: {
                             ticks: { precision: 0 },
                             stacked: isStacked // Apply stacking to X-axis if needed
                         }
@@ -1262,7 +1483,6 @@ function displayStats() {
                 }, 0);
             });
         });
-
         const aggregatedFeatureDataByColorFinal = {};
         Object.keys(aggregatedFeatureDataByColor).forEach(label => {
             let data = aggregatedFeatureDataByColor[label];
@@ -1271,7 +1491,6 @@ function displayStats() {
             }
             aggregatedFeatureDataByColorFinal[label] = data;
         });
-        
         // Create datasets for the line chart using the aggregated data and corresponding colors
         const featureLineDatasets = Object.keys(featureColorGroups).map(baseColorIndex => {
             const group = featureColorGroups[baseColorIndex];
@@ -1289,7 +1508,6 @@ function displayStats() {
                 tension: 0.25
             };
         });
-
         if (featuresPerYearCtx && featureLineDatasets.length > 0) {
             window.featuresPerYearLineChartInstance = new Chart(featuresPerYearCtx, {
                 type: 'line',
@@ -1319,12 +1537,12 @@ function displayStats() {
                         }
                     },
                     scales: {
-                        y: { 
-                            beginAtZero: true, 
+                        y: {
+                            beginAtZero: true,
                             ticks: { precision: 0 },
                             stacked: isStacked // Apply stacking to Y-axis
                         },
-                        x: { 
+                        x: {
                             ticks: { precision: 0 },
                             stacked: isStacked // Apply stacking to X-axis if needed
                         }
@@ -1349,7 +1567,6 @@ function displayStats() {
         // --- 4. Publication Types per Year (Translated Labels) ---
         const pubTypesYearlyData = latestYearlyData.pubTypes || {};
         const yearsForPubTypes = Object.keys(pubTypesYearlyData).map(Number).sort((a, b) => a - b);
-
         // Create datasets for the line chart, one for each publication type
         const pubTypeLineDatasets = allPubTypes.map((type, index) => { // Use original types for data fetching
             // Generate a distinct color for each type (simple hue rotation)
@@ -1357,14 +1574,12 @@ function displayStats() {
             const hue = (index * 137.508) % 360; // Golden angle approximation for spread
             const borderColor = `hsl(${hue}, 40%, 40%)`;
             const backgroundColor = `hsla(${hue}, 30%, 65%, 0.85)`;
-
-
             let data = yearsForPubTypes.map(year => pubTypesYearlyData[year]?.[type] || 0);
             if (isCumulative) {
                 data = calculateCumulativeData(data);
             }
             return {
-                label: mapPubType(type), // NEW: Apply mapping here for the dataset label (shown in legend and tooltip)
+                label: mapPubType(type),
                 data: data, // Use final data array
                 borderColor: borderColor,
                 backgroundColor: backgroundColor,
@@ -1391,7 +1606,7 @@ function displayStats() {
                             labels: {
                                 usePointStyle: true,
                                 pointStyle: 'circle',
-                                generateLabels: cumulativeLegendLabels   // <-- added
+                                generateLabels: cumulativeLegendLabels
                             }
                         },
                         title: { display: false, text: 'Publication Types per Year' },
@@ -1441,18 +1656,16 @@ function displayStats() {
             });
         }
         const { journals, conferences } = calculateJournalConferenceStats();
-
         //comms.s or ghpages.js (different functions depending on source!)  
         //This fetches data from server on full implementation (no detail row readily available)
         //or directly from detail row contents on HTML exports
-        // buildDetailRowLists(); 
-    
+        // buildStatsLists(); 
         // --- Populate Client-side Journal/Conference Lists ---
         function populateListFromClient(listElementId, dataArray) { //for items with count >=2
             const listElement = document.getElementById(listElementId);
             listElement.innerHTML = '';
             if (!dataArray || dataArray.length === 0) {
-                listElement.innerHTML = '<li>No items with count > 1.</li>';
+                listElement.innerHTML = '<li><span class="count"><span class="name">No items with count > 1.</span></li>';
                 return;
             }
             dataArray.forEach(item => {
@@ -1487,43 +1700,33 @@ function displayStats() {
             });
         }
         populateListFromClient('journalStatsList', journals);
-        populateListFromClient('conferenceStatsList', conferences); // Use the new ID
-
-        // --- Populate Metrics Table (Updated Logic) ---
-        // Assume server lists (keywords, authors, etc.) are already populated
-        // by an initial call to buildDetailRowLists() before displayStats() is run for the first time
-        // or when filters change.
-        // This function calculates metrics based on current state.
-        function populateMetricsTableDirectly() { // Renamed for clarity
+        populateListFromClient('conferenceStatsList', conferences); 
+        // --- Populate Metrics Table ---
+        function populateMetricsTableDirectly() {
             const tableElement = document.getElementById('metricsTableStatsList');
             if (!tableElement) {
                 console.error("Metrics table element with ID 'metricsTableStatsList' not found.");
                 return;
             }
-
             // Clear previous content
             tableElement.innerHTML = '';
-
             // Calculate metrics based on latestCounts and the lists already assumed to be populated
             const filteredPapersCount = latestCounts['pdf_present'] || 0;
             const distinctJournalsCount = journals.length; // Client-side calculation
             const distinctConferencesCount = conferences.length; // Client-side calculation
-
-            // Count distinct authors from the author list (assuming it's already populated by buildDetailRowLists)
+            // Count distinct authors from the author list (assuming it's already populated by buildStatsLists)
             // This is the critical part: this function assumes authorStatsList is already up-to-date.
             const authorListElement = document.getElementById('authorStatsList');
             let distinctAuthorsCount = 0;
             if (authorListElement) {
-                // Count the <li> elements inside the author list *after* it's populated by buildDetailRowLists
+                // Count the <li> elements inside the author list *after* it's populated by buildStatsLists
                 distinctAuthorsCount = authorListElement.querySelectorAll('li').length;
                 // console.log("Authors counted in displayStats:", distinctAuthorsCount); // Debug log
             } else {
                 console.warn("Author stats list element with ID 'authorStatsList' not found for counting authors.");
             }
-
             // Count papers providing datasets
             const papersWithDatasetCount = latestCounts['technique_available_dataset'] || 0;
-
             // Create table rows - Modified to support HTML in the label
             const createRow = (labelHtml, value) => {
                 const row = document.createElement('tr');
@@ -1537,7 +1740,6 @@ function displayStats() {
                 row.appendChild(valueCell);
                 return row;
             };
-            
             // Select only VISIBLE main rows for counting '✔️' and calculating visible count
             const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
             const visiblePaperCount = visibleRows.length;
@@ -1548,15 +1750,11 @@ function displayStats() {
             tableElement.appendChild(createRow('Total unique <strong>authors</strong>:', distinctAuthorsCount)); // Relies on pre-populated list
             tableElement.appendChild(createRow('Articles mentioning <strong>available dataset</strong>:', papersWithDatasetCount));
         }
-
-        // Call the direct population function here
         populateMetricsTableDirectly();
-
-        // ---- now the lists exist; build cloud if switch is on ----
-        if (document.getElementById('cloudToggle').checked) {
-            toggleCloud();                     // first render
-        }
-
+        // // ---- now the lists exist; build cloud if switch is on ----
+        // if (document.getElementById('cloudToggle').checked) {
+        //     toggleCloud();                     // first render
+        // }
         // Trigger reflow to ensure styles are applied before adding the active class
         // This helps ensure the transition plays correctly on the first open
         modal.offsetHeight;
@@ -1564,10 +1762,11 @@ function displayStats() {
         modal.classList.add('modal-active');
         setTimeout(() => {
             document.documentElement.classList.remove('busyCursor');
-        }, 500); 
+        }, 500);
     }, 20);
 }
 
+// ... (rest of the file remains unchanged)
 
 function displayAbout(){
     modalSmall.offsetHeight;
@@ -1595,8 +1794,7 @@ function buildKeywordCloud() {
                      })
                      .filter(Boolean);
 
-    /*  NEW: empty list → wipe canvas and stop  */
-    if (!raw.length) {
+    if (!raw.length) {  /*  empty list → wipe canvas and stop  */
         const dpr = window.devicePixelRatio || 1;
         ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
         return;
@@ -1680,47 +1878,19 @@ document.addEventListener('DOMContentLoaded', function () {
     stackingToggle.checked = false;
     cumulativeToggle.checked = false;
     pieToggle.checked = false;
-    cloudToggle.checked = false; // NEW: Initialize the cloud toggle state
+    cloudToggle.checked = false; 
 
     statsBtn.addEventListener('click', function () {
         document.documentElement.classList.add('busyCursor');
-        setTimeout(() => {
-            // NEW: Call buildDetailRowLists only once when opening the modal,
-            // or whenever filters change significantly.
-            // Move the call OUTSIDE of displayStats and only call it here initially,
-            // OR call it whenever search/filter results update.
-            // For now, let's assume it should run when the modal opens IF the lists are stale/empty.
-            // A simple approach: Call it once on first open, or if a flag indicates refresh is needed.
-
-            // Option A: Always fetch on open (less efficient if data rarely changes)
-            // buildDetailRowLists(() => displayStats()); // Pass displayStats as the callback
-
-            // Option B: Fetch once initially, then only when filters change significantly (e.g., search)
-            // This requires a variable to track if data needs refreshing.
-            // Let's implement Option B for better performance.
-
-            // Assume a flag or check might be needed later to decide if refetch is necessary
-            // For now, since filters (like search) likely trigger updateCounts and maybe a general refresh,
-            // we might call buildDetailRowLists from the search/filter logic.
-            // For the button click, just call displayStats, assuming data is fresh enough or fetched elsewhere.
-            // UNLESS it's the very first time the modal is opened.
-
-            // Let's add a simple flag to fetch once on first open of the stats modal.
-            if (typeof window.detailRowsFetched === 'undefined' || !window.detailRowsFetched) {
-                buildDetailRowLists(() => {
-                    window.detailRowsFetched = true; // Set the flag after fetching
-                    displayStats(); // Now display stats with potentially updated lists
-                });
-            } else {
-                // If lists were already fetched, just display stats directly
-                displayStats();
-            }
-
-            // OR, if you want to ensure the most up-to-date lists every time the modal opens
-            // (accepting the potential latency), use:
-            // buildDetailRowLists(() => displayStats());
-
-        }, 10); // Keep the initial timeout
+        // Let's add a simple flag to fetch once on first open of the stats modal.
+        if (typeof window.detailRowsFetched === 'undefined' || !window.detailRowsFetched) {
+            buildStatsLists(() => {
+                window.detailRowsFetched = true; // Set the flag after fetching
+                displayStats(); // Now display stats with potentially updated lists
+            });
+        } else {
+            displayStats();
+        }
     });
 
 
@@ -1794,7 +1964,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     pieToggle.addEventListener('change', function() {
         showPieCharts = this.checked; // Update the state variable
-        displayStats(); // Re-display to recreate charts with new type
+        displayStats(); // Re-display to recreate charts with changed type
     });
     
     aboutBtn.addEventListener('click', displayAbout);

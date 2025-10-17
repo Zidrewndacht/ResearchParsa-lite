@@ -82,6 +82,7 @@
         <td class="toggle-btn" onclick="toggleDetails(this)"><span>Show</span></td>
 
         <!-- Hidden data cells for faster stats retrieval -->
+        <td class="hidden-data-cell" data-field="abstract" style="display: none;">{{ paper.abstract }}</td>
         <td class="hidden-data-cell" data-field="keywords" style="display: none;">{{ paper.keywords }}</td>
         <td class="hidden-data-cell" data-field="authors" style="display: none;">{{ paper.authors }}</td>
         <td class="hidden-data-cell" data-field="research_area" style="display: none;">{{ paper.research_area or '' }}</td>

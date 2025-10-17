@@ -461,7 +461,7 @@ function applyLocalFilters() {
             applyButton.style.pointerEvents = 'none';
         }
         updateCounts();
-        buildDetailRowLists();
+        buildStatsLists();
         
         setTimeout(() => {
             document.documentElement.classList.remove('busyCursor');
