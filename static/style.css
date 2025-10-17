@@ -903,7 +903,7 @@ tr.filter-hidden {
 }
 
 .stats-section {
-    overflow-y: hidden;
+    overflow-y: scroll;
     overflow-x: hidden;
     /*! border-right: 2px solid var(--stats-primary-ui-color); */
 }
