@@ -462,7 +462,7 @@ function cumulativeLegendLabels(chart) {
   return labels;
 }
 
-function buildStatsLists(callback) {
+function buildStatsLists() {
     const stats = {
         journals: {},
         conferences: {},
@@ -652,7 +652,6 @@ function buildStatsLists(callback) {
     if (document.getElementById('cloudToggle').checked) {
         toggleCloud();                     // first render
     }
-    if (callback) callback();
 }
 
 // static/stats.js
@@ -962,7 +961,6 @@ function displayStats() {
             window.pubTypesDistChartInstance.destroy();
             delete window.pubTypesDistChartInstance;
         }
-        // --- Destroy NEW charts if they exist ---
         if (window.smtVsThtDistChartInstance) {
             window.smtVsThtDistChartInstance.destroy();
             delete window.smtVsThtDistChartInstance;
@@ -981,7 +979,6 @@ function displayStats() {
         }
 
 
-        // --- Get Canvas Contexts for ALL charts ---
         const featuresCtx = document.getElementById('featuresPieChart')?.getContext('2d');
         const techniquesCtx = document.getElementById('techniquesPieChart')?.getContext('2d');
         const surveyVsImplCtx = document.getElementById('surveyVsImplLineChart')?.getContext('2d');
@@ -990,11 +987,17 @@ function displayStats() {
         const pubTypesPerYearCtx = document.getElementById('pubTypesPerYearLineChart')?.getContext('2d'); // Get context for pub types chart
         const surveyVsImplDistCtx = document.getElementById('surveyVsImplPieChart')?.getContext('2d');
         const pubTypesDistCtx = document.getElementById('publTypePieChart')?.getContext('2d');
-        // --- Get Canvas Contexts for NEW charts ---
         const smtVsThtCtx = document.getElementById('SMTvsTHTPieChart')?.getContext('2d');
         const relevanceHistogramCtx = document.getElementById('RelevanceHistogram')?.getContext('2d');
         const estScoreHistogramCtx = document.getElementById('estScoreHistogram')?.getContext('2d');
         const scopeCtx = document.getElementById('OffTopicPieChart')?.getContext('2d');
+        // do this ONCE, before you call new Chart()
+
+        Chart.defaults.font = {
+            size: 12.5,
+            family: 'Arial Narrow',
+            weight: '300'
+        };
 
         // --- Render Features Distribution Chart (Bar or Pie) ---
         const featuresChartType = showPieCharts ? 'pie' : 'bar';
@@ -1656,10 +1659,7 @@ function displayStats() {
             });
         }
         const { journals, conferences } = calculateJournalConferenceStats();
-        //comms.s or ghpages.js (different functions depending on source!)  
-        //This fetches data from server on full implementation (no detail row readily available)
-        //or directly from detail row contents on HTML exports
-        // buildStatsLists(); 
+        
         // --- Populate Client-side Journal/Conference Lists ---
         function populateListFromClient(listElementId, dataArray) { //for items with count >=2
             const listElement = document.getElementById(listElementId);
@@ -1711,17 +1711,12 @@ function displayStats() {
             // Clear previous content
             tableElement.innerHTML = '';
             // Calculate metrics based on latestCounts and the lists already assumed to be populated
-            const filteredPapersCount = latestCounts['pdf_present'] || 0;
             const distinctJournalsCount = journals.length; // Client-side calculation
             const distinctConferencesCount = conferences.length; // Client-side calculation
-            // Count distinct authors from the author list (assuming it's already populated by buildStatsLists)
-            // This is the critical part: this function assumes authorStatsList is already up-to-date.
             const authorListElement = document.getElementById('authorStatsList');
             let distinctAuthorsCount = 0;
             if (authorListElement) {
-                // Count the <li> elements inside the author list *after* it's populated by buildStatsLists
                 distinctAuthorsCount = authorListElement.querySelectorAll('li').length;
-                // console.log("Authors counted in displayStats:", distinctAuthorsCount); // Debug log
             } else {
                 console.warn("Author stats list element with ID 'authorStatsList' not found for counting authors.");
             }
@@ -1763,7 +1758,7 @@ function displayStats() {
         setTimeout(() => {
             document.documentElement.classList.remove('busyCursor');
         }, 500);
-    }, 20);
+    }, 0);
 }
 
 // ... (rest of the file remains unchanged)
@@ -1882,15 +1877,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     statsBtn.addEventListener('click', function () {
         document.documentElement.classList.add('busyCursor');
-        // Let's add a simple flag to fetch once on first open of the stats modal.
-        if (typeof window.detailRowsFetched === 'undefined' || !window.detailRowsFetched) {
-            buildStatsLists(() => {
-                window.detailRowsFetched = true; // Set the flag after fetching
-                displayStats(); // Now display stats with potentially updated lists
-            });
-        } else {
-            displayStats();
-        }
+        buildStatsLists();
+        displayStats(); 
     });
 
 

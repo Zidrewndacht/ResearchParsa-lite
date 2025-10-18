@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html class="busyCursor">
+<html lang="en" class="busyCursor">
 <head>
     <title>HTML Export - ResearchParça - PCB Inspection Papers</title>
     <link rel="stylesheet" type="text/css" href="static/fonts.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
     <style>
     {{ style_css_content | safe }}
     /* Overrides for static export: Disable editable status hover/active, doing it here because .editable-status is used by JS for sorting, etc.*/        
@@ -70,11 +71,20 @@
                 <col style="width: 32px; min-width: 32px; max-width: 32px;"> <!-- Accr. Score -->
                 <col style="width: 27px; min-width: 27px; max-width: 27px;"> <!-- Verified By -->
                 <col style="width: 27px; min-width: 27px; max-width: 27px;"> <!-- user comments state -->
-                <col style="width: 44px; min-width: 44px; max-width: 44px;"> <!-- Details -->
+                <col style="width: 44px; min-width: 44px; max-width: 44px;"> <!-- Details -->               
+                <!-- hidden fields -->
+                <col style="display:none"> 
+                <col style="display:none"> 
+                <col style="display:none"> 
+                <col style="display:none"> 
+                <col style="display:none"> 
             </colgroup>
             <thead>
                 <tr>
                     <th id="main-header-wrapper" colspan=42 style="display: none;"></th> <!-- this must exist for CSS consistency between export and real page (uses nth-child, etc.) -->
+                    
+                    <!-- Hidden metadata fields -->
+                    <th style="display:none" colspan="5"></th>
                 </tr>
                 <tr>
                     <th class="ontop-header" colspan="6" rowspan="2"> 
@@ -116,6 +126,8 @@
                             <button type="button" id="clear-search-btn" class="clear-btn" title="Clear search">&times;</button>
                         </div>
                     </th>
+                    <!-- Hidden metadata fields -->
+                    <th style="display:none" colspan="5"></th>
                 </tr>
                 <tr>
                     <th class="inferred-header ontop-header" colspan="1">
@@ -160,6 +172,9 @@
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="8">Techniques</th>
                     <!-- <th class="inferred-header inferred-header-3 ontop-header" colspan="6">DL-based</th> -->
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="1"></th>
+
+                    <!-- Hidden metadata fields -->
+                    <th style="display:none" colspan="5"></th>
                 </tr>
                 <tr>
                     <th class="rotate-header status-header editable-header" data-sort="pdf-link"><div><span>PDF</span></div> <span class="sort-indicator"></span></th>
@@ -214,6 +229,9 @@
                     <th class="rotate-header" data-sort="verified_by"><div><span>Verified By</span></div> <span class="sort-indicator"></span></th>
                     <th class="rotate-header status-header" data-sort="user_comment_state"><span class="sort-indicator"></span><div><span>Commented</span></div></th>
                     <th class="rotate-header"><div>Details</div></th> <!-- must be 50px due to 'collapse' button text -->
+
+                    <!-- Hidden metadata fields -->
+                    <th style="display:none" colspan="5"></th>
                 </tr>
         </thead>
         {{ papers_table_static_export | safe }}

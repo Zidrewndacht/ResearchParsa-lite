@@ -792,7 +792,7 @@ tr.filter-hidden {
 
 .modal-content {
     width: calc(100vw - 60px);
-    min-width: calc(var(--min-width) + 70px);
+    min-width: calc(var(--min-width) + 0px);
     height: calc(100vh - 12px);
     grid-template-columns: 640px 1fr;
 }
@@ -835,7 +835,7 @@ tr.filter-hidden {
 
 .stats-section li {
     padding: 4px 3px;
-    font-size: 9.5pt
+    font-size: 9pt;
 }
 
 .stats-section li span.count {
@@ -1131,9 +1131,87 @@ li {
         top: 48px;
         left: 176px;
     }
+    .modal-content {
+        width: calc(100vw);
+        min-width: calc(var(--min-width) + 0px);
+        height: calc(100vh);
+    }
 }
 
 ::-webkit-scrollbar {
     width: 0;
     height: 0
+}
+
+
+/* Media query for high device pixel ratio (HiDPI) screens */
+/* This targets the *physical* pixel density of the screen */
+@media screen and (min-resolution: 2dppx) { /* Minimum 2 device pixels per CSS pixel */
+  /* Alternatively, you could use: */
+  /* @media screen and (-webkit-min-device-pixel-ratio: 2) { /* For older WebKit */
+  /* Or a combination: */
+  /* @media screen and (min-resolution: 192dpi) { /* Approximately 2dppx */
+
+  /* Disable demanding visual effects on HiDPI screens */
+  * {
+    /* Disable transitions and animations */
+    transition: none !important;
+    animation: none !important;
+
+    /* Disable shadows */
+    /* box-shadow: none !important; */
+    text-shadow: none !important; /* Note: This might affect readability if shadows were used for contrast */
+
+    /* Disable backdrop filter (very demanding) */
+    backdrop-filter: none !important;
+
+    /* Disable blur filters (if applied elsewhere) */
+    /* filter: none !important; /* This might reset hue/saturation adjustments too */
+  }
+
+  /* Specifically target the most demanding transition */
+  .detail-flex-container {
+    /* Overrides max-height/opacity transitions */
+    transition: none !important;
+    /* You might want to set a fixed height or rely on content flow instead */
+    /* max-height: none !important; */ /* Or a large fixed value */
+  }
+
+  /* Target the spinner animation */
+  .loading-spinner {
+    animation: spin 1.5s linear infinite !important; /* Removes the spin animation */
+  }
+
+  /* Target the modal backdrop filter specifically */
+  .loading-overlay,
+  .modal {
+    backdrop-filter: none !important;
+    background: #eeed
+  }
+
+  /* Target the modal transform for smoother display if transitions are off */
+  .modal-content,
+  .modal-small-content,
+  #batch-actions,
+  #import-actions,
+  #export-actions {
+    transform: none !important; /* Removes initial modal scaling/rotation */
+    transition: none !important; /* Ensures no transition occurs */
+  }
+
+  /* Target potential hover effects causing frequent redraws */
+  .editable-status:hover,
+  .editable-verify:hover,
+  .pdf-status:hover,
+  .action-btn:hover,
+  .toggle-btn:hover {
+    /* Override any hover effects that might rely on transitions or filters */
+    transform: none !important; /* Removes scale */
+    filter: none !important; /* Removes saturate/contrast on hover */
+    /* Keep background color change if needed for visual feedback */
+  }
+    #batch-actions, #import-actions, #export-actions{
+        background:  var(--detail-button-background)
+    }
+
 }

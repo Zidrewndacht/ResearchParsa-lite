@@ -1,12 +1,11 @@
 <!-- templates/papers_table_tfoot.html -->
 <tfoot id="counts-footer">
     <tr>
-        <!-- Empty cells to align with non-count columns -->
         <td id="count-pdf_present" title=""></td> <!-- Combined PDF/Annotated Count Cell -->
-        <td style="font-weight: 400;" id="visible-count-cell">
+        <td style="font-weight: 400;" id="visible-count-cell"> <!-- Title -->
             Filtered: <span style="font-weight: bold;" id="visible-papers-count"></span>, 
             Loaded: <span style="font-weight: bold;" id="loaded-papers-count"></span>, 
-            Total: <span style="font-weight: bold;" id="total-papers-count">{{ total_paper_count | safe }}</span>, <!-- Title -->
+            Total: <span style="font-weight: bold;" id="total-papers-count">{{ total_paper_count | safe }}</span>, 
             Duplicate: <span style="font-weight: bold;" id="duplicate-papers-count"></span>
         </td>
         <!-- <td></td> Authors -->
@@ -22,7 +21,7 @@
         <td id="count-is_smt" class="count-cell" title="SMT"></td>
         <td id="count-is_x_ray" class="count-cell" title="X-Ray"></td>
         
-        <!-- Features Counts (Updated list - 10 columns now) -->
+        <!-- Features Counts -->
         <td id="count-features_tracks" class="count-cell" title="Tracks"></td>
         <td id="count-features_holes" class="count-cell" title="Holes"></td>
         <td id="count-features_bare_pcb_other" class="count-cell" title="Bare PCB other"></td>
@@ -38,7 +37,7 @@
         <td id="count-features_cosmetic" class="count-cell" title="Cosmetic"></td>
         <td id="count-features_other_state" class="count-cell" title="Other"></td>
 
-        <!-- Techniques Counts (Updated list - 9 columns now) -->
+        <!-- Techniques Counts -->
         <td id="count-technique_classic_cv_based" class="count-cell" title="Classic CV"></td>
         <td id="count-technique_ml_traditional" class="count-cell" title="Traditional ML"></td>
         <td id="count-technique_dl_cnn_classifier" class="count-cell" title="CNN Classifier"></td>
@@ -49,7 +48,6 @@
         <td id="count-technique_hybrid" class="count-cell" title="Hybrid"></td>
         <td id="count-technique_available_dataset" class="count-cell" title="Available Dataset"></td>
 
-        <!-- Empty cells for remaining columns -->
         <td></td> <!-- Last Changed -->
         <td id="count-changed_by" class="count-cell" title="Changed by User"></td>
         <td id="count-verified" class="count-cell" title="Verified"></td>
@@ -57,5 +55,12 @@
         <td id="count-verified_by" class="count-cell" title="Verified by User"></td> 
         <td id="count-user_comment_state" class="count-cell" title="Commented by User"></td> 
         <td></td> <!-- Actions -->
+        
+        <!-- Hidden metadata fields -->
+        <td style="display:none"></td>
+        <td style="display:none"></td>
+        <td style="display:none"></td>
+        <td style="display:none"></td>
+        <td style="display:none"></td>
     </tr>
 </tfoot>

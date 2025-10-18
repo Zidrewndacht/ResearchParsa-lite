@@ -2,13 +2,14 @@
 {% block papers_table_content %}
 <tbody style="position: relative;">
 <tr>
-    <td style="padding:0;">
+    <td style="padding:0;" colspan="42">
         <div class="loading-overlay">
             <div class="header-branding"><span>Research</span><span style="font-weight: 600; color: var(--primary-ui-color);">Parça</span></div>
             <div class="loading-spinner"></div>
             <div>Reprocessing table. Wait patiently. </div>
         </div>
     </td>
+    <td style="display:none" colspan="5"></td>
 </tr>
 {% for paper in papers %}
     <tr data-paper-id="{{ paper.id }}" >
@@ -38,8 +39,6 @@
         <td class="secondary-text-cell number-cell">{{ paper.page_count or '' }}</td>
         <td class="secondary-text-cell">{{ paper.journal }}</td>        
         <td class="status-cell" title="{{ paper.type }}">{{ type_emojis.get(paper.type, default_type_emoji) }}
-        
-        
 
         <td class="status-cell editable-status" data-field="is_offtopic">{{ paper.is_offtopic | render_status }}</td>
         <td class="secondary-text-cell number-cell">{{ paper.relevance or '' }}</td>
@@ -95,6 +94,7 @@
             <div class="detail-content-placeholder">
             </div>
         </td>
+        <td style="display:none" colspan="5"></td>
     </tr>
 {% endfor %}
 </tbody>

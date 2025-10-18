@@ -115,9 +115,15 @@ def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_coun
     # --- Build Final Query ---
     # Start with base query
     query_parts = [base_query]
+
     # Add WHERE clause if conditions exist
     if conditions:
         query_parts.append("WHERE " + " AND ".join(conditions))
+
+    # Add ORDER BY clause for user comments first
+    # This sorts rows where user_trace is NOT NULL and NOT empty string first
+    query_parts.append("ORDER BY (p.user_trace IS NULL OR p.user_trace = '') ASC")
+
     # Combine all parts
     query = " ".join(query_parts)
 
