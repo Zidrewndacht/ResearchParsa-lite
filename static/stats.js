@@ -180,7 +180,15 @@ const COUNT_FIELDS = [
     'changed_by', 'verified', 'verified_by', 'user_comment_state' // user counting (Top-level)
 ];
 
-// --- Helper Functions ---
+function getChartDPR() {
+    const nativeDPR = window.devicePixelRatio || 1; // Fallback to 1 if API isn't available
+    if (nativeDPR > 1.0 && nativeDPR < 2.0) {
+        return nativeDPR * 2; // Use 2x for slightly over 1x screens to improve clarity
+    }
+    // Use native DPR for <= 1x or >= 2x screens
+    return nativeDPR;
+}
+
 function updateCounts() {
     const counts = {};
     const yearlySurveyImpl = {}; // { year: { surveys: count, impl: count } }
@@ -926,6 +934,7 @@ function renderBarOrPieChart(ctx, chartData, chartLabel, chartType) {
             ...(chartType === 'pie' ? { radius: '90%' } : {}), // Adjust '80%' as needed (e.g., '70%', '90%')
             responsive: true,
             maintainAspectRatio: false,
+            devicePixelRatio: getChartDPR(),
             plugins: {
                 legend: {
                     display: chartType === 'pie', // Show legend only for pie charts
@@ -966,6 +975,7 @@ function renderHistogram(ctx, chartData, title) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            devicePixelRatio: getChartDPR(),
             plugins: {
                 legend: { display: false },
                 title: { display: false, text: title }
@@ -1031,6 +1041,7 @@ function renderLineCharts() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            devicePixelRatio: getChartDPR(),
             plugins: {
                 legend: {
                     position: 'top',
@@ -1099,6 +1110,7 @@ function renderLineCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                devicePixelRatio: getChartDPR(),
                 plugins: {
                     legend: {
                         position: 'top',
@@ -1137,6 +1149,7 @@ function renderLineCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                devicePixelRatio: getChartDPR(),
                 plugins: {
                     legend: { display: false },
                     title: { display: true, text: 'Techniques per Year (No Data)' }
@@ -1198,6 +1211,7 @@ function renderLineCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                devicePixelRatio: getChartDPR(),
                 plugins: {
                     legend: {
                         position: 'top',
@@ -1236,6 +1250,7 @@ function renderLineCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                devicePixelRatio: getChartDPR(),
                 plugins: {
                     legend: { display: false },
                     title: { display: true, text: 'Features per Year (No Data)' }
@@ -1282,6 +1297,7 @@ function renderLineCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                devicePixelRatio: getChartDPR(),
                 plugins: {
                     legend: {
                         position: 'top',
@@ -1330,6 +1346,7 @@ function renderLineCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                devicePixelRatio: getChartDPR(),
                 plugins: {
                     legend: { display: false },
                     title: { display: true, text: 'Publication Types per Year (No Data)' }
@@ -1337,7 +1354,6 @@ function renderLineCharts() {
             }
         });
     }
-    // --- ADD THIS LINE AT THE END OF renderLineCharts ---
     // This ensures datasets are reordered for stacking *after* they are rendered,
     // whether the render was due to initial display, stacking toggle, or cumulative toggle.
     reorderDatasetsForStacking();
@@ -1347,6 +1363,7 @@ function renderLineCharts() {
 // --- Refactored displayStats function ---
 function displayStats() {
     document.documentElement.classList.add('busyCursor');
+    
     setTimeout(() => {
         updateCounts(); // Run updateCounts to get the latest data for visible rows
 
@@ -1634,6 +1651,127 @@ document.addEventListener('DOMContentLoaded', function () {
         displayStats();
     });
 
+
+    // --- Helper function to prepare datasets based on current state (isCumulative, isStacked) ---
+    // Move the core data preparation logic from renderLineCharts here.
+    function prepareLineChartData() {
+        const surveyImplData = latestYearlyData.surveyImpl || {};
+        const yearsForSurveyImpl = Object.keys(surveyImplData).map(Number).sort((a, b) => a - b);
+        const surveyCounts = yearsForSurveyImpl.map(year => surveyImplData[year].surveys || 0);
+        const implCounts = yearsForSurveyImpl.map(year => surveyImplData[year].impl || 0);
+
+        let surveyCountsFinal = surveyCounts;
+        let implCountsFinal = implCounts;
+        if (isCumulative) {
+            surveyCountsFinal = calculateCumulativeData(surveyCounts);
+            implCountsFinal = calculateCumulativeData(implCounts);
+        }
+
+        const surveyVsImplDatasets = [
+            {
+                label: 'Survey Papers',
+                data: surveyCountsFinal,
+                borderColor: 'hsl(204, 42%, 37%)',
+                backgroundColor: 'hsla(204, 42%, 67%, 0.95)',
+                fill: isStacked,
+                tension: 0.25
+            },
+            {
+                label: 'Primary Papers',
+                data: implCountsFinal,
+                borderColor: 'hsla(38, 70%, 49%, 1.00)',
+                backgroundColor: 'hsla(42, 50%, 69%, 0.95)',
+                fill: isStacked,
+                tension: 0.25
+            }
+        ];
+
+        const techniquesYearlyData = latestYearlyData.techniques || {};
+        const yearsForTechniques = Object.keys(techniquesYearlyData).map(Number).sort((a, b) => a - b);
+        const techniqueLineDatasets = TECHNIQUE_FIELDS_FOR_YEARLY.map(field => {
+            const label = FIELD_LABELS[field] || field;
+            let data = yearsForTechniques.map(year => techniquesYearlyData[year]?.[field] || 0);
+            if (isCumulative) {
+                data = calculateCumulativeData(data);
+            }
+            const originalIndex = TECHNIQUE_FIELD_COLOR_MAP[field] !== undefined ? TECHNIQUE_FIELD_COLOR_MAP[field] : -1;
+            const borderColor = (originalIndex !== -1 && techniquesBorderColors[originalIndex]) ? techniquesBorderColors[originalIndex] : 'rgba(0, 0, 0, 1)';
+            const backgroundColor = (originalIndex !== -1 && techniquesColors[originalIndex]) ? techniquesColors[originalIndex] : 'rgba(0, 0, 0, 0.1)';
+            return {
+                label: label,
+                data: data,
+                borderColor: borderColor,
+                backgroundColor: backgroundColor,
+                fill: isStacked,
+                tension: 0.25
+            };
+        });
+
+        const featuresYearlyData = latestYearlyData.features || {};
+        const yearsForFeatures = Object.keys(featuresYearlyData).map(Number).sort((a, b) => a - b);
+        const aggregatedFeatureDataByColor = {};
+        Object.keys(featureColorGroups).forEach(baseColorIndex => {
+            const group = featureColorGroups[baseColorIndex];
+            aggregatedFeatureDataByColor[group.label] = yearsForFeatures.map(year => {
+                return group.fields.reduce((sum, field) => {
+                    return sum + (featuresYearlyData[year]?.[field] || 0);
+                }, 0);
+            });
+        });
+
+        const aggregatedFeatureDataByColorFinal = {};
+        Object.keys(aggregatedFeatureDataByColor).forEach(label => {
+            let data = aggregatedFeatureDataByColor[label];
+            if (isCumulative) {
+                data = calculateCumulativeData(data);
+            }
+            aggregatedFeatureDataByColorFinal[label] = data;
+        });
+
+        const featureLineDatasets = Object.keys(featureColorGroups).map(baseColorIndex => {
+            const group = featureColorGroups[baseColorIndex];
+            const colorIndex = parseInt(baseColorIndex);
+            const borderColor = featuresBorderColorsOriginalOrder[colorIndex];
+            const backgroundColor = featuresColorsOriginalOrder[colorIndex];
+            return {
+                label: group.label,
+                data: aggregatedFeatureDataByColorFinal[group.label],
+                borderColor: borderColor,
+                backgroundColor: backgroundColor,
+                fill: isStacked,
+                tension: 0.25
+            };
+        });
+
+        const pubTypesYearlyData = latestYearlyData.pubTypes || {};
+        const yearsForPubTypes = Object.keys(pubTypesYearlyData).map(Number).sort((a, b) => a - b);
+        const pubTypeLineDatasets = Object.keys(PUB_TYPE_MAP).map((type, index) => {
+            const hue = (index * 137.508) % 360;
+            const borderColor = `hsl(${hue}, 40%, 40%)`;
+            const backgroundColor = `hsla(${hue}, 30%, 65%, 0.85)`;
+            let data = yearsForPubTypes.map(year => pubTypesYearlyData[year]?.[type] || 0);
+            if (isCumulative) {
+                data = calculateCumulativeData(data);
+            }
+            return {
+                label: mapPubType(type),
+                data: data,
+                borderColor: borderColor,
+                backgroundColor: backgroundColor,
+                fill: isStacked,
+                tension: 0.25,
+                hidden: false // Consider preserving hidden state if needed
+            };
+        });
+
+        return {
+            surveyImpl: { labels: yearsForSurveyImpl, datasets: surveyVsImplDatasets },
+            techniques: { labels: yearsForTechniques, datasets: techniqueLineDatasets },
+            features: { labels: yearsForFeatures, datasets: featureLineDatasets },
+            pubTypes: { labels: yearsForPubTypes, datasets: pubTypeLineDatasets }
+        };
+    }
+
     stackingToggle.addEventListener('change', function () {
         isStacked = this.checked; // Update the state variable
         // Update the chart options for stacking
@@ -1673,14 +1811,124 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     cumulativeToggle.addEventListener('change', function () {
-        isCumulative = this.checked;
-        displayStats();
-        if (isStacked) reorderDatasetsForStacking();    //doesn't actually work
+        isCumulative = this.checked; // Update the state variable
+
+        // Prepare the updated data based on the new cumulative state
+        const updatedLineChartData = prepareLineChartData();
+
+        // Update each line chart instance with the new data
+        if (window.surveyVsImplLineChartInstance) {
+            window.surveyVsImplLineChartInstance.data.labels = updatedLineChartData.surveyImpl.labels;
+            window.surveyVsImplLineChartInstance.data.datasets = updatedLineChartData.surveyImpl.datasets;
+            // No need to update scales for cumulative, just data and potentially legend
+            // Legend update might be handled by cumulativeLegendLabels already, but update() triggers it
+            window.surveyVsImplLineChartInstance.update(); // Update the chart
+        }
+        if (window.techniquesPerYearLineChartInstance) {
+            window.techniquesPerYearLineChartInstance.data.labels = updatedLineChartData.techniques.labels;
+            window.techniquesPerYearLineChartInstance.data.datasets = updatedLineChartData.techniques.datasets;
+            window.techniquesPerYearLineChartInstance.update();
+        }
+        if (window.featuresPerYearLineChartInstance) {
+            window.featuresPerYearLineChartInstance.data.labels = updatedLineChartData.features.labels;
+            window.featuresPerYearLineChartInstance.data.datasets = updatedLineChartData.features.datasets;
+            window.featuresPerYearLineChartInstance.update();
+        }
+        if (window.pubTypesPerYearLineChartInstance) {
+            window.pubTypesPerYearLineChartInstance.data.labels = updatedLineChartData.pubTypes.labels;
+            window.pubTypesPerYearLineChartInstance.data.datasets = updatedLineChartData.pubTypes.datasets;
+            window.pubTypesPerYearLineChartInstance.update();
+        }
+        // reorderDatasetsForStacking(); // Call this *after* updating data if stacking is enabled and cumulative changed
+        if (isStacked) {
+            reorderDatasetsForStacking();
+        }
     });
 
+
+    // --- Modified pieToggle Event Listener ---
     pieToggle.addEventListener('change', function () {
         showPieCharts = this.checked; // Update the state variable
-        displayStats(); // Re-display to recreate charts with changed type
+
+        // Prepare the updated data based on the new showPieCharts state
+        const featuresChartData = prepareFeaturesData();
+        const techniquesChartData = prepareTechniquesData();
+        const surveyVsImplDistChartData = prepareSurveyVsImplDistData(
+            // You need to get the current totalVisiblePaperCount here.
+            // It's calculated in displayStats but not stored globally.
+            // Option 1: Store it in a global variable like latestCounts/YearlyData
+            // Option 2: Recalculate it here (less efficient but simpler for this change)
+            document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)').length
+        );
+        const pubTypesDistChartData = preparePubTypesDistData();
+        const smtVsThtDistChartData = prepareSMTvsTHTData();
+        const scopeChartData = prepareScopeData(
+            // Similarly, you need the visible and total counts here
+            document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)').length,
+            parseInt(document.getElementById('total-papers-count')?.textContent.trim() || '0', 10)
+        );
+
+        // Determine the chart type ('bar' or 'pie')
+        const chartType = showPieCharts ? 'pie' : 'bar';
+
+        // Update each distribution chart instance with the new data and type
+        // Features Chart
+        if (window.featuresBarChartInstance) {
+            // Destroy the old instance
+            window.featuresBarChartInstance.destroy();
+            // Get the context again
+            const featuresCtx = document.getElementById('featuresPieChart')?.getContext('2d');
+            if (featuresCtx) {
+                // Create the new chart instance
+                window.featuresBarChartInstance = renderBarOrPieChart(featuresCtx, featuresChartData, 'Features Count', chartType);
+            }
+        }
+
+        // Techniques Chart
+        if (window.techniquesBarChartInstance) {
+            window.techniquesBarChartInstance.destroy();
+            const techniquesCtx = document.getElementById('techniquesPieChart')?.getContext('2d');
+            if (techniquesCtx) {
+                window.techniquesBarChartInstance = renderBarOrPieChart(techniquesCtx, techniquesChartData, 'Techniques Count', chartType);
+            }
+        }
+
+        // Survey vs Impl Distribution Chart
+        if (window.surveyVsImplDistChartInstance) {
+            window.surveyVsImplDistChartInstance.destroy();
+            const surveyVsImplDistCtx = document.getElementById('surveyVsImplPieChart')?.getContext('2d');
+            if (surveyVsImplDistCtx) {
+                window.surveyVsImplDistChartInstance = renderBarOrPieChart(surveyVsImplDistCtx, surveyVsImplDistChartData, 'Survey vs Primary Distribution', chartType);
+            }
+        }
+
+        // Publication Types Distribution Chart
+        if (window.pubTypesDistChartInstance) {
+            window.pubTypesDistChartInstance.destroy();
+            const pubTypesDistCtx = document.getElementById('publTypePieChart')?.getContext('2d');
+            if (pubTypesDistCtx) {
+                window.pubTypesDistChartInstance = renderBarOrPieChart(pubTypesDistCtx, pubTypesDistChartData, 'Publication Types Distribution', chartType);
+            }
+        }
+
+        // SMT vs THT Distribution Chart
+        if (window.smtVsThtDistChartInstance) {
+            window.smtVsThtDistChartInstance.destroy();
+            const smtVsThtCtx = document.getElementById('SMTvsTHTPieChart')?.getContext('2d');
+            if (smtVsThtCtx) {
+                window.smtVsThtDistChartInstance = renderBarOrPieChart(smtVsThtCtx, smtVsThtDistChartData, 'SMT vs THT Distribution', chartType);
+            }
+        }
+
+        // Scope Distribution Chart
+        if (window.scopeDistChartInstance) {
+            window.scopeDistChartInstance.destroy();
+            const scopeCtx = document.getElementById('OffTopicPieChart')?.getContext('2d');
+            if (scopeCtx) {
+                window.scopeDistChartInstance = renderBarOrPieChart(scopeCtx, scopeChartData, 'Dataset Scope (On-topic vs Off-topic)', chartType);
+            }
+        }
+        // Note: Line charts (window.surveyVsImplLineChartInstance, etc.) are NOT touched here.
     });
 
     aboutBtn.addEventListener('click', displayAbout);

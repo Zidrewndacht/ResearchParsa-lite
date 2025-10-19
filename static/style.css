@@ -853,7 +853,7 @@ tr.filter-hidden {
 .stats-list-multicolumn-short {
     column-count: 3;
     padding: 0 10px;
-    max-height: 2048px;
+    /*! max-height: 2048px; */
 }
 
 .stats-list-multicolumn-2,.stats-list-multicolumn-short {
