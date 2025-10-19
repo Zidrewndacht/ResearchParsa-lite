@@ -530,6 +530,7 @@ function applyLocalFilters() {
                 // Pass only visible rows to duplicate shading
                 const visibleRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
                 applyDuplicateShading(visibleRows);
+                const applyButton = document.getElementById('apply-serverside-filters');
                 applyButton.style.opacity = '0';
                 applyButton.style.pointerEvents = 'none';
             }
