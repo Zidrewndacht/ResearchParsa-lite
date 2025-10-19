@@ -1,3 +1,5 @@
+//static/pdfjs/web/autosave.js
+//Autosave script for ResearchParça Annotator based on PDF.js
 document.addEventListener('DOMContentLoaded', function () {
     const PDFViewerApplication = window.PDFViewerApplication;
     if (!PDFViewerApplication) {

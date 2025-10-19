@@ -162,37 +162,57 @@ OK      Fix filtering/stats generation: unified client-side logic for now.
 OK              deprecated fetchDetailRowLists()
 OK              deprecated /get_stats
 OK              deprecated FTS search
-        Currently search doesn't read abstracts (not in preloaded detail row to reduce excess bloat). Should it?
 
-        Adapt flatten.py to autoflatten latest version of all relevant code (e.g skipping libraries)
+OK      Shockingly massive performance improvement/fixes (>2~5x responsiveness with no functionality loss detected):
+OK              Fix layout (col, colspans) reducing browser ambiguity;
+OK                        Pass HTML validation;
+OK              Refactor filtering.js:
+OK                      Fix multiple redundant redraws;
+OK                      Get rid of querySelectors();
+OL                      Search directly onto hidden cells;
+OK                      Extensive caching;
+OK              Add CSS media query for weak HiDPI laptops:
+OK                      Force-disable most eyecandy entirely if density is larger than most desktops (as it's likely a ~4K laptop suffering on battery);
+OK                              Backdrop-filtering alone was mauling the poor UHD 620 on the 4K C630 Yoga Chromebook...
 
+OK      Refactor stats.js for smaller functions
+OK              Fix cumulative stacked charts not stacking in right order
+OK              Stop reloading cloud when changing charts
+OK              Stop reloading all charts when changing only some of them
+OK              Fix blurry cloud;
+OK              Fix blurry charts on 1.25 DPR displays;
+OK              Fix lagging when changing charts
+
+Ok      Integrate embedded emoji favicons
+OK      Adapt flatten.py to autoflatten latest version of all relevant code (e.g skipping libraries)
+
+        Fix ugly checkboxes
+OK                Show negative vs positive checkboxes differently
+
+        Add automatic ABNT? citation to detail pane
 
         Refactor browse_db.py (too large)?
+OK              Getting rid of server-side stats and search already reduced it a bit, still unwieldy;
                 Moving SQLite logic to a separate file for DB operations may cause 
                         'sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 34640 and this is thread id 16976.'
                 Moving helpers away is fine, but there are only three.
-                
-        Fix ugly checkboxes
-                Show negative vs positive checkboxes differently
 
-        Integrate base64 favicon incl. in HTML Export
-        Add ABNT? citation to detail pane
-
-        Add multiuser capability (naming users, user-selectable DB) -- good for offline "sneakernet" collaboration;
-                Possibly auth for online server hosting? -- low priority
+        Refactor comms.js
+                Works fine, just need some better mantainability. Low priority.
 
         Isolate most domain-specific logic where possible -- long term, complicated refactor with little usefulness for now:
                 separate fixed from domain-specific HTML templates;
                 add a python file exclusive for the domain-specific details (DB schema, JSON schemas, etc) and change existing scripts to use it accordingly;
                 separate JS for logic that access the domain-specific HTML parts from generic JS
                 See docs.md for info on some domain-specific scattered code.
+                
+                Implement ResearchParça Lite, a standalone non-domain-specific PDF organizer/annotator instead, so at least the annotator can be used for other researchers.
+
+        Add multiuser capability (naming users, user-selectable DB) -- good for offline "sneakernet" collaboration;
+                Possibly auth for online server hosting? -- low priority
 
         Low relevance XHR limitations/fixes:
                 Update commented&other field displays on save.
                 Update PDF icon on first annotation without manual reload.
 
         Automatic add/remove paywalled icon to papers based on user trace containing 'paywalled' string;
-
-        
-        Fix FTS search (not finding text fields at all?)
-                Optimize FTS Search (use all searchable fields)

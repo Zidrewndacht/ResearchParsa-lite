@@ -688,9 +688,21 @@ function prepareSMTvsTHTData() {
 }
 
 function prepareScopeData(totalVisiblePaperCount, totalAllPaperCount) {
-    // On-topic count is visible papers minus off-topic papers
-    const ontopicCount = totalVisiblePaperCount;
-    const offtopicCount = totalAllPaperCount - totalVisiblePaperCount; // Assuming totalAllPaperCount includes off-topic
+    let ontopicCount = 0;
+    let offtopicCount = 0;
+
+    if (document.body.id === 'html-export') {
+        const allRowsInExport = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
+        const totalRowsInExportLoaded = allRowsInExport.length;
+        ontopicCount = totalVisiblePaperCount;
+        offtopicCount = Math.max(0, totalRowsInExportLoaded - totalVisiblePaperCount);
+    } else {
+        ontopicCount = totalVisiblePaperCount;
+        offtopicCount = Math.max(0, totalAllPaperCount - totalVisiblePaperCount); // Ensure non-negative
+    }
+
+    console.log(`[prepareScopeData] Document ID: ${document.body.id}, Total Loaded (Export) / Total DB (Main): ${document.body.id === 'html-export' ? document.querySelectorAll('#papersTable tbody tr[data-paper-id]').length : totalAllPaperCount}, Visible (On-topic): ${ontopicCount}, Calculated Off-topic: ${offtopicCount}`); // Debug log
+
     return {
         labels: ['On-topic', 'Off-topic'],
         datasets: [{
