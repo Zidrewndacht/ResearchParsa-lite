@@ -180,7 +180,6 @@ def should_ignore_file(file_path):
         '*.gif',
         '*.bmp',
         '*.ico',
-        '*.svg',
         '*.mp3',
         '*.mp4',
         '*.avi',
@@ -263,7 +262,7 @@ def flatten_files(file_list, output_file, max_file_size=MAX_FILE_SIZE):
             
             # Skip if file is too large
             if is_file_too_large(file_path, max_file_size):
-                print(f"Skipping large file (> {max_file_size/1024:.0f}KB): {file_path}")
+                # print(f"Skipping large file (> {max_file_size/1024:.0f}KB): {file_path}")
                 continue
             
             # Try to read the file first with fallback encoding
@@ -286,8 +285,8 @@ def flatten_files(file_list, output_file, max_file_size=MAX_FILE_SIZE):
             language = get_language_extension(file_path)
             
             # Write file header with markdown code block
+            out_file.write(f"# {file_path}\n")
             out_file.write(f"```{language}\n")
-            # out_file.write(f"# {file_path}\n")
             
             # Write file content (already read above)
             out_file.write(content)
@@ -348,7 +347,7 @@ def main():
         sys.exit(1)
     
     # Default output file name
-    output_file = "flattened_code.md"
+    output_file = "flattened_code.txt"
     
     # Parse command line arguments for optional custom output file
     if len(sys.argv) > 1:
