@@ -42,4 +42,32 @@ https://github.com/user-attachments/assets/3a12f927-1050-485e-b6f7-5df151685a58
     - From the web UI, you can trigger classification and verification tasks for individual papers or in batches ('all' or 'remaining').
     - Alternatively, manually run classification using `automate_classification.py` and `verify_classification.py`. Manual run supports (not yet properly documented) additional operating modes, check the script's usage hints.
 
+## Acknowledgments
+
+Developed by [**Luis Alfredo da Silva**](https://zidrewndacht.github.io/), to assist his own Master's degree research at [**Universidade do Estado de Santa Catarina (UDESC)**](https://www.udesc.br/cct).
+
+At least the following open source libraries, and its dependencies, are leveraged by this software:
+
+**Backend:**
+[Python](https://www.python.org/),
+[Flask](https://flask.palletsprojects.com/),
+[SQLite3](https://www.sqlite.org/)
+
+**Frontend:**
+[HTML5](https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/HTML5),
+[CSS3](https://developer.mozilla.org/en-US/docs/Web/CSS),
+[Vanilla JS](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+
+**Data Visualization:**
+[Chart.js](https://www.chartjs.org/)
+
+**PDF View/Annotation/Autosave:**
+[PDF.js](https://mozilla.github.io/pdf.js/getting_started/)
+
+**Utilities:**
+[rcssmin](https://opensource.perlig.de/rcssmin/) (minification),
+[rjsmin](https://opensource.perlig.de/rjsmin/) (minification),
+[openpyxl](https://openpyxl.readthedocs.io/) (Excel export),
+[pako](https://nodeca.github.io/pako/) (compressed HTML export),
+[Zstandard](https://github.com/facebook/zstd) (backup/restore).
 <img width="1995" height="1579" alt="image" src="https://github.com/user-attachments/assets/5591360f-cec9-4b9f-b544-3a063402065f" />
