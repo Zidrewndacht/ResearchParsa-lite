@@ -562,7 +562,7 @@ tr.filter-hidden {
 
 #counts-footer {
     position: sticky;
-    bottom: 0;
+    bottom: -1px;
     z-index: 998;
     border-radius: 6px
 }
@@ -1159,12 +1159,11 @@ li {
   /* Disable demanding visual effects on HiDPI screens */
   * {
     /* Disable transitions and animations */
-    transition: none !important;
-    animation: none !important;
+    /* transition: none !important; */
+    /* animation: none !important; */
 
     /* Disable shadows */
     /* box-shadow: none !important; */
-    text-shadow: none !important; /* Note: This might affect readability if shadows were used for contrast */
 
     /* Disable backdrop filter (very demanding) */
     backdrop-filter: none !important;
@@ -1200,7 +1199,7 @@ li {
   #import-actions,
   #export-actions {
     transform: none !important; /* Removes initial modal scaling/rotation */
-    transition: none !important; /* Ensures no transition occurs */
+    /* transition: none !important; /* Ensures no transition occurs */
   }
 
   /* Target potential hover effects causing frequent redraws */
@@ -1211,11 +1210,10 @@ li {
   .toggle-btn:hover {
     /* Override any hover effects that might rely on transitions or filters */
     transform: none !important; /* Removes scale */
-    filter: none !important; /* Removes saturate/contrast on hover */
     /* Keep background color change if needed for visual feedback */
   }
     #batch-actions, #import-actions, #export-actions{
-        background:  var(--detail-button-background)
+        background:  var(--detail-button-background) /*remove translucid background as it requires backdrop-filter*/
     }
 
 }

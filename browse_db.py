@@ -508,6 +508,7 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
     fonts_css_content = ""
     style_css_content = ""
     chart_js_content = ""
+    chart_js_datalabels_content = ""
     d3_js_content = ""
     d3_cloud_js_content = ""
     ghpages_js_content = ""
@@ -516,11 +517,12 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
     try:
         with open(os.path.join(static_dir, 'libs/chart.min.js'), 'r', encoding='utf-8') as f:
             chart_js_content = f.read()
+        with open(os.path.join(static_dir, 'libs/chartjs-plugin-datalabels.min.js'), 'r', encoding='utf-8') as f:
+            chart_js_datalabels_content = f.read()
         with open(os.path.join(static_dir, 'libs/d3.min.js'), 'r', encoding='utf-8') as f:
             d3_js_content = f.read()
         with open(os.path.join(static_dir, 'libs/d3-cloud.min.js'), 'r', encoding='utf-8') as f:
             d3_cloud_js_content = f.read()
-
 
         with open(os.path.join(static_dir, 'fonts.css'), 'r', encoding='utf-8') as f:
             fonts_css_content = f.read()
@@ -541,6 +543,7 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
     style_css_content = rcssmin.cssmin(style_css_content)
     
     chart_js_content = rjsmin.jsmin(chart_js_content)
+    chart_js_datalabels_content = rjsmin.jsmin(chart_js_datalabels_content)
     d3_js_content = rjsmin.jsmin(d3_js_content)
     d3_cloud_js_content = rjsmin.jsmin(d3_cloud_js_content)
 
@@ -574,6 +577,7 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
         style_css_content=Markup(style_css_content),
         
         chart_js_content=Markup(chart_js_content),
+        chart_js_datalabels_content=Markup(chart_js_datalabels_content),
         d3_js_content=Markup(d3_js_content),
         d3_cloud_js_content=Markup(d3_cloud_js_content),
 

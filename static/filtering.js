@@ -656,27 +656,48 @@ function sortTable() {
     }, 20); // Initial defer for adding busy cursor
 }
 
+// --- Add F3 Shortcut ---
+document.addEventListener('keydown', function(event) {
+    // Check if F3 key is pressed
+    // event.key is more reliable than event.keyCode, especially for function keys
+    if (event.key === 'F3') {
+        // Prevent the browser's default F3 action (usually opening Find dialog)
+        event.preventDefault();
+
+        // Focus the search input if it exists
+        if (searchInput && searchInput instanceof HTMLElement) {
+            searchInput.focus();
+            // Optional: Select all text in the search bar for easy replacement
+            // searchInput.select();
+        } else {
+            console.warn("Search input element not found for F3 shortcut.");
+        }
+    }
+});
+
+// Existing DOMContentLoaded listener and other code follows...
 document.addEventListener('DOMContentLoaded', function () {
+    // ... (your existing code inside DOMContentLoaded)
     hideXrayCheckbox.addEventListener('change', applyLocalFilters);
     hideApprovedCheckbox.addEventListener('change', applyLocalFilters);
-    onlySurveyCheckbox.addEventListener('click', cycleSurveyFilterState); // Use 'click' to handle cycling
+    onlySurveyCheckbox.addEventListener('click', cycleSurveyFilterState);
     showPCBcheckbox.addEventListener('change', applyLocalFilters);
     showSolderCheckbox.addEventListener('change', applyLocalFilters);
     showPCBAcheckbox.addEventListener('change', applyLocalFilters);
     noFeaturesCheckbox.addEventListener('change', applyLocalFilters);
     showOtherCheckbox.addEventListener('change', applyLocalFilters);
 
-    //server-side search disabled for now as FTS is broken. Using full-client-side search instead:
-    searchInput.addEventListener('input', applyLocalFilters);
+    // Server-side search disabled... Using full-client-side search instead:
+    searchInput.addEventListener('input', applyLocalFilters); // Assumes searchInput is defined globally
 
     document.getElementById('clear-search-btn').addEventListener('click', function() {
-        searchInput.value = ''; // Clear the input value
+        searchInput.value = '';
         searchInput.dispatchEvent(new Event('input'));
     });
 
-    headers.forEach(header => { header.addEventListener('click', sortTable);   });
-    applyLocalFilters(); //apply initial filtering   
+    headers.forEach(header => {
+        header.addEventListener('click', sortTable);
+    });
+    applyLocalFilters(); // Apply initial filtering
     updateSurveyCheckboxUI();
-});
-
-
+}); // End of DOMContentLoaded listener
