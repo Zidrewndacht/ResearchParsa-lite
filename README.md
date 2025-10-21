@@ -2,7 +2,7 @@
 
 Live Demo (read-only HTML export): [ResearchParça](https://zidrewndacht.github.io/bibtex-custom-parser).
 
-The frontend was made to be used with Mozilla Firefox. The demo has some **known performance issues in Chromium-based browsers**. If the page lags, stops responding, etc, in reasonably modern hardware, please run it in Firefox instead.
+The frontend was mostly tested with Mozilla Firefox and works well. The HTML export has some **known performance issues in Chromium-based browsers**. If the page lags, stops responding, etc, in reasonably modern hardware, please run it in Firefox instead.
 
 ResearchParça is a tool for managing and analyzing a bibliographic database, specifically tailored for academic papers on Printed Circuit Board (PCB) inspection. It processes BibTeX files, stores the data in an SQLite database, and provides a web interface for browsing, filtering, and editing the information. The core functionality includes using Large Language Models (LLMs) to automatically classify papers based on their content (title, abstract, keywords) and to verify these classifications.
 
