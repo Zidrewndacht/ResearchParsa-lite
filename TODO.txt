@@ -163,7 +163,7 @@ OK              deprecated fetchDetailRowLists()
 OK              deprecated /get_stats
 OK              deprecated FTS search
 
-OK      Shockingly massive performance improvement/fixes (>2~5x responsiveness with no functionality loss detected):
+OK      Shockingly massive performance improvement/fixes (>2~5x responsiveness with no functionality loss detected - still struggles with Chromium though):
 OK              Fix layout (col, colspans) reducing browser ambiguity;
 OK                        Pass HTML validation;
 OK              Refactor filtering.js:

@@ -24,7 +24,7 @@ const noFeaturesCheckbox = document.getElementById('no-features-checkbox');
 const showOtherCheckbox = document.getElementById('show-other-checkbox');
 
 let filterTimeoutId = null;
-const FILTER_DEBOUNCE_DELAY = 200;
+const FILTER_DEBOUNCE_DELAY = 250;
 
 const headers = document.querySelectorAll('th[data-sort]');
 let currentClientSort = { column: null, direction: 'ASC' };
@@ -49,6 +49,9 @@ const SYMBOL_PDF_WEIGHTS = {
 // Cache frequently accessed elements
 const tbody = document.querySelector('#papersTable tbody');
 const duplicateCountElement = document.getElementById('duplicate-papers-count');
+
+// Add the WeakMap for caching row data
+const rowCache = new WeakMap();
 
 /**
  * Applies alternating row shading to visible main rows.
@@ -77,18 +80,25 @@ function applyAlternatingShading() {
 /**
  * Optimized duplicate shading using cached data and batch operations
  */
-function applyDuplicateShading(rows) {
-    // Use the rows parameter passed from applyLocalFilters to avoid DOM queries
+// Corrected version assuming 'rows' passed are the visible ones:
+/**
+ * Optimized duplicate shading using cached data and batch operations
+ * @param {NodeList} visibleRows - The list of rows currently visible after filtering.
+ */
+function applyDuplicateShading(visibleRows) {
+    // Use the rows parameter passed from applyLocalFilters
     const journalCounts = new Map();
     const titleCounts = new Map();
 
-    // Count occurrences for both journal names and titles
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row.classList.contains('filter-hidden')) {
-            const journalName = row._cachedData.journalText;
-            const title = row._cachedData.titleText;
-            
+    // Count occurrences for both journal names and titles from visible rows
+    for (let i = 0; i < visibleRows.length; i++) {
+        const row = visibleRows[i];
+        // Use rowCache.get(row) instead of row._cachedData
+        const cachedData = rowCache.get(row);
+        if (cachedData) { // Ensure cache exists for this row
+            const journalName = cachedData.journalText;
+            const title = cachedData.titleText;
+
             if (journalName) {
                 journalCounts.set(journalName, (journalCounts.get(journalName) || 0) + 1);
             }
@@ -105,7 +115,7 @@ function applyDuplicateShading(rows) {
             duplicateTitleCount++;
         }
     }
-    
+
     // Update the duplicate papers count in HTML
     if (duplicateCountElement) {
         duplicateCountElement.textContent = duplicateTitleCount;
@@ -122,11 +132,11 @@ function applyDuplicateShading(rows) {
     const baseSaturation = 66;
     const minLightness = 96;
     const maxLightness = 84;
-    
+
     const baseTitleHue = 0;
     const titleSaturation = 66;
     const titleLightness = 94;
-    
+
     // Pre-calculate HSL strings for journals
     const journalHslStrings = new Map();
     for (const [journalName, count] of journalCounts) {
@@ -146,25 +156,26 @@ function applyDuplicateShading(rows) {
     const duplicateTitleHslString = `hsl(${baseTitleHue}, ${titleSaturation}%, ${titleLightness}%)`;
 
     // Apply shading in a single pass
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
+    for (let i = 0; i < visibleRows.length; i++) {
+        const row = visibleRows[i];
         const journalCell = row.cells[journalCellIndex];
         const titleCell = row.cells[titleCellIndex];
-        
+
         // Reset background colors
         journalCell.style.backgroundColor = '';
         titleCell.style.backgroundColor = '';
 
-        // Only apply shading if the row is visible
-        if (!row.classList.contains('filter-hidden')) {
-            const journalName = row._cachedData.journalText;
-            const title = row._cachedData.titleText;
-            
+        // Use rowCache.get(row) to get cached data
+        const cachedData = rowCache.get(row);
+        if (cachedData) { // Ensure cache exists
+            const journalName = cachedData.journalText;
+            const title = cachedData.titleText;
+
             // Apply journal shading (progressive)
-            if (journalName && journalCounts.get(journalName) >= 2) { 
+            if (journalName && journalCounts.get(journalName) >= 2) {
                 journalCell.style.backgroundColor = journalHslStrings.get(journalName);
             }
-            
+
             // Apply title shading (consistent red for duplicates)
             if (title && titleCounts.get(title) >= 2) {
                 titleCell.style.backgroundColor = duplicateTitleHslString;
@@ -172,7 +183,6 @@ function applyDuplicateShading(rows) {
         }
     }
 }
-
 // --- Tri-State Survey Filter Logic (Add to globals.js) ---
 // Define the states for the survey filter
 const SURVEY_FILTER_STATES = {
@@ -275,261 +285,259 @@ let rafId = 0;
 function applyLocalFilters() {
     clearTimeout(filterTimeoutId);
     document.documentElement.classList.add('busyCursor');
-    cancelAnimationFrame(rafId);
-    filterTimeoutId = setTimeout(() => {          // 200 ms debounce
-        rafId = requestAnimationFrame(() => {       // 1 layout + 1 paint
-            if (!tbody) return;
+    cancelAnimationFrame(rafId)
+    filterTimeoutId = setTimeout(() => { 
+        // --- Pre-cache data for all rows to avoid repeated DOM queries ---
+        const rows = tbody.querySelectorAll('tr[data-paper-id]');
+        
+        // Pre-calculate filter values outside the loop
+        const hideXrayChecked = hideXrayCheckbox.checked;
+        const hideApprovedChecked = hideApprovedCheckbox.checked;
+        const showPCBChecked = showPCBcheckbox.checked;
+        const showSolderChecked = showSolderCheckbox.checked;
+        const showPCBAChecked = showPCBAcheckbox.checked;
+        const showOtherChecked = showOtherCheckbox.checked;
+        const showNoFeaturesChecked = noFeaturesCheckbox.checked;
+        const hideOfftopicChecked = document.body.id === 'html-export' ? hideOfftopicCheckbox.checked : false;
+        const minPageCountValue = document.body.id === 'html-export' ? (document.getElementById('min-page-count').value.trim() || 0) : 0;
+        const yearFromValue = document.body.id === 'html-export' ? (document.getElementById('year-from').value.trim() || 0) : 0;
+        const yearToValue = document.body.id === 'html-export' ? (document.getElementById('year-to').value.trim() || 0) : 0;
+        const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const compiledSearchRegex = compileSearchRegex(searchTerm);
 
-            // --- Pre-cache data for all rows to avoid repeated DOM queries ---
-            const rows = tbody.querySelectorAll('tr[data-paper-id]');
-            
-            // Pre-calculate filter values outside the loop
-            const hideXrayChecked = hideXrayCheckbox.checked;
-            const hideApprovedChecked = hideApprovedCheckbox.checked;
-            const showPCBChecked = showPCBcheckbox.checked;
-            const showSolderChecked = showSolderCheckbox.checked;
-            const showPCBAChecked = showPCBAcheckbox.checked;
-            const showOtherChecked = showOtherCheckbox.checked;
-            const showNoFeaturesChecked = noFeaturesCheckbox.checked;
-            const hideOfftopicChecked = document.body.id === 'html-export' ? hideOfftopicCheckbox.checked : false;
-            const minPageCountValue = document.body.id === 'html-export' ? (document.getElementById('min-page-count').value.trim() || 0) : 0;
-            const yearFromValue = document.body.id === 'html-export' ? (document.getElementById('year-from').value.trim() || 0) : 0;
-            const yearToValue = document.body.id === 'html-export' ? (document.getElementById('year-to').value.trim() || 0) : 0;
-            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
-            const compiledSearchRegex = compileSearchRegex(searchTerm);
+        // --- Cache data for all rows in a single pass ---
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            // Cache status cells
+            const surveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
+            const xrayCell = row.querySelector('.editable-status[data-field="is_x_ray"]');
+            const verifiedCell = row.querySelector('.editable-status[data-field="verified"]');
+            const offtopicCell = row.querySelector('.editable-status[data-field="is_offtopic"]');
 
-            // Pre-process search terms
-            const searchTermsLower = searchTerm ? searchTerm.split(/\s+/).filter(t => t.length > 0) : [];
+            // Cache feature cell values
+            const featureValues = {};
+            for (let j = 0; j < ALL_FEATURE_FIELDS.length; j++) {
+                const fieldName = ALL_FEATURE_FIELDS[j];
+                const cell = row.querySelector(`[data-field="${fieldName}"]`);
+                featureValues[fieldName] = cell ? cell.textContent.trim() : '';
+            }
 
-            // --- Cache data for all rows in a single pass ---
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
-                const paperId = row.getAttribute('data-paper-id');
-                
-                // Cache status cells
-                const surveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
-                const xrayCell = row.querySelector('.editable-status[data-field="is_x_ray"]');
-                const verifiedCell = row.querySelector('.editable-status[data-field="verified"]');
-                const offtopicCell = row.querySelector('.editable-status[data-field="is_offtopic"]');
+            // Determine group membership based on cached feature values
+            let hasPCBFeature = false;
+            for (let j = 0; j < FEATURE_GROUPS.pcb.length; j++) {
+                if (featureValues[FEATURE_GROUPS.pcb[j]] === '✔️') {
+                    hasPCBFeature = true;
+                    break;
+                }
+            }
 
-                // Cache feature cell values
-                const featureValues = {};
+            let hasSolderFeature = false;
+            for (let j = 0; j < FEATURE_GROUPS.solder.length; j++) {
+                if (featureValues[FEATURE_GROUPS.solder[j]] === '✔️') {
+                    hasSolderFeature = true;
+                    break;
+                }
+            }
+
+            let hasPCBAFeature = false;
+            for (let j = 0; j < FEATURE_GROUPS.pcba.length; j++) {
+                if (featureValues[FEATURE_GROUPS.pcba[j]] === '✔️') {
+                    hasPCBAFeature = true;
+                    break;
+                }
+            }
+
+            let hasOtherFeature = false;
+            for (let j = 0; j < FEATURE_GROUPS.other.length; j++) {
+                if (featureValues[FEATURE_GROUPS.other[j]] === '✔️') {
+                    hasOtherFeature = true;
+                    break;
+                }
+            }
+
+            // Cache hidden data text
+            let hiddenDataText = '';
+            const hiddenDataCells = row.querySelectorAll('td.hidden-data-cell');
+            for (let j = 0; j < hiddenDataCells.length; j++) {
+                hiddenDataText += ' ' + (hiddenDataCells[j].textContent || '').toLowerCase();
+            }
+
+            // Cache main row text content (excluding hidden data cells)
+            let visibleRowText = '';
+            for (let j = 0; j < row.cells.length; j++) {
+                if (!row.cells[j].classList.contains('hidden-data-cell')) {
+                    visibleRowText += ' ' + row.cells[j].textContent.toLowerCase();
+                }
+            }
+
+            // Cache frequently accessed text values
+            const journalText = row.cells[journalCellIndex]?.textContent?.trim().toLowerCase() || '';
+            const titleText = row.cells[titleCellIndex]?.textContent?.trim().toLowerCase() || '';
+
+            // Store all cached data in the WeakMap using the row element as the key
+            rowCache.set(row, {
+                surveyStatus: surveyCell ? surveyCell.textContent.trim() : '❔',
+                xrayStatus: xrayCell ? xrayCell.textContent.trim() : 'N/A',
+                verifiedStatus: verifiedCell ? verifiedCell.textContent.trim() : 'N/A',
+                offtopicStatus: offtopicCell ? offtopicCell.textContent.trim() : 'N/A',
+                featureValues: featureValues,
+                hasPCBFeature,
+                hasSolderFeature,
+                hasPCBAFeature,
+                hasOtherFeature,
+                hiddenDataText,
+                visibleRowText,
+                journalText,
+                titleText,
+                pageCount: row.cells[pageCountCellIndex]?.textContent?.trim() || '',
+                year: row.cells[yearCellIndex]?.textContent?.trim() || ''
+            });
+        }
+        /* ---------- 1.  shared batch containers ---------- */
+        const toHide = [];
+        const toShow = [];
+
+        /* ---------- 2.  single walk over every <tr> using cached data ---------- */
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            // Get cached data from the WeakMap
+            const cachedData = rowCache.get(row); // Use rowCache.get(row) instead of row._cachedData
+
+            let showRow = true;
+
+            /* ----------------------------------------------------
+                2a.  HTML-export-only filters
+            ---------------------------------------------------- */
+            if (document.body.id === 'html-export') {
+                if (showRow && hideOfftopicChecked) {
+                    if (cachedData.offtopicStatus === '✔️') { // Access via cachedData
+                        showRow = false;
+                    }
+                }
+
+                if (showRow && minPageCountValue > 0) {
+                    const pageCount = parseInt(cachedData.pageCount, 10); // Access via cachedData
+                    if (!isNaN(pageCount) && pageCount < minPageCountValue) {
+                        showRow = false;
+                    }
+                }
+
+                if (showRow && (yearFromValue || yearToValue)) {
+                    const year = cachedData.year ? parseInt(cachedData.year, 10) : NaN; // Access via cachedData
+                    if (isNaN(year) || (yearFromValue && year < yearFromValue) || (yearToValue && year > yearToValue)) {
+                        showRow = false;
+                    }
+                }
+            }
+
+            /* ----------------------------------------------------
+                2b.  universal filters (search, survey, X-ray, …)
+            ---------------------------------------------------- */
+            // Search Term
+            if (showRow && searchTerm) {
+                // Fast string inclusion check first
+                if (!cachedData.visibleRowText.includes(searchTerm) && !cachedData.hiddenDataText.includes(searchTerm)) { // Access via cachedData
+                    showRow = false;
+                }
+
+                // If still showing, do more complex search if needed
+                if (showRow && compiledSearchRegex) {
+                    // Additional regex or multi-term checks if needed
+                }
+            }
+
+            // Apply the tri-state survey filter logic
+            if (showRow) {
+                const surveyStatus = cachedData.surveyStatus; // Access via cachedData
+
+                switch (currentSurveyFilterState) {
+                    case SURVEY_FILTER_STATES.ONLY_SURVEYS:
+                        if (surveyStatus !== '✔️') {
+                            showRow = false;
+                        }
+                        break;
+                    case SURVEY_FILTER_STATES.ONLY_NON_SURVEYS:
+                        if (surveyStatus === '✔️') {
+                            showRow = false;
+                        }
+                        break;
+                    // For SURVEY_FILTER_STATES.ALL, showRow remains unchanged (default)
+                }
+            }
+
+            // Existing filters (X-Ray, Survey, Approved)
+            if (showRow && hideXrayChecked) {
+                if (cachedData.xrayStatus === '✔️') { // Access via cachedData
+                    showRow = false;
+                }
+            }
+            if (showRow && hideApprovedChecked) {
+                if (cachedData.verifiedStatus === '✔️') { // Access via cachedData
+                    showRow = false;
+                }
+            }
+
+            // --- Feature Group Filters ---
+            if (showRow && (showPCBChecked || showSolderChecked || showPCBAChecked || showOtherChecked)) {
+                if (!( (showPCBChecked && cachedData.hasPCBFeature) || // Access via cachedData
+                        (showSolderChecked && cachedData.hasSolderFeature) || // Access via cachedData
+                        (showPCBAChecked && cachedData.hasPCBAFeature) || // Access via cachedData
+                        (showOtherChecked && cachedData.hasOtherFeature) )) {
+                    showRow = false;
+                }
+            }
+
+            // --- "No Features" Filter ---
+            if (showRow && showNoFeaturesChecked) {
+                let hasAnyFeatureFilled = false;
                 for (let j = 0; j < ALL_FEATURE_FIELDS.length; j++) {
-                    const fieldName = ALL_FEATURE_FIELDS[j];
-                    const cell = row.querySelector(`[data-field="${fieldName}"]`);
-                    featureValues[fieldName] = cell ? cell.textContent.trim() : '';
-                }
-
-                // Determine group membership based on cached feature values
-                let hasPCBFeature = false;
-                for (let j = 0; j < FEATURE_GROUPS.pcb.length; j++) {
-                    if (featureValues[FEATURE_GROUPS.pcb[j]] === '✔️') {
-                        hasPCBFeature = true;
-                        break;
-                    }
-                }
-                
-                let hasSolderFeature = false;
-                for (let j = 0; j < FEATURE_GROUPS.solder.length; j++) {
-                    if (featureValues[FEATURE_GROUPS.solder[j]] === '✔️') {
-                        hasSolderFeature = true;
-                        break;
-                    }
-                }
-                
-                let hasPCBAFeature = false;
-                for (let j = 0; j < FEATURE_GROUPS.pcba.length; j++) {
-                    if (featureValues[FEATURE_GROUPS.pcba[j]] === '✔️') {
-                        hasPCBAFeature = true;
-                        break;
-                    }
-                }
-                
-                let hasOtherFeature = false;
-                for (let j = 0; j < FEATURE_GROUPS.other.length; j++) {
-                    if (featureValues[FEATURE_GROUPS.other[j]] === '✔️') {
-                        hasOtherFeature = true;
+                    const cellText = cachedData.featureValues[ALL_FEATURE_FIELDS[j]]; // Access via cachedData
+                    if (cellText !== '' && cellText !== '❌' && cellText !== '❔') {
+                        hasAnyFeatureFilled = true;
                         break;
                     }
                 }
 
-                // Cache hidden data text
-                let hiddenDataText = '';
-                const hiddenDataCells = row.querySelectorAll('td.hidden-data-cell');
-                for (let j = 0; j < hiddenDataCells.length; j++) {
-                    hiddenDataText += ' ' + (hiddenDataCells[j].textContent || '').toLowerCase();
-                }
-
-                // Cache main row text content (excluding hidden data cells)
-                let visibleRowText = '';
-                for (let j = 0; j < row.cells.length; j++) {
-                    if (!row.cells[j].classList.contains('hidden-data-cell')) {
-                        visibleRowText += ' ' + row.cells[j].textContent.toLowerCase();
-                    }
-                }
-
-                // Cache frequently accessed text values
-                const journalText = row.cells[journalCellIndex]?.textContent?.trim().toLowerCase() || '';
-                const titleText = row.cells[titleCellIndex]?.textContent?.trim().toLowerCase() || '';
-
-                // Store all cached data directly on the row element for fast access
-                row._cachedData = {
-                    surveyStatus: surveyCell ? surveyCell.textContent.trim() : '❔',
-                    xrayStatus: xrayCell ? xrayCell.textContent.trim() : 'N/A',
-                    verifiedStatus: verifiedCell ? verifiedCell.textContent.trim() : 'N/A',
-                    offtopicStatus: offtopicCell ? offtopicCell.textContent.trim() : 'N/A',
-                    featureValues: featureValues,
-                    hasPCBFeature,
-                    hasSolderFeature,
-                    hasPCBAFeature,
-                    hasOtherFeature,
-                    hiddenDataText,
-                    visibleRowText,
-                    journalText,
-                    titleText,
-                    pageCount: row.cells[pageCountCellIndex]?.textContent?.trim() || '',
-                    year: row.cells[yearCellIndex]?.textContent?.trim() || ''
-                };
-            }
-
-            /* ---------- 1.  shared batch containers ---------- */
-            const toHide = [];
-            const toShow = [];
-
-            /* ---------- 2.  single walk over every <tr> using cached data ---------- */
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
-                const cachedData = row._cachedData;
-
-                let showRow = true;
-
-                /* ----------------------------------------------------
-                   2a.  HTML-export-only filters
-                ---------------------------------------------------- */
-                if (document.body.id === 'html-export') {
-                    if (showRow && hideOfftopicChecked) {
-                        if (cachedData.offtopicStatus === '✔️') {
-                            showRow = false;
-                        }
-                    }
-
-                    if (showRow && minPageCountValue > 0) {
-                        const pageCount = parseInt(cachedData.pageCount, 10);
-                        if (!isNaN(pageCount) && pageCount < minPageCountValue) {
-                            showRow = false;
-                        }
-                    }
-
-                    if (showRow && (yearFromValue || yearToValue)) {
-                        const year = cachedData.year ? parseInt(cachedData.year, 10) : NaN;
-                        if (isNaN(year) || (yearFromValue && year < yearFromValue) || (yearToValue && year > yearToValue)) {
-                            showRow = false;
-                        }
-                    }
-                }
-
-                /* ----------------------------------------------------
-                   2b.  universal filters (search, survey, X-ray, …)
-                ---------------------------------------------------- */
-                // Search Term
-                if (showRow && searchTerm) {
-                    // Fast string inclusion check first
-                    if (!cachedData.visibleRowText.includes(searchTerm) && !cachedData.hiddenDataText.includes(searchTerm)) {
-                        showRow = false;
-                    }
-                    
-                    // If still showing, do more complex search if needed
-                    if (showRow && compiledSearchRegex) {
-                        // Additional regex or multi-term checks if needed
-                    }
-                }
-
-                // Apply the tri-state survey filter logic
-                if (showRow) {
-                    const surveyStatus = cachedData.surveyStatus;
-
-                    switch (currentSurveyFilterState) {
-                        case SURVEY_FILTER_STATES.ONLY_SURVEYS:
-                            if (surveyStatus !== '✔️') {
-                                showRow = false;
-                            }
-                            break;
-                        case SURVEY_FILTER_STATES.ONLY_NON_SURVEYS:
-                            if (surveyStatus === '✔️') {
-                                showRow = false;
-                            }
-                            break;
-                        // For SURVEY_FILTER_STATES.ALL, showRow remains unchanged (default)
-                    }
-                }
-
-                // Existing filters (X-Ray, Survey, Approved)
-                if (showRow && hideXrayChecked) {
-                    if (cachedData.xrayStatus === '✔️') {
-                        showRow = false;
-                    }
-                }
-                if (showRow && hideApprovedChecked) {
-                    if (cachedData.verifiedStatus === '✔️') {
-                        showRow = false;
-                    }
-                }
-
-                // --- Feature Group Filters ---
-                if (showRow && (showPCBChecked || showSolderChecked || showPCBAChecked || showOtherChecked)) {
-                    if (!( (showPCBChecked && cachedData.hasPCBFeature) ||
-                           (showSolderChecked && cachedData.hasSolderFeature) ||
-                           (showPCBAChecked && cachedData.hasPCBAFeature) ||
-                           (showOtherChecked && cachedData.hasOtherFeature) )) {
-                        showRow = false;
-                    }
-                }
-
-                // --- "No Features" Filter ---
-                if (showRow && showNoFeaturesChecked) {
-                    let hasAnyFeatureFilled = false;
-                    for (let j = 0; j < ALL_FEATURE_FIELDS.length; j++) {
-                        const cellText = cachedData.featureValues[ALL_FEATURE_FIELDS[j]];
-                        if (cellText !== '' && cellText !== '❌' && cellText !== '❔') {
-                            hasAnyFeatureFilled = true;
-                            break;
-                        }
-                    }
-
-                    if (hasAnyFeatureFilled) {
-                        showRow = false;
-                    }
-                }
-
-                /* ----------------------------------------------------
-                   2c.  queue the visibility change (no DOM touch yet)
-                ---------------------------------------------------- */
-                const detailRow = row.nextElementSibling;
-                const hide = !showRow;
-
-                if (row.classList.contains('filter-hidden') !== hide) {
-                    (hide ? toHide : toShow).push(row);
-                }
-                if (detailRow && detailRow.classList.contains('filter-hidden') !== hide) {
-                    (hide ? toHide : toShow).push(detailRow);
+                if (hasAnyFeatureFilled) {
+                    showRow = false;
                 }
             }
 
-            /* ---------- 3.  one RAF to flush all changes ---------- */
-            // Batch DOM operations
-            for (let i = 0; i < toHide.length; i++) {
-                toHide[i].classList.add('filter-hidden');
-            }
-            for (let i = 0; i < toShow.length; i++) {
-                toShow[i].classList.remove('filter-hidden');
-            }
+            /* ----------------------------------------------------
+                2c.  queue the visibility change (no DOM touch yet)
+            ---------------------------------------------------- */
+            const detailRow = row.nextElementSibling;
+            const hide = !showRow;
 
+            if (row.classList.contains('filter-hidden') !== hide) {
+                (hide ? toHide : toShow).push(row);
+            }
+            if (detailRow && detailRow.classList.contains('filter-hidden') !== hide) {
+                (hide ? toHide : toShow).push(detailRow);
+            }
+        }
+
+        /* ---------- 3.  one RAF to flush all changes ---------- */
+        // Batch DOM operations
+        for (let i = 0; i < toHide.length; i++) {
+            toHide[i].classList.add('filter-hidden');
+        }
+        for (let i = 0; i < toShow.length; i++) {
+            toShow[i].classList.remove('filter-hidden');
+        }
+
+        rafId = requestAnimationFrame(() => {       // 1 layout + 1 paint
             applyAlternatingShading();
 
             if (document.body.id !== 'html-export') {
                 // Pass only visible rows to duplicate shading
+                // const visibleRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)'); // This line was already correct
+                // Use the same query or the 'rows' variable if filtered correctly before the loop
+                // It's better to get the visible rows *after* the visibility classes are applied
+                // but *before* applyDuplicateShading runs. Since applyLocalFilters batch applies
+                // visibility changes before the rAF, the query inside rAF will be accurate.
                 const visibleRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
-                applyDuplicateShading(visibleRows);
+                applyDuplicateShading(visibleRows); // Pass the NodeList
                 const applyButton = document.getElementById('apply-serverside-filters');
                 applyButton.style.opacity = '0';
                 applyButton.style.pointerEvents = 'none';
@@ -564,11 +572,12 @@ function sortTable() {
         }
 
         // --- PRE-PROCESS: Extract Sort Values and Row References ---
+        // Get visible rows BEFORE sorting potentially changes their order in the DOM
         const visibleMainRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
         const headerIndex = Array.prototype.indexOf.call(this.parentNode.children, this);
         const sortData = new Array(visibleMainRows.length);
         let sortIndex = 0;
-        
+
         // Pre-calculate sort type to avoid repeated checks
         const isNumericSort = ['year', 'estimated_score', 'page_count', 'relevance'].includes(sortBy);
         const isStatusSort = !['title', 'year', 'journal', 'page_count', 'estimated_score', 'relevance', 'pdf-link'].includes(sortBy);
@@ -593,6 +602,11 @@ function sortTable() {
                 cellValue = cell ? cell.textContent.trim() : '';
             }
 
+            // Use rowCache.get(mainRow) to get cached data for secondary sort key (if needed)
+            // For example, if you wanted to use journalText or titleText for secondary sort on text columns:
+            // const cachedData = rowCache.get(mainRow);
+            // const secondarySortKey = cachedData ? cachedData.titleText || cachedData.journalText || paperId : paperId;
+            // However, the original code used paperId for secondary sort, which is fine and more stable for text sorts.
             const detailRow = mainRow.nextElementSibling; // Get the associated detail row
             sortData[sortIndex] = { value: cellValue, mainRow, detailRow, paperId };
             sortIndex++;
@@ -623,8 +637,9 @@ function sortTable() {
         requestAnimationFrame(() => {
             applyAlternatingShading();
             if (document.body.id !== 'html-export') {
-                const visibleRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
-                applyDuplicateShading(visibleRows);
+                // Pass the currently visible rows after sorting to applyDuplicateShading
+                const visibleRowsAfterSort = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
+                applyDuplicateShading(visibleRowsAfterSort); // Pass the NodeList
             }
             updateCounts();
         });
@@ -663,3 +678,5 @@ document.addEventListener('DOMContentLoaded', function () {
     applyLocalFilters(); //apply initial filtering   
     updateSurveyCheckboxUI();
 });
+
+
