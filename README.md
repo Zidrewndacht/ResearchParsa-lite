@@ -52,6 +52,7 @@ At least the following open source libraries, and its dependencies, are leverage
 [Python](https://www.python.org/),
 [Flask](https://flask.palletsprojects.com/),
 [SQLite3](https://www.sqlite.org/)
+[bibtexparser](https://pypi.org/project/bibtexparser/)
 
 **Frontend:**
 [HTML5](https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/HTML5),
@@ -59,7 +60,10 @@ At least the following open source libraries, and its dependencies, are leverage
 [Vanilla JS](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
 **Data Visualization:**
-[Chart.js](https://www.chartjs.org/)
+[Chart.js](https://www.chartjs.org/),
+[chartjs-plugin-datalabels](https://chartjs-plugin-datalabels.netlify.app/), 
+[d3.js](https://d3js.org/),
+[d3-cloud.js](https://github.com/jasondavies/d3-cloud) 
 
 **PDF View/Annotation/Autosave:**
 [PDF.js](https://mozilla.github.io/pdf.js/getting_started/)
