@@ -26,13 +26,14 @@ The system is designed to streamline literature reviews by allowing for advanced
 
 0.  **Running the Application**:
     - Download this repository and run !browse_db.bat. A Virtual Environment with the according requirements will be automatically created if it doesn't yet exist. After startup, the application will be available at `http://127.0.0.1:5000`, and a browser window should open to this address automatically.
+    - This should run fine in Linux or Mac, you just have to manually create and run the venv in that case.
     - Look at the help page in the Web application itself for more instructions about the Web interface itself (Note: those instructions are currently outdated, some functionality has been changed or added).
 
 1.  **Database Setup**:
     - You can import a BibTeX file directly from the web interface after the application is running. If no database is found on startup, the application will copy `fallback.sqlite` to the data directory to ensure it can launch for the first import or a backup restore.
       
 2.  **LLM Integration**:
-    - Start an OpenAI-compatible inference server (e.g., llama.cpp). `/lcpp` folder has sample settings for a supported llama.cpp configuration.
+    - Start an OpenAI-compatible inference server (e.g., llama.cpp). `/lcpp` folder has sample settings for a **supported** llama.cpp configuration.
     - From the web UI, you can trigger classification and verification tasks for individual papers or in batches ('all' or 'remaining').
-    - Alternatively, manually run classification using `automate_classification.py` and `verify_classification.py.` Both accept `--mode all` and `--mode remaining` operating modes for batch classification.
+    - Alternatively, manually run classification using `automate_classification.py` and `verify_classification.py`. Manual run supports (not yet properly documented) additional operating modes, check the script's usage hints.
 
