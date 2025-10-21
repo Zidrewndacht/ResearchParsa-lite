@@ -8,11 +8,15 @@ ResearchParça is a tool for managing and analyzing a bibliographic database, sp
 
 The system is designed to streamline literature reviews by allowing for advanced search capabilities, statistical analysis of the dataset, and traceable, LLM-driven data enrichment.
 
+https://github.com/user-attachments/assets/a37ee7b6-27e8-459a-a092-be67ee769b5e
+
+https://github.com/user-attachments/assets/3a12f927-1050-485e-b6f7-5df151685a58
+
 ## Features
 
 - **BibTeX Import**: Imports bibliographic data from `.bib` files into a structured SQLite database. The import process handles duplicate entries by checking for existing DOIs or matching titles and years.
 - **Web Interface**: A Flask-based web application (`browse_db.py`) provides a user-friendly interface to view, filter, and edit the paper database. The server starts up and automatically opens the interface in a web browser.
-- **LLM-Powered Classification**: The `automate_classification.py` script sends paper metadata to an OpenAI-compatible LLM server to classify papers based on a detailed prompt template. It can process all papers, only unprocessed ones, or a single paper by its ID. Classification results, including the model's reasoning trace, are saved to the database.
+- **LLM-Powered Classification**: The `automate_classification.py` script sends paper metadata to an OpenAI-compatible LLM server (e.g. llama.cpp) to classify papers based on a detailed prompt template. It can process all papers, only unprocessed ones, or a single paper by its ID. Classification results, **including the model's reasoning trace**, are saved to the database.
 - **LLM-Powered Verification**: `verify_classification.py` uses an LLM to review and verify the accuracy of a previous classification, providing a score and a "verified" status. This process also runs in different modes ('all', 'remaining', 'id').
 - **Advanced Filtering and Search**: The web UI allows for server-side filtering by year range, minimum page count, and off-topic. Every other filtering functionality, including search, is done purely client-side (which means search can NOT find papers outside the currently downloaded range (e.g. year, size, off-topic).
 - **Data Editing**: Users can directly edit classification fields, add comments (`user_trace`), and manage metadata through the web interface.
@@ -38,3 +42,4 @@ The system is designed to streamline literature reviews by allowing for advanced
     - From the web UI, you can trigger classification and verification tasks for individual papers or in batches ('all' or 'remaining').
     - Alternatively, manually run classification using `automate_classification.py` and `verify_classification.py`. Manual run supports (not yet properly documented) additional operating modes, check the script's usage hints.
 
+<img width="1995" height="1579" alt="image" src="https://github.com/user-attachments/assets/5591360f-cec9-4b9f-b544-3a063402065f" />
