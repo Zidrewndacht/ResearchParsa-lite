@@ -569,7 +569,6 @@ function buildStatsLists() {
 
     });
 
-    // ... (rest of the function remains the same: populateList, populateSimpleList, toggleCloud) ...
     function populateList(listElementId, dataObj) {
         const listElement = document.getElementById(listElementId);
         if (!listElement) {
@@ -945,11 +944,14 @@ function getBarLabelPosition(value, maxBarValue) {
         return { align: 'start', anchor: 'end' }; // Outside the bar at the end (right side for horizontal bars)
     }
 }
-
 function renderBarOrPieChart(ctx, chartData, chartLabel, chartType) {
     const isBar = chartType === 'bar';
     let datalabelsPluginConfig = {};
     let datalabelsPlugin = [];
+
+    /* -------------------------------------------------
+       1.  HORIZONTAL BAR – keep the old “smart” labels
+       ------------------------------------------------- */
 
     if (isBar && ChartDataLabels) {
         // Calculate the maximum value across all datasets for this chart
@@ -987,11 +989,41 @@ function renderBarOrPieChart(ctx, chartData, chartLabel, chartType) {
         datalabelsPlugin = [ChartDataLabels];
     }
 
+    /* -------------------------------------------------
+       2.  PIE – show percentage inside every slice
+       ------------------------------------------------- */
+    if (!isBar && ChartDataLabels) {
+        datalabelsPluginConfig = {
+            datalabels: {
+                color: '#444',
+                font: ctx => {                       // ← dynamic font
+                    const h = ctx.chart.height || 280; // fallback
+                    return {
+                        size: Math.max(8, h * 0.035), // 6 px minimum
+                        weight: '400'
+                    };
+                },
+                anchor: 'end',
+                align: 'start',
+                offset: -2,
+                formatter: (value, ctx) => {
+                    const sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                    const pct = sum ? Math.round((value / sum) * 100) : 0;
+                    return pct > 3  ? pct + '%' : '';
+                }
+            }
+        };
+        datalabelsPlugin = [ChartDataLabels];
+    }
+
+    /* -------------------------------------------------
+       3.  Common Chart.js config
+       ------------------------------------------------- */
     const options = {
         type: chartType,
         data: chartData,
         options: {
-            ...(isBar ? { indexAxis: 'y' } : { radius: '90%' }), // indexAxis: 'y' makes it a horizontal bar chart
+            ...(isBar ? { indexAxis: 'y' } : { radius: '90%' }),
             responsive: true,
             maintainAspectRatio: false,
             devicePixelRatio: getChartDPR(),
@@ -1007,16 +1039,12 @@ function renderBarOrPieChart(ctx, chartData, chartLabel, chartType) {
                         label: ctx => `${ctx.label}: ${ctx.raw}`
                     }
                 },
-                // Apply the conditional datalabels config only for bar charts
                 ...datalabelsPluginConfig
             },
             scales: {
-                ...(isBar ? {
-                    x: { beginAtZero: true, ticks: { precision: 0 } }
-                } : {})
+                ...(isBar ? { x: { beginAtZero: true, ticks: { precision: 0 } } } : {})
             }
         },
-        // Register the plugin only for bar charts if ChartDataLabels is available
         plugins: datalabelsPlugin
     };
 
@@ -1638,13 +1666,13 @@ function buildKeywordCloud() {
   /* ----------  font scale  ---------- */
   const sizeScale = d3.scaleLinear()
     .domain([topK[topK.length - 1].size, topK[0].size])
-    .range([10, 60]);
+    .range([9 , 54]);
 
   /* ----------  layout (unchanged)  ---------- */
   const layout = d3.layout.cloud()
     .size([width, height])
     .words(topK.map(d => ({ ...d, size: sizeScale(d.size) })))
-    .padding(3)
+    .padding(1)
     .rotate(() => (Math.random() - 0.5) * 0)   // 0° for all words
     .font('sans-serif')
     .fontSize(d => d.size)
@@ -1897,8 +1925,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-
-    // --- Modified pieToggle Event Listener ---
     pieToggle.addEventListener('change', function () {
         showPieCharts = this.checked; // Update the state variable
 

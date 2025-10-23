@@ -38,7 +38,7 @@ DEFAULT_MIN_PAGE_COUNT = 4
 app = Flask(__name__)
 DATABASE = None # Will be set from command line argument
 
-def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_param=None, min_page_count_param=None, search_query_param=None):
+def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_param=None, min_page_count_param=None):
     """Fetches papers based on filters and renders the papers_table.html template. 
        Used for initial render from / and XHR updates."""
     # Determine hide_offtopic state
@@ -81,7 +81,7 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row 
     return conn
 
-def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_count=None, search_query=None):
+def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_count=None):
     """Fetch papers from the database, applying various optional filters."""
     conn = get_db_connection()
     base_query = "SELECT p.* FROM papers p"
@@ -469,7 +469,7 @@ def format_changed_timestamp(changed_str):
         return changed_str
 
 # used for HTML and XLSX exports: 
-def get_default_filter_values(hide_offtopic_param, year_from_param, year_to_param, min_page_count_param, search_query_param):
+def get_default_filter_values(hide_offtopic_param, year_from_param, year_to_param, min_page_count_param):
     """Extracts and validates filter parameters, returning default values if invalid/missing."""
     hide_offtopic = True 
     if hide_offtopic_param is not None:
@@ -490,13 +490,11 @@ def get_default_filter_values(hide_offtopic_param, year_from_param, year_to_para
     except ValueError:
         min_page_count_value = DEFAULT_MIN_PAGE_COUNT
 
-    search_query_value = search_query_param if search_query_param is not None else ""
-
-    return hide_offtopic, year_from_value, year_to_value, min_page_count_value, search_query_value
+    return hide_offtopic, year_from_value, year_to_value, min_page_count_value
 
 # --- Core Export Generation Functions ---
 
-def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to_value, min_page_count_value, search_query_value, is_lite_export=False):
+def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to_value, min_page_count_value, is_lite_export=False):
     """Generates the full HTML content string for the static export."""
     # Strip fat text for lite export:
     if is_lite_export:
@@ -562,7 +560,6 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
         year_from_value=str(year_from_value),
         year_to_value=str(year_to_value),
         min_page_count_value=str(min_page_count_value),
-        search_query_value=search_query_value
     )
     full_html_content = render_template(
         'index_static_export.html',
@@ -571,7 +568,6 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
         year_from_value=year_from_value, # Pass raw values if needed by template logic
         year_to_value=year_to_value,
         min_page_count_value=min_page_count_value,
-        search_query=search_query_value,
         # --- Pass potentially minified static content ---
         fonts_css_content=Markup(fonts_css_content), # Markup was already applied if needed, or content is minified
         style_css_content=Markup(style_css_content),
@@ -802,7 +798,7 @@ def generate_xlsx_export_content(papers):
     output.seek(0)
     return output.getvalue()
 
-def generate_filename(base_name, year_from, year_to, min_page_count, hide_offtopic, search_query, extra_suffix=""):
+def generate_filename(base_name, year_from, year_to, min_page_count, hide_offtopic, extra_suffix=""):
     """Generates a filename based on filters."""
     filename_parts = [base_name]
     if year_from == year_to:
@@ -813,11 +809,6 @@ def generate_filename(base_name, year_from, year_to, min_page_count, hide_offtop
         filename_parts.append(f"min{min_page_count}pg")
     if hide_offtopic:
         filename_parts.append("noOfftopic")
-    if search_query:
-        # Sanitize search query for filename (basic)
-        safe_search = "".join(c for c in search_query if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        if safe_search:
-            filename_parts.append(f"search_{safe_search[:20]}") # Limit name length
     if extra_suffix:
         filename_parts.append(extra_suffix)
     return "_".join(filename_parts)
@@ -864,6 +855,96 @@ def render_changed_by(value):
         escaped_model_name = str(value).replace('"', '&quot;').replace("'", "&#39;")
         return f'<span title="{escaped_model_name}">🖥️</span>'
 
+# --- BibTeX Generation Function ---
+def generate_bibtex_string(paper):
+    """
+    Generates a raw BibTeX entry string from a paper dictionary.
+    Excludes the abstract field.
+    Handles different entry types and common fields.
+    """
+    if not paper or not paper.get('id'):
+        return "Error: Paper ID missing."
+
+    entry_type = paper.get('type', 'misc').lower() # Default to 'misc' if type is missing
+    bibtex_key = paper['id'] # Use the database ID as the BibTeX key
+
+    # Map common database fields to BibTeX fields
+    field_mapping = {
+        'title': paper.get('title'),
+        'author': paper.get('authors'), # Assuming authors are stored as a semicolon-separated string, might need reformatting for BibTeX
+        'year': paper.get('year'),
+        'journal': paper.get('journal'),
+        'volume': paper.get('volume'),
+        'number': paper.get('number'), # Add number if it exists in DB (mapped from issue)
+        'pages': paper.get('pages'), # Already normalized, might need further cleaning for BibTeX range format
+        'doi': paper.get('doi'),
+        'issn': paper.get('issn'),
+        'month': paper.get('month'),
+        # Add other fields as needed, e.g., 'booktitle' for 'inproceedings'
+    }
+
+    # Handle author formatting (semicolon-separated to ' and ' separated, potentially)
+    # This is a simple conversion, might need refinement based on your exact storage format
+    if field_mapping['author']:
+        # Split by semicolon and join with ' and '
+        authors_list = [author.strip() for author in field_mapping['author'].split(';')]
+        field_mapping['author'] = ' and '.join(authors_list)
+
+    # Handle pages formatting for BibTeX range (e.g., "123 - 125" -> "123--125")
+    if field_mapping['pages']:
+        # Simple replacement, might need more robust parsing if formats vary significantly
+        # Remove spaces around hyphens/dashes and replace with double dash
+        import re
+        pages_str = field_mapping['pages']
+        # Replace spaces around various dash-like characters with double hyphen
+        field_mapping['pages'] = re.sub(r'\s*[-–—]\s*', '--', pages_str)
+
+    # Determine fields relevant to the entry type and build the entry
+    # This is a basic example, you might want to expand this mapping
+    type_required_fields = {
+        'article': ['title', 'author', 'journal', 'year'],
+        'inproceedings': ['title', 'author', 'booktitle', 'year'], # Note: booktitle, not journal
+        'book': ['title', 'author', 'publisher', 'year'],
+        'inbook': ['title', 'author', 'chapter', 'publisher', 'year'],
+        'incollection': ['title', 'author', 'booktitle', 'publisher', 'year'],
+        'techreport': ['title', 'author', 'institution', 'year'],
+        'phdthesis': ['title', 'author', 'school', 'year'],
+        'mastersthesis': ['title', 'author', 'school', 'year'],
+        'manual': ['title'],
+        'misc': ['title'], # Default, might add author, howpublished, note
+        'conference': ['title', 'author', 'booktitle', 'year'], # Treat like inproceedings
+    }
+
+    relevant_fields = type_required_fields.get(entry_type, ['title', 'author', 'year']) # Default fields
+
+    # Start building the BibTeX string
+    lines = [f"@{entry_type}{{{bibtex_key},"]
+    for field in relevant_fields:
+        value = field_mapping.get(field)
+        if value is not None and str(value).strip() != "": # Only add non-empty fields
+            # Basic escaping for common BibTeX characters if needed (e.g., #, {, }, $)
+            # bibtex_value = str(value).replace('{', '\\{').replace('}', '\\}') # Example
+            bibtex_value = str(value)
+            # Ensure proper quoting, using double quotes as standard
+            lines.append(f"  {field} = {{{bibtex_value}}},") # Use braces for safety
+
+    # Add other potentially relevant fields that aren't strictly "required"
+    other_fields = ['volume', 'number', 'pages', 'doi', 'issn', 'month']
+    for field in other_fields:
+        value = field_mapping.get(field)
+        if value is not None and str(value).strip() != "" and field not in relevant_fields:
+             bibtex_value = str(value)
+             lines.append(f"  {field} = {{{bibtex_value}}},") # Use braces
+
+    lines.append("}") # Close the entry
+    return "\n".join(lines)
+
+# --- Register the new filter ---
+@app.template_filter('bibtex')
+def bibtex_filter(paper):
+    """Jinja2 filter to generate a BibTeX string for a paper dictionary."""
+    return generate_bibtex_string(paper)
+
 @app.template_filter('render_changed_by')
 def render_changed_by_filter(value):
     # Use Markup to tell Jinja2 that the output is safe HTML
@@ -892,8 +973,6 @@ def index():
     year_from_param = request.args.get('year_from')
     year_to_param = request.args.get('year_to')
     min_page_count_param = request.args.get('min_page_count')
-
-    search_query_param = request.args.get('search_query')
         
     # Get the total number of papers in the database.
     conn = get_db_connection()
@@ -905,7 +984,6 @@ def index():
         year_from_param=year_from_param,
         year_to_param=year_to_param,
         min_page_count_param=min_page_count_param,
-        search_query_param=search_query_param,
     )
     # Pass the rendered table content and filter values to the main index template
     # Determine values to display in the input fields (use defaults if URL params were missing/invalid)
@@ -922,7 +1000,6 @@ def index():
     except ValueError:
         min_page_count_input_value = str(DEFAULT_MIN_PAGE_COUNT)
     hide_offtopic_checkbox_checked = hide_offtopic_param is None or hide_offtopic_param.lower() in ['1', 'true', 'yes', 'on']
-    search_input_value = search_query_param if search_query_param is not None else ""
 
     return render_template(
         'index.html',
@@ -931,7 +1008,6 @@ def index():
         year_from_value=year_from_input_value,
         year_to_value=year_to_input_value,
         min_page_count_value=min_page_count_input_value,
-        search_query_value=search_input_value,
         total_paper_count=total_paper_count
     )
 
@@ -947,7 +1023,7 @@ def backup_database():
         # Create temporary directory for exports
         with tempfile.TemporaryDirectory() as temp_dir:
             # Generate HTML export (full, not lite)
-            papers = fetch_papers(hide_offtopic=True, year_from=0, year_to=9999, min_page_count=0, search_query="")
+            papers = fetch_papers(hide_offtopic=True, year_from=0, year_to=9999, min_page_count=0)
             html_content = generate_html_export_content(papers, True, 0, 9999, 0, "", is_lite_export=False)
             html_path = os.path.join(temp_dir, 'export.html')
             with open(html_path, 'w', encoding='utf-8') as f:
@@ -1267,14 +1343,13 @@ def static_export():
     year_from_param = request.args.get('year_from')
     year_to_param = request.args.get('year_to')
     min_page_count_param = request.args.get('min_page_count')
-    search_query_param = request.args.get('search_query')
     # hidden params (usable, but not implemented in the Web client GUI):
     lite_param = request.args.get('lite', default='0')
     download_param = request.args.get('download', default='1')
 
     # --- Determine filter values ---
-    hide_offtopic, year_from_value, year_to_value, min_page_count_value, search_query_value = get_default_filter_values(
-        hide_offtopic_param, year_from_param, year_to_param, min_page_count_param, search_query_param
+    hide_offtopic, year_from_value, year_to_value, min_page_count_value= get_default_filter_values(
+        hide_offtopic_param, year_from_param, year_to_param, min_page_count_param
     )
 
     # --- Fetch papers based on these filters ---
@@ -1283,19 +1358,18 @@ def static_export():
         year_from=year_from_value,
         year_to=year_to_value,
         min_page_count=min_page_count_value,
-        search_query=search_query_value # Pass the search query
     )
 
     is_lite_export = lite_param.lower() in ['1', 'true', 'yes']
 
     # --- Generate the content using the core function ---
     full_html_content = generate_html_export_content(
-        papers, hide_offtopic, year_from_value, year_to_value, min_page_count_value, search_query_value, is_lite_export
+        papers, hide_offtopic, year_from_value, year_to_value, min_page_count_value, is_lite_export
     )
 
     # --- Create a filename based on filters ---
     extra_suffix = "lite" if is_lite_export else ""
-    filename = generate_filename("ResearchParça", year_from_value, year_to_value, min_page_count_value, hide_offtopic, search_query_value, extra_suffix) + ".html"
+    filename = generate_filename("ResearchParça", year_from_value, year_to_value, min_page_count_value, hide_offtopic, extra_suffix) + ".html"
 
     # --- Prepare Response Headers ---
     response_headers = {"Content-Type": "text/html"}
@@ -1320,11 +1394,10 @@ def export_excel():
     year_from_param = request.args.get('year_from')
     year_to_param = request.args.get('year_to')
     min_page_count_param = request.args.get('min_page_count')
-    search_query_param = request.args.get('search_query') # Include search
 
     # --- Determine filter values ---
-    hide_offtopic, year_from_value, year_to_value, min_page_count_value, search_query_value = get_default_filter_values(
-        hide_offtopic_param, year_from_param, year_to_param, min_page_count_param, search_query_param
+    hide_offtopic, year_from_value, year_to_value, min_page_count_value = get_default_filter_values(
+        hide_offtopic_param, year_from_param, year_to_param, min_page_count_param
     )
 
     # --- Fetch papers based on these filters ---
@@ -1333,14 +1406,13 @@ def export_excel():
         year_from=year_from_value,
         year_to=year_to_value,
         min_page_count=min_page_count_value,
-        search_query=search_query_value # Pass the search query
     )
 
     # --- Generate the content using the core function ---
     excel_bytes = generate_xlsx_export_content(papers)
 
     # --- Create a filename based on filters ---
-    filename = generate_filename("ResearchParça", year_from_value, year_to_value, min_page_count_value, hide_offtopic, search_query_value) + ".xlsx"
+    filename = generate_filename("ResearchParça", year_from_value, year_to_value, min_page_count_value, hide_offtopic) + ".xlsx"
 
     # --- Return as a downloadable attachment ---
     return Response(
@@ -1391,7 +1463,6 @@ def load_table():
     year_from_param = request.args.get('year_from')
     year_to_param = request.args.get('year_to')
     min_page_count_param = request.args.get('min_page_count')
-    search_query_param = request.args.get('search_query')
 
     # Use the updated helper function to render the table, passing the search query
     table_html = render_papers_table(
@@ -1399,7 +1470,6 @@ def load_table():
         year_from_param=year_from_param,
         year_to_param=year_to_param,
         min_page_count_param=min_page_count_param,
-        search_query_param=search_query_param # Pass the search query
     )
     return table_html
 

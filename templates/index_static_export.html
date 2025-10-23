@@ -18,6 +18,7 @@
     </style>
     <script>
     {{ chart_js_content | safe }}
+    {{ chart_js_datalabels_content | safe }}
     {{ d3_js_content | safe }}
     {{ d3_cloud_js_content | safe }}
     </script>
@@ -149,13 +150,13 @@
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="3">
                         <div>
                             <span>PCB</span>
-                            <input type="checkbox" title="Enable to include papers about PCB features" id="show-pcb-checkbox">   
+                            <input type="checkbox" title="Enable to include (or limit to if it's the only checkbox enabled) papers about PCB features." id="show-pcb-checkbox">
                         </div>
                     </th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="5">
                         <div>
                             <span>Solder</span>
-                            <input type="checkbox" title="Enable to include papers about solder features" id="show-solder-checkbox">
+                            <input type="checkbox" title="Enable to include (or limit to if it's the only checkbox enabled) papers about solder features" id="show-solder-checkbox">
                         </div>
                     </th>
                     <th class="inferred-header inferred-header-2 ontop-header" colspan="5">
@@ -172,7 +173,6 @@
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="8">Techniques</th>
                     <!-- <th class="inferred-header inferred-header-3 ontop-header" colspan="6">DL-based</th> -->
                     <th class="inferred-header inferred-header-3 ontop-header" colspan="1"></th>
-
                     <!-- Hidden metadata fields -->
                     <th style="display:none" colspan="5"></th>
                 </tr>

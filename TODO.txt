@@ -163,7 +163,7 @@ OK              deprecated fetchDetailRowLists()
 OK              deprecated /get_stats
 OK              deprecated FTS search
 
-OK      Shockingly massive performance improvement/fixes (>2~5x responsiveness with no functionality loss detected - still struggles with Chromium though):
+OK      Shockingly massive performance improvement/fixes (>2~5x responsiveness with no functionality loss detected):
 OK              Fix layout (col, colspans) reducing browser ambiguity;
 OK                        Pass HTML validation;
 OK              Refactor filtering.js:
@@ -173,23 +173,31 @@ OL                      Search directly onto hidden cells;
 OK                      Extensive caching;
 OK              Add CSS media query for weak HiDPI laptops:
 OK                      Force-disable most eyecandy entirely if density is larger than most desktops (as it's likely a ~4K laptop suffering on battery);
-OK                              Backdrop-filtering alone was mauling the poor UHD 620 on the 4K C630 Yoga Chromebook...
+OK                              Backdrop-filtering alone was mauling the poor UHD 620 on the 4K C630 Yoga ex-Chromebook...
 
 OK      Refactor stats.js for smaller functions
 OK              Fix cumulative stacked charts not stacking in right order
-OK              Stop reloading cloud when changing charts
-OK              Stop reloading all charts when changing only some of them
 OK              Fix blurry cloud;
 OK              Fix blurry charts on 1.25 DPR displays;
+OK              Stop reloading cloud when changing charts
+OK              Stop reloading all charts when changing only some of them
 OK              Fix lagging when changing charts
 
 Ok      Integrate embedded emoji favicons
 OK      Adapt flatten.py to autoflatten latest version of all relevant code (e.g skipping libraries)
 
-        Fix ugly checkboxes
-OK                Show negative vs positive checkboxes differently
+OK      Add client filters to URL       
+OK                Respect defaults from HTML
+OK      Add searchable authors/keywords
 
-        Add automatic ABNT? citation to detail pane
+OK      Fix broken !editable_content sorting
+
+OK      Add BibTeX citation on detail row
+
+OK      Add pie labels
+
+        Improve ugly/inconsistent default checkboxes
+OK                Show negative vs positive checkboxes differently (tri-state) 
 
         Refactor browse_db.py (too large)?
 OK              Getting rid of server-side stats and search already reduced it a bit, still unwieldy;

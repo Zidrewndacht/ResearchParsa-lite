@@ -1100,6 +1100,32 @@ li {
 }
 
 
+/* Style for the clickable items (authors, keywords) */
+.clickable-item {
+    /* background-color: #f0f8ff; 
+    /* border: 1px solid #87ceeb;*/
+    border-radius: 5px;
+    padding: 3px 5px;
+    margin: 0;
+    /* display: inline-block; */
+    cursor: pointer;
+    font-size: 0.85em;
+    opacity: 0.7;
+    transition: 0.33s all ease;
+}
+
+.clickable-item:hover {
+    background-color: #e0f0ff; /* Slightly darker on hover */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    opacity: 1;
+}
+
+/* Optional: Style for the container spans if needed */
+.clickable-authors, .clickable-keywords {
+    /* line-height: 1.25; */
+    text-align: justify;
+}
+
 
 @media screen and (max-width:1880px) {
     body {
@@ -1151,38 +1177,19 @@ li {
 /* Media query for high device pixel ratio (HiDPI) screens */
 /* This targets the *physical* pixel density of the screen */
 @media screen and (min-resolution: 2dppx) { /* Minimum 2 device pixels per CSS pixel */
-  /* Alternatively, you could use: */
-  /* @media screen and (-webkit-min-device-pixel-ratio: 2) { /* For older WebKit */
-  /* Or a combination: */
-  /* @media screen and (min-resolution: 192dpi) { /* Approximately 2dppx */
-
   /* Disable demanding visual effects on HiDPI screens */
   * {
-    /* Disable transitions and animations */
-    /* transition: none !important; */
-    /* animation: none !important; */
-
-    /* Disable shadows */
-    /* box-shadow: none !important; */
-
-    /* Disable backdrop filter (very demanding) */
     backdrop-filter: none !important;
-
-    /* Disable blur filters (if applied elsewhere) */
-    /* filter: none !important; /* This might reset hue/saturation adjustments too */
   }
-
   /* Specifically target the most demanding transition */
   .detail-flex-container {
     /* Overrides max-height/opacity transitions */
     transition: none !important;
-    /* You might want to set a fixed height or rely on content flow instead */
-    /* max-height: none !important; */ /* Or a large fixed value */
   }
 
   /* Target the spinner animation */
   .loading-spinner {
-    animation: spin 1.5s linear infinite !important; /* Removes the spin animation */
+    animation: spin 1.5s linear infinite !important; /* Slows down the spin animation */
   }
 
   /* Target the modal backdrop filter specifically */
@@ -1192,14 +1199,12 @@ li {
     background: #eeed
   }
 
-  /* Target the modal transform for smoother display if transitions are off */
   .modal-content,
   .modal-small-content,
   #batch-actions,
   #import-actions,
   #export-actions {
     transform: none !important; /* Removes initial modal scaling/rotation */
-    /* transition: none !important; /* Ensures no transition occurs */
   }
 
   /* Target potential hover effects causing frequent redraws */
@@ -1210,10 +1215,9 @@ li {
   .toggle-btn:hover {
     /* Override any hover effects that might rely on transitions or filters */
     transform: none !important; /* Removes scale */
-    /* Keep background color change if needed for visual feedback */
   }
     #batch-actions, #import-actions, #export-actions{
-        background:  var(--detail-button-background) /*remove translucid background as it requires backdrop-filter*/
+        background:  var(--detail-button-background) /*remove translucid background as it requires backdrop-filter for legibility*/
     }
 
 }

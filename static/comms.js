@@ -310,6 +310,35 @@ function toggleDetails(element) {   //has server-based logic
             .then(data => {
                 if (data.status === 'success' && data.html) {
                     contentPlaceholder.innerHTML = data.html;
+
+                    // --- ADD EVENT LISTENER AFTER INSERTING HTML ---
+                    // Find the newly inserted detail content container
+                    const detailContainer = contentPlaceholder; // Or find a more specific container within contentPlaceholder if needed
+
+                    // Add event listener for clicks on clickable items within this specific detail row
+                    if (detailContainer) {
+                        detailContainer.addEventListener('click', function(event) {
+                            // Check if the clicked element is a clickable item
+                            if (event.target.classList.contains('clickable-item')) {
+                                event.preventDefault(); // Prevent any default action if necessary
+                                const searchTerm = event.target.getAttribute('data-search-term');
+                                const searchField = event.target.getAttribute('data-search-field'); // Optional
+
+                                if (searchTerm) {
+                                    // Set the search input value
+                                    searchInput.value = searchTerm.trim();
+                                    // Close the stats modal if it's open (optional)
+                                    // closeModal(); // Assuming closeModal is defined elsewhere or not needed here
+                                    // Apply the filters to update the table
+                                    applyLocalFilters();
+                                }
+                            }
+                        });
+                    } else {
+                        console.warn("Detail container for click delegation not found for paper", paperId);
+                    }
+                    // --- END ADD EVENT LISTENER ---
+
                 } else {  // Handle error from server
                     console.error(`Error loading detail row for paper ${paperId}:`, data.message);
                     if (contentPlaceholder) {
@@ -325,6 +354,7 @@ function toggleDetails(element) {   //has server-based logic
             });
     }
 }
+
 
 function applyServerSideFilters() {     //moved from filtering as it has server-based
     document.documentElement.classList.add('busyCursor');

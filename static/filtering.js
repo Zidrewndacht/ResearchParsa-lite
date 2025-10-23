@@ -281,11 +281,75 @@ function compileSearchRegex(searchTerm) {
     }
 }
 
+// Add this function to get current client filter state
+function getClientFilterState() {
+    return {
+        hide_xray: hideXrayCheckbox.checked ? 1 : 0,
+        hide_approved: hideApprovedCheckbox.checked ? 1 : 0,
+        hide_offtopic: hideOfftopicCheckbox.checked ? 1 : 0,
+        survey_filter: currentSurveyFilterState,
+        show_pcb: showPCBcheckbox.checked ? 1 : 0,
+        show_solder: showSolderCheckbox.checked ? 1 : 0,
+        show_pcba: showPCBAcheckbox.checked ? 1 : 0,
+        show_other: showOtherCheckbox.checked ? 1 : 0,
+        no_features: noFeaturesCheckbox.checked ? 1 : 0,
+        search: searchInput.value.trim()
+    };
+}
+
+let urlUpdateTimeout;
+function updateUrlWithClientFilters() {
+    clearTimeout(urlUpdateTimeout);
+    urlUpdateTimeout = setTimeout(() => {
+        const url = new URL(window.location);
+        const clientFilters = getClientFilterState();
+        
+        for (const [key, value] of Object.entries(clientFilters)) {
+            if (value === 0 || value === "" || value === "all") {
+                url.searchParams.delete(key);
+            } else {
+                url.searchParams.set(key, value);
+            }
+        }
+        window.history.replaceState({}, '', url);
+    }, 100); // Debounce by 100ms
+}
+
+
+
 let rafId = 0;
 function applyLocalFilters() {
     clearTimeout(filterTimeoutId);
     document.documentElement.classList.add('busyCursor');
     cancelAnimationFrame(rafId)
+
+    // --- NEW: Close all currently expanded detail rows BEFORE applying new filters ---
+    // This ensures a clean state after filtering/searching.
+    // Find all rows that are currently expanded
+    const expandedDetailRows = document.querySelectorAll('tr.detail-row.expanded');
+    expandedDetailRows.forEach(detailRow => {
+        // Find the corresponding main row (the one before the detail row)
+        const mainRow = detailRow.previousElementSibling; // Should be the main paper row
+        if (mainRow && mainRow.matches('tr[data-paper-id]')) { // Ensure it's the right type of row
+            // Find the toggle button within the main row
+            const toggleButton = mainRow.querySelector('.toggle-btn'); // Adjust selector if needed
+            if (toggleButton) {
+                // Remove the 'expanded' class from the detail row
+                detailRow.classList.remove('expanded');
+                // Update the button text back to 'Show'
+                toggleButton.innerHTML = '<span>Show</span>';
+                // Optional: Remove any specific listeners added dynamically to this detail row's content container if applicable
+                // e.g., if you stored listeners on the container like in the previous static export example:
+                // const container = detailRow.querySelector('.detail-flex-container');
+                // if (container && container._clickableItemListener) {
+                //     container.removeEventListener('click', container._clickableItemListener);
+                //     container._clickableItemListener = null;
+                // }
+            }
+        }
+    });
+    // --- END NEW ---
+
     filterTimeoutId = setTimeout(() => { 
         // --- Pre-cache data for all rows to avoid repeated DOM queries ---
         const rows = tbody.querySelectorAll('tr[data-paper-id]');
@@ -542,6 +606,7 @@ function applyLocalFilters() {
                 applyButton.style.opacity = '0';
                 applyButton.style.pointerEvents = 'none';
             }
+            updateUrlWithClientFilters();
             updateCounts();
             document.documentElement.classList.remove('busyCursor');
         });
@@ -559,12 +624,21 @@ const SORT_COLUMN_INDICES = {
     'pdf-link': pdfCellIndex
 };
 
+// Define fields that do NOT use the .editable-status selector for sorting
+// These will be sorted using their direct cell text content, but still potentially using SYMBOL_SORT_WEIGHTS if they contain symbols.
+const NON_EDITABLE_STATUS_FIELDS = new Set([
+    'user_comment_state', // Commented
+    'features_other_state', // Other (Features)
+    'type'                // Type
+    // Add other non-editable status fields here if any are discovered later
+    // e.g., 'some_other_field_name'
+]);
+
 function sortTable() {
     document.documentElement.classList.add('busyCursor');
-
     setTimeout(() => {
         const sortBy = this.getAttribute('data-sort');
-        if (!sortBy) return;
+        if (!sortBy) return; // Guard clause if data-sort is missing
 
         let newDirection = 'DESC';
         if (currentClientSort.column === sortBy) {
@@ -572,16 +646,21 @@ function sortTable() {
         }
 
         // --- PRE-PROCESS: Extract Sort Values and Row References ---
-        // Get visible rows BEFORE sorting potentially changes their order in the DOM
         const visibleMainRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
+        // Calculate the header index based on the clicked header's position
         const headerIndex = Array.prototype.indexOf.call(this.parentNode.children, this);
         const sortData = new Array(visibleMainRows.length);
-        let sortIndex = 0;
 
-        // Pre-calculate sort type to avoid repeated checks
+        // Pre-calculate sort type to avoid repeated checks inside the loop
         const isNumericSort = ['year', 'estimated_score', 'page_count', 'relevance'].includes(sortBy);
-        const isStatusSort = !['title', 'year', 'journal', 'page_count', 'estimated_score', 'relevance', 'pdf-link'].includes(sortBy);
+        const isPDFSort = sortBy === 'pdf-link';
+        // Determine if this field is a status field that uses .editable-status
+        // It's a status sort if it's not numeric, not PDF, not explicitly in the non-editable set, and not in the text-only set.
+        // The original 'isStatusSort' logic was implicitly: not numeric and not 'pdf-link' and not 'title'/'journal'/etc.
+        // So, it covered *most* status fields. We refine by excluding non-editable ones.
+        const isEditableStatusSort = !isNumericSort && !isPDFSort && !NON_EDITABLE_STATUS_FIELDS.has(sortBy);
 
+        let sortIndex = 0;
         for (let i = 0; i < visibleMainRows.length; i++) {
             const mainRow = visibleMainRows[i];
             const paperId = mainRow.getAttribute('data-paper-id');
@@ -589,37 +668,47 @@ function sortTable() {
 
             // --- Extract cell value based on column type ---
             if (isNumericSort) {
-                const cell = mainRow.cells[headerIndex];
+                const cell = mainRow.cells[headerIndex]; // Use the direct cell index
                 cellValue = cell ? parseFloat(cell.textContent.trim()) || 0 : 0;
-            } else if (sortBy === 'pdf-link') {
-                const cell = mainRow.cells[headerIndex];
-                cellValue = SYMBOL_PDF_WEIGHTS[cell?.textContent.trim()] ?? 0;
-            } else if (isStatusSort) {
+            } else if (isPDFSort) {
+                 const cell = mainRow.cells[headerIndex]; // Use the direct cell index
+                 cellValue = SYMBOL_PDF_WEIGHTS[cell?.textContent.trim()] ?? 0;
+            } else if (isEditableStatusSort) {
+                // Use the selector for editable status cells (most status fields)
                 const cell = mainRow.querySelector(`.editable-status[data-field="${sortBy}"]`);
+                // Use SYMBOL_SORT_WEIGHTS for sorting based on symbols like ✔️, ❌, ❔
                 cellValue = SYMBOL_SORT_WEIGHTS[cell?.textContent.trim()] ?? 0;
-            } else { // Text columns
+            } else { // Text columns or other non-editable status columns treated as text
+                // Use the direct cell index for text sorts (e.g., title, journal)
                 const cell = mainRow.cells[headerIndex];
-                cellValue = cell ? cell.textContent.trim() : '';
+                const cellText = cell ? cell.textContent.trim() : '';
+                // *** CHANGE: Check if this NON_EDITABLE_STATUS_FIELDS column contains symbols and apply weights ***
+                if (NON_EDITABLE_STATUS_FIELDS.has(sortBy)) {
+                    // Assume these fields also contain symbols like ✔️, ❌, ❔ and should be sorted by weight
+                    cellValue = SYMBOL_SORT_WEIGHTS[cellText] ?? 0; // Use weight, default to 0 if symbol not found
+                } else {
+                    // For truly text columns like 'title', 'journal', use the raw text
+                    cellValue = cellText;
+                }
             }
 
-            // Use rowCache.get(mainRow) to get cached data for secondary sort key (if needed)
-            // For example, if you wanted to use journalText or titleText for secondary sort on text columns:
-            // const cachedData = rowCache.get(mainRow);
-            // const secondarySortKey = cachedData ? cachedData.titleText || cachedData.journalText || paperId : paperId;
-            // However, the original code used paperId for secondary sort, which is fine and more stable for text sorts.
             const detailRow = mainRow.nextElementSibling; // Get the associated detail row
             sortData[sortIndex] = { value: cellValue, mainRow, detailRow, paperId };
             sortIndex++;
         }
 
+        // --- SORT the data array ---
         sortData.sort((a, b) => {
             let comparison = 0;
+            // Compare the extracted values
             if (a.value > b.value) comparison = 1;
             else if (a.value < b.value) comparison = -1;
-            else {  // Secondary sort by paperId to ensure stable sort
+            else {
+                // If values are equal, sort by paperId as a secondary key to ensure stability
                 if (a.paperId > b.paperId) comparison = 1;
                 else if (a.paperId < b.paperId) comparison = -1;
             }
+            // Return based on the desired sort direction
             return newDirection === 'DESC' ? -comparison : comparison;
         });
 
@@ -643,19 +732,23 @@ function sortTable() {
             }
             updateCounts();
         });
+
+        // Update the global sort state
         currentClientSort = { column: sortBy, direction: newDirection };
+        // Clear indicators on all headers
         document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
+        // Set the indicator on the clicked header
         const indicator = this.querySelector('.sort-indicator');
         if (indicator) {
             indicator.textContent = newDirection === 'ASC' ? '▲' : '▼';
         }
-        // 3. Schedule removal of the busy cursor class AFTER a guaranteed delay
+
+        // Remove the busy cursor after a short delay
         setTimeout(() => {
             document.documentElement.classList.remove('busyCursor');
         }, 150); // Delay slightly longer than CSS delay
     }, 20); // Initial defer for adding busy cursor
 }
-
 // --- Add F3 Shortcut ---
 document.addEventListener('keydown', function(event) {
     // Check if F3 key is pressed
@@ -675,9 +768,57 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
+// Add this function to initialize client filters from DOM state and URL
+function initializeClientFilters() {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // For each checkbox, if there's a URL parameter, use it to set the state
+    // Otherwise, keep the existing DOM state
+    const checkboxParams = {
+        'hide_xray': hideXrayCheckbox,
+        'hide_approved': hideApprovedCheckbox,
+        'hide_offtopic': hideOfftopicCheckbox,
+        'show_pcb': showPCBcheckbox,
+        'show_solder': showSolderCheckbox,
+        'show_pcba': showPCBAcheckbox,
+        'show_other': showOtherCheckbox,
+        'no_features': noFeaturesCheckbox
+    };
+
+    for (const [param, checkbox] of Object.entries(checkboxParams)) {
+        const paramValue = urlParams.get(param);
+        if (paramValue !== null) {
+            // If URL parameter exists, set checkbox accordingly
+            checkbox.checked = paramValue === '1';
+        }
+        // If no URL parameter, keep existing DOM state
+    }
+    
+    // Handle search input
+    const searchValueFromUrl = urlParams.get('search');
+    if (searchValueFromUrl !== null) {
+        searchInput.value = searchValueFromUrl;
+    }
+    
+    // Handle survey filter state
+    const surveyFilterValue = urlParams.get('survey_filter');
+    if (surveyFilterValue) {
+        currentSurveyFilterState = surveyFilterValue;
+    } else {
+        // If no URL parameter, keep the default or existing state
+        // The default is already set in the global variable
+    }
+    
+    updateSurveyCheckboxUI();
+    
+    // Update URL to reflect initial state (this ensures the URL is clean and consistent)
+    updateUrlWithClientFilters();
+}
+
 // Existing DOMContentLoaded listener and other code follows...
 document.addEventListener('DOMContentLoaded', function () {
-    // ... (your existing code inside DOMContentLoaded)
+    // Apply client filters from URL first
+    initializeClientFilters();
     hideXrayCheckbox.addEventListener('change', applyLocalFilters);
     hideApprovedCheckbox.addEventListener('change', applyLocalFilters);
     onlySurveyCheckbox.addEventListener('click', cycleSurveyFilterState);

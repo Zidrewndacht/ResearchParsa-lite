@@ -97,10 +97,26 @@
         <td colspan="42">
             <div class="detail-flex-container">
                 <div class="detail-content detail-abstract">
-                    <p><strong>Abstract:</strong> {{ paper.abstract or 'No abstract available.' }}</p>
+                    <p><strong>Abstract:</strong> {{ paper.abstract }}</p>
+                    <p><strong>Keywords:</strong>
+                        <span class="clickable-keywords">
+                            {% if paper.keywords %}
+                                {% set keywords_list = paper.keywords.split(';') %}
+                                {% for keyword in keywords_list %}
+                                    {% set trimmed_keyword = keyword.strip() %}
+                                    {% if trimmed_keyword %}
+                                        <span class="clickable-item" data-search-field="keywords" data-search-term="{{ trimmed_keyword }}">🔍{{ trimmed_keyword }}{% if not loop.last %}; {% endif %}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                {{ paper.keywords }} <!-- In case it's empty or None -->
+                            {% endif %}
+                        </span>
+                    </p>
                 </div>
+
                 <div class="detail-content detail-metadata">
-                    <p><strong>Keywords:</strong> {{ paper.keywords }}</p>
+                    <p><strong>ID:</strong> {{ paper.id }}</p>
                     <p><strong>Type:</strong> {{ paper.type }}</p>
                     <p><strong>DOI:</strong>
                         {% if paper.doi %}
@@ -108,12 +124,27 @@
                         {% else %}
                             {{ paper.doi }}
                         {% endif %}
+                    <strong> — ISSN:</strong> {{ paper.issn }}</p>
+                    <p><strong>Authors:</strong>
+                        <span class="clickable-authors">
+                            {% if paper.authors %}
+                                {% set authors_list = paper.authors.split(';') %}
+                                {% for author in authors_list %}
+                                    {% set trimmed_author = author.strip() %}
+                                    {% if trimmed_author %}
+                                        <span class="clickable-item" data-search-field="authors" data-search-term="{{ trimmed_author }}">🔍{{ trimmed_author }}{% if not loop.last %}; {% endif %}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                {{ paper.authors }} <!-- In case it's empty or None -->
+                            {% endif %}
+                        </span>
                     </p>
-                    <p><strong>ISSN:</strong> {{ paper.issn }}</p>
-                    <p><strong>Pages:</strong> {{ paper.pages }}</p>
-                    <p><strong>ID:</strong> {{ paper.id }}</p>
-                    <p><strong>Full Authors:</strong> {{ paper.authors }}</p>
                     <p><strong>Year:</strong> {{ paper.year }}</p>
+                    <p><strong>Pages:</strong> {{ paper.pages }}</p>
+                    
+                    <p><strong>BibTeX Citation:</strong></p>
+                    <pre style="overflow:scroll">{{ paper | bibtex }}</pre>
                 </div>
                 <div class="edit-section detail-edit">
                     <form id="form-{{ paper.id }}" data-paper-id="{{ paper.id }}">
@@ -136,9 +167,11 @@
                             <textarea class="editable" name="user_trace" disabled>{{ paper.user_trace or '' }}</textarea>
                         </label>
                         <div class="row-actions">
-                            <button type="button" class="action-btn classify-btn" data-paper-id="{{ paper.id }}" disabled>Classify <strong>this paper</strong></button>
-                            <button type="button" class="action-btn verify-btn" data-paper-id="{{ paper.id }}" disabled>Verify <strong>this paper</strong></button>
-                            <button type="button" class="action-btn save-btn" onclick="saveChanges('{{ paper.id }}')" disabled>Save Changes</button>
+                            <div>
+                                <button type="button" class="action-btn classify-btn" data-paper-id="{{ paper.id }}">Classify <strong>this paper</strong></button>
+                                <button type="button" class="action-btn verify-btn" data-paper-id="{{ paper.id }}">Verify <strong>this paper</strong></button>
+                            </div>
+                            <button type="button" class="action-btn save-btn" onclick="saveChanges('{{ paper.id }}')">Save Changes</button>
                         </div>
                     </form>
                 </div>
