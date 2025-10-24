@@ -328,12 +328,15 @@ input[type=search]::-webkit-input-placeholder {
 form label {
     display: block;
     font-weight: 700;
-    line-height: 2em
+    line-height: 1.em;
+    border: 1px solid #dadada;
+    border-radius: 6px;
+    padding: 6px;
+    margin: 2px;
+    background: #ffffffa0;
+    font-size: 10pt;
 }
 
-form input[type=text] {
-    margin-bottom: 10px
-}
 
 .changed-by-cell,.changed-cell {
     font-size: 9.5pt;
@@ -414,12 +417,12 @@ form input[type=text] {
 }
 
 .detail-edit input[type=text] {
-    padding: 6px;
-    border: 1px solid #dadada;
+    /*! padding: 6px; */
+    border: 0px solid #dadada;
     border-radius: 5px;
     font-family: inherit;
-    font-size: 1em;
-    background: #ffffffa0
+    font-size: 12pt;
+    background: #ffffffa0;
 }
 
 .save-btn {
@@ -753,12 +756,12 @@ tr.filter-hidden {
     height: 100%;
     box-sizing: border-box;
     min-height: 150px;
-    border-radius: 5px;
+    border-radius: 4px;
     display: block;
     resize: none;
     background: #ffffffa0;
-    border: 1px solid #dadada;
-    padding: 8px;
+    border: 0px solid #dadada;
+    /*! padding: 8px; */
     font-family: consolas, monospace;
     font-size: 0.9em;
     line-height: 1.25em;
@@ -1196,7 +1199,7 @@ li {
   .loading-overlay,
   .modal {
     backdrop-filter: none !important;
-    background: #eeed
+    background: #eeee
   }
 
   .modal-content,
