@@ -126,7 +126,7 @@ function sendAjaxRequest(cell, dataToSend, currentText, row, paperId, field) {
                 }
             }
             updateCounts();
-            console.log(`Quick save successful for ${paperId} field ${field}`);
+            //console.log(`Quick save successful for ${paperId} field ${field}`);
         } else {
             console.error('Quick save error:', data.message);
             cell.textContent = currentText; // Revert text
@@ -288,48 +288,44 @@ function saveChanges(paperId) {
     });
 }
 
-
-
-function toggleDetails(element) {   //has server-based logic
+function toggleDetails(element) {
     const row = element.closest('tr');
     const detailRow = row.nextElementSibling;
     const isExpanded = detailRow && detailRow.classList.contains('expanded');
     const paperId = row.getAttribute('data-paper-id');
 
     if (isExpanded) {
+        // Hiding the detail row
         detailRow.classList.remove('expanded');
         element.innerHTML = '<span>Show</span>';
+        // Remove ID from set and update URL
+        openDetailIds.delete(paperId);
+        updateUrlWithDetailState(); // Update URL immediately after hiding
+        //console.log(`Closed detail for ${paperId}, set now:`, [...openDetailIds]); // Debug log
     } else {
+        // Showing the detail row
         detailRow.classList.add('expanded');
         element.innerHTML = '<span>Hide</span>';
+        // Add ID to set immediately, update URL after potential fetch
+        openDetailIds.add(paperId);
+        updateUrlWithDetailState(); // Update URL immediately after showing
+        //console.log(`Opened detail for ${paperId}, set now:`, [...openDetailIds]); // Debug log
+
         const contentPlaceholder = detailRow.querySelector('.detail-content-placeholder');
         fetch(`/get_detail_row?paper_id=${encodeURIComponent(paperId)}`)
-            .then(response => {
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if (data.status === 'success' && data.html) {
                     contentPlaceholder.innerHTML = data.html;
-
                     // --- ADD EVENT LISTENER AFTER INSERTING HTML ---
-                    // Find the newly inserted detail content container
-                    const detailContainer = contentPlaceholder; // Or find a more specific container within contentPlaceholder if needed
-
-                    // Add event listener for clicks on clickable items within this specific detail row
+                    const detailContainer = contentPlaceholder;
                     if (detailContainer) {
                         detailContainer.addEventListener('click', function(event) {
-                            // Check if the clicked element is a clickable item
                             if (event.target.classList.contains('clickable-item')) {
-                                event.preventDefault(); // Prevent any default action if necessary
+                                event.preventDefault();
                                 const searchTerm = event.target.getAttribute('data-search-term');
-                                const searchField = event.target.getAttribute('data-search-field'); // Optional
-
                                 if (searchTerm) {
-                                    // Set the search input value
                                     searchInput.value = searchTerm.trim();
-                                    // Close the stats modal if it's open (optional)
-                                    // closeModal(); // Assuming closeModal is defined elsewhere or not needed here
-                                    // Apply the filters to update the table
                                     applyLocalFilters();
                                 }
                             }
@@ -337,20 +333,28 @@ function toggleDetails(element) {   //has server-based logic
                     } else {
                         console.warn("Detail container for click delegation not found for paper", paperId);
                     }
-                    // --- END ADD EVENT LISTENER ---
-
-                } else {  // Handle error from server
+                } else {
                     console.error(`Error loading detail row for paper ${paperId}:`, data.message);
                     if (contentPlaceholder) {
                         contentPlaceholder.innerHTML = `<p>Error loading details: ${data.message || 'Unknown error'}</p>`;
                     }
+                    // If fetch fails, maybe remove the ID again? Or keep it if the error is temporary?
+                    // For now, let's keep it as the user intended to open it.
+                    // openDetailIds.delete(paperId); // Maybe not?
                 }
+                // Update URL after content is loaded (or attempted) - redundant here as it's already updated above
+                // updateUrlWithDetailState(); // Probably not needed again immediately
             })
-            .catch(error => {  // Handle network or other errors
+            .catch(error => {
                 console.error(`Error fetching detail row for paper ${paperId}:`, error);
                 if (contentPlaceholder) {
                     contentPlaceholder.innerHTML = `<p>Error loading details: ${error.message}</p>`;
                 }
+                 // If fetch fails, maybe remove the ID again? Or keep it if the error is temporary?
+                 // For now, let's keep it as the user intended to open it.
+                 // openDetailIds.delete(paperId); // Maybe not?
+                 // Update URL even if fetch fails - already updated above
+                 // updateUrlWithDetailState(); // Probably not needed again immediately
             });
     }
 }
@@ -462,7 +466,7 @@ function uploadPDFForPaper(paperId) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            console.log("PDF uploaded successfully for paper ID:", paperId);
+            //console.log("PDF uploaded successfully for paper ID:", paperId);
             // Update the table row with the new PDF info
             // Pass the filename and state received from the server
             updateTableRowWithPDFData(paperId, data.pdf_filename, data.pdf_state);
@@ -527,7 +531,7 @@ document.addEventListener('click', function(event) {
             return;
         }
 
-        console.log("Attempting upload for paper ID:", paperId); // Debug log
+        //console.log("Attempting upload for paper ID:", paperId); // Debug log
 
         // Reset the file input to allow selecting the same file again
         pdfFileInput.value = '';
@@ -900,7 +904,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             }
                         }
                         updateCounts();
-                        console.log(`${actionType.charAt(0).toUpperCase() + actionType.slice(1)} successful for paper ${paperId}`);
+                        //console.log(`${actionType.charAt(0).toUpperCase() + actionType.slice(1)} successful for paper ${paperId}`);
                     }
                 } else {
                     console.error(`${actionType.charAt(0).toUpperCase() + actionType.slice(1)} error for paper ${paperId}:`, data.message);
@@ -975,7 +979,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(data => {
                 if (data.status === 'success') {
-                    console.log(data.message);
+                    //console.log(data.message);
                     if (batchStatusMessage) {
                         batchStatusMessage.textContent = data.message;
                         batchStatusMessage.style.color = 'green'; // Success color
@@ -1013,7 +1017,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- Export HTML Button ---
     const exportHtmlBtn = document.getElementById('export-html-btn');
     exportHtmlBtn.addEventListener('click', function() {
-        console.log("Export HTML button clicked");
+        //console.log("Export HTML button clicked");
         // Gather current filter values from the UI elements
         const hideOfftopicCheckbox = document.getElementById('hide-offtopic-checkbox');
         const yearFromInput = document.getElementById('year-from');
@@ -1043,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Remove trailing '&' or '?' if present
         exportUrl = exportUrl.replace(/&$/, '');
 
-        console.log("Export URL:", exportUrl);
+        //console.log("Export URL:", exportUrl);
 
         // --- Trigger the download asynchronously ---
         // Create a temporary invisible anchor element
@@ -1075,7 +1079,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Construct the URL for the Excel export endpoint
         const exportUrl = `/xlsx_export?${exportUrlParams.toString()}`;
-        console.log("Exporting Excel with URL:", exportUrl);
+        //console.log("Exporting Excel with URL:", exportUrl);
 
         // Trigger the download
         window.location.href = exportUrl;
@@ -1087,7 +1091,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     backupBtn.addEventListener('click', function() {
         document.documentElement.classList.add('busyCursor');
-        console.log("Backup button clicked");
+        //console.log("Backup button clicked");
 
         backupStatusMessage.textContent = 'Creating backup...';
         backupStatusMessage.style.color = '';
@@ -1141,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     restoreBtn.addEventListener('click', function() {
-        console.log("Restore button clicked");
+        //console.log("Restore button clicked");
         
         // Create file input for backup selection
         const fileInput = document.createElement('input');
@@ -1175,7 +1179,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 document.documentElement.classList.add('busyCursor');
                 if (data.status === 'success') {
-                    console.log(data.message);
+                    //console.log(data.message);
                     backupStatusMessage.textContent = data.message;
                     backupStatusMessage.style.color = 'green';
                     

@@ -565,7 +565,7 @@ tr.filter-hidden {
 
 #counts-footer {
     position: sticky;
-    bottom: -1px;
+    bottom: 0px;
     z-index: 998;
     border-radius: 6px
 }

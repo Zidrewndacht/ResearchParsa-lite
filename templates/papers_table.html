@@ -38,7 +38,7 @@
         <td class="secondary-text-cell number-cell">{{ paper.year or '' }}</td>
         <td class="secondary-text-cell number-cell">{{ paper.page_count or '' }}</td>
         <td class="secondary-text-cell">{{ paper.journal }}</td>        
-        <td class="status-cell" title="{{ paper.type }}">{{ type_emojis.get(paper.type, default_type_emoji) }}
+        <td class="status-cell" title="{{ paper.type }}">{{ type_emojis.get(paper.type, default_type_emoji) }}</td>
 
         <td class="status-cell editable-status" data-field="is_offtopic">{{ paper.is_offtopic | render_status }}</td>
         <td class="secondary-text-cell number-cell">{{ paper.relevance or '' }}</td>

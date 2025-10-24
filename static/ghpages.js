@@ -8,71 +8,61 @@ const yearToInput = document.getElementById('year-to');
 const allRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]');
 const totalPaperCount = allRows.length;
 
-// --- NEW/OVERWRITTEN toggleDetails function for GH Export ---
-function toggleDetails(element) {   //this function is specific to GH Export!
+function toggleDetails(element) {
     const row = element.closest('tr');
-    const detailRow = row.nextElementSibling; // Get the immediately following detail row
+    const detailRow = row.nextElementSibling;
     const isExpanded = detailRow && detailRow.classList.contains('expanded');
-    const paperId = row.getAttribute('data-paper-id'); // Get the paper ID from the main row
+    const paperId = row.getAttribute('data-paper-id');
 
     if (isExpanded) {
         // Hiding the detail row
         if (detailRow) {
             detailRow.classList.remove('expanded');
-            // Remove the specific listener added for this detail row (optional but good practice)
-            // We can use the paperId to identify the listener if needed, but simple removal on hide works.
-            // Since the listener is on the detail row itself, removing the class hides it,
-            // and the listener remains on the container, which is fine.
+            // Remove listener if stored
+            const detailContentContainer = detailRow.querySelector('.detail-flex-container');
+            if (detailContentContainer && detailContentContainer._clickableItemListener) {
+                 detailContentContainer.removeEventListener('click', detailContentContainer._clickableItemListener);
+                 detailContentContainer._clickableItemListener = null;
+            }
         }
         element.innerHTML = '<span>Show</span>';
+        // Remove ID from set and update URL
+        openDetailIds.delete(paperId);
+        updateUrlWithDetailState(); // Update URL immediately after hiding
+        //console.log(`Closed detail for ${paperId}, set now:`, [...openDetailIds]); // Debug log
     } else {
         // Showing the detail row
         if (detailRow) {
             detailRow.classList.add('expanded');
-            // Ensure the listener is active for this specific detail row now that it's visible
-            // We attach the listener to the detail row container itself to scope it.
-            // This listener will catch clicks on .clickable-item elements within *this* specific detail row.
-            const detailContentContainer = detailRow.querySelector('.detail-flex-container'); // Target the content container within the detail row
-
+            const detailContentContainer = detailRow.querySelector('.detail-flex-container');
             if (detailContentContainer) {
-                 // Remove any existing listener from this container to prevent duplicates if toggled multiple times
-                 // A simple way is to remove and re-add the event listener.
-                 // Store the listener function for removal if it already exists.
                  if (detailContentContainer._clickableItemListener) {
                      detailContentContainer.removeEventListener('click', detailContentContainer._clickableItemListener);
                  }
-
                  const clickableItemListener = function(event) {
-                     // Check if the clicked element is a clickable item within this detail row
                      if (event.target.classList.contains('clickable-item')) {
-                         event.preventDefault(); // Prevent any default action if necessary
+                         event.preventDefault();
                          const searchTerm = event.target.getAttribute('data-search-term');
-                         const searchField = event.target.getAttribute('data-search-field'); // Optional
-
                          if (searchTerm) {
-                             // Set the search input value
                              searchInput.value = searchTerm.trim();
-                             // Close the stats modal if it's open (optional)
-                             // closeModal(); // Assuming closeModal is defined elsewhere or not needed here
-                             // Apply the filters to update the table
                              applyLocalFilters();
                          }
                      }
                  };
-
-                 // Attach the listener
                  detailContentContainer.addEventListener('click', clickableItemListener);
-                 // Store the listener function reference on the container for potential removal
                  detailContentContainer._clickableItemListener = clickableItemListener;
-
             } else {
                  console.warn("Detail content container not found for paper", paperId);
             }
-
         }
         element.innerHTML = '<span>Hide</span>';
+        // Add ID to set and update URL
+        openDetailIds.add(paperId);
+        updateUrlWithDetailState(); // Update URL immediately after showing
+        //console.log(`Opened detail for ${paperId}, set now:`, [...openDetailIds]); // Debug log
     }
 }
+
 document.addEventListener('DOMContentLoaded', function () {
     //These listeners are specific to GH Export:          
     

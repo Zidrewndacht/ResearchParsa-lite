@@ -44,7 +44,7 @@
         <td class="secondary-text-cell number-cell">{{ paper.year or '' }}</td>
         <td class="secondary-text-cell number-cell">{{ paper.page_count or '' }}</td>
         <td class="secondary-text-cell">{{ paper.journal }}</td>        
-        <td class="status-cell" title="{{ paper.type }}">{{ type_emojis.get(paper.type, default_type_emoji) }}
+        <td class="status-cell" title="{{ paper.type }}">{{ type_emojis.get(paper.type, default_type_emoji) }}</td>
         
 
         <td class="status-cell editable-status" data-field="is_offtopic">{{ paper.is_offtopic | render_status }}</td>
@@ -97,7 +97,12 @@
         <td colspan="42">
             <div class="detail-flex-container">
                 <div class="detail-content detail-abstract">
+                    <p><strong>ID:</strong> {{ paper.id }} 
+                    <!-- <strong>Type:</strong> {{ paper.type }}</p> -->
                     <p><strong>Abstract:</strong> {{ paper.abstract }}</p>
+                </div>
+
+                <div class="detail-content detail-metadata">
                     <p><strong>Keywords:</strong>
                         <span class="clickable-keywords">
                             {% if paper.keywords %}
@@ -105,7 +110,7 @@
                                 {% for keyword in keywords_list %}
                                     {% set trimmed_keyword = keyword.strip() %}
                                     {% if trimmed_keyword %}
-                                        <span class="clickable-item" data-search-field="keywords" data-search-term="{{ trimmed_keyword }}">🔍{{ trimmed_keyword }}{% if not loop.last %}; {% endif %}</span>
+                                        <span class="clickable-item" data-search-field="keywords" data-search-term="{{ trimmed_keyword }}">{{ trimmed_keyword }}🔍</span>
                                     {% endif %}
                                 {% endfor %}
                             {% else %}
@@ -113,18 +118,14 @@
                             {% endif %}
                         </span>
                     </p>
-                </div>
-
-                <div class="detail-content detail-metadata">
-                    <p><strong>ID:</strong> {{ paper.id }}</p>
-                    <p><strong>Type:</strong> {{ paper.type }}</p>
                     <p><strong>DOI:</strong>
                         {% if paper.doi %}
                             <a href="https://doi.org/{{ paper.doi }}" target="_blank">{{ paper.doi }}</a>
                         {% else %}
                             {{ paper.doi }}
                         {% endif %}
-                    <strong> — ISSN:</strong> {{ paper.issn }}</p>
+                    <strong> — ISSN:</strong> {{ paper.issn }}
+                    <strong> — Pages:</strong> {{ paper.pages }}</p></p>
                     <p><strong>Authors:</strong>
                         <span class="clickable-authors">
                             {% if paper.authors %}
@@ -132,7 +133,7 @@
                                 {% for author in authors_list %}
                                     {% set trimmed_author = author.strip() %}
                                     {% if trimmed_author %}
-                                        <span class="clickable-item" data-search-field="authors" data-search-term="{{ trimmed_author }}">🔍{{ trimmed_author }}{% if not loop.last %}; {% endif %}</span>
+                                        <span class="clickable-item" data-search-field="authors" data-search-term="{{ trimmed_author }}">{{ trimmed_author }}🔍</span>
                                     {% endif %}
                                 {% endfor %}
                             {% else %}
@@ -140,8 +141,7 @@
                             {% endif %}
                         </span>
                     </p>
-                    <p><strong>Year:</strong> {{ paper.year }}</p>
-                    <p><strong>Pages:</strong> {{ paper.pages }}</p>
+                    <!-- <p><strong>Year:</strong> {{ paper.year }}</p> -->
                     
                     <p><strong>BibTeX Citation:</strong></p>
                     <pre style="overflow:scroll">{{ paper | bibtex }}</pre>

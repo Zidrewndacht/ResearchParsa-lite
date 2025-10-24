@@ -1024,7 +1024,7 @@ def backup_database():
         with tempfile.TemporaryDirectory() as temp_dir:
             # Generate HTML export (full, not lite)
             papers = fetch_papers(hide_offtopic=True, year_from=0, year_to=9999, min_page_count=0)
-            html_content = generate_html_export_content(papers, True, 0, 9999, 0, "", is_lite_export=False)
+            html_content = generate_html_export_content(papers, True, 0, 9999, 0, is_lite_export=False)
             html_path = os.path.join(temp_dir, 'export.html')
             with open(html_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)

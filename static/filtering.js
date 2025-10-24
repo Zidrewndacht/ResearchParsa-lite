@@ -25,6 +25,7 @@ const showOtherCheckbox = document.getElementById('show-other-checkbox');
 
 let filterTimeoutId = null;
 const FILTER_DEBOUNCE_DELAY = 250;
+const MAX_STORED_OPEN_DETAILS = 10;
 
 const headers = document.querySelectorAll('th[data-sort]');
 let currentClientSort = { column: null, direction: 'ASC' };
@@ -281,7 +282,7 @@ function compileSearchRegex(searchTerm) {
     }
 }
 
-// Add this function to get current client filter state
+// Update getClientFilterState to include sort parameters
 function getClientFilterState() {
     return {
         hide_xray: hideXrayCheckbox.checked ? 1 : 0,
@@ -293,9 +294,12 @@ function getClientFilterState() {
         show_pcba: showPCBAcheckbox.checked ? 1 : 0,
         show_other: showOtherCheckbox.checked ? 1 : 0,
         no_features: noFeaturesCheckbox.checked ? 1 : 0,
-        search: searchInput.value.trim()
+        search: searchInput.value.trim(),
+        sort_by: currentClientSort.column || '',
+        sort_dir: currentClientSort.direction || 'ASC'
     };
 }
+
 
 let urlUpdateTimeout;
 function updateUrlWithClientFilters() {
@@ -303,54 +307,39 @@ function updateUrlWithClientFilters() {
     urlUpdateTimeout = setTimeout(() => {
         const url = new URL(window.location);
         const clientFilters = getClientFilterState();
-        
+
         for (const [key, value] of Object.entries(clientFilters)) {
-            if (value === 0 || value === "" || value === "all") {
-                url.searchParams.delete(key);
-            } else {
-                url.searchParams.set(key, value);
-            }
+            // Always include everything: '1', '0', 'all', search string, etc.
+            // This is important because some checkboxes are default on, other default off, etc.
+            url.searchParams.set(key, String(value));
         }
+
         window.history.replaceState({}, '', url);
-    }, 100); // Debounce by 100ms
+    }, 100);
 }
 
 
 
 let rafId = 0;
+let currentFilterAbortController = null;
+
 function applyLocalFilters() {
+    // Cancel any ongoing filter operation
+    if (currentFilterAbortController) {
+        currentFilterAbortController.abort();
+    }
+    
+    // Create a new abort controller for this operation
+    currentFilterAbortController = new AbortController();
+    const signal = currentFilterAbortController.signal;
+
     clearTimeout(filterTimeoutId);
     document.documentElement.classList.add('busyCursor');
-    cancelAnimationFrame(rafId)
+    cancelAnimationFrame(rafId);
+    filterTimeoutId = setTimeout(() => {
+        // Check if operation was cancelled
+        if (signal.aborted) return;
 
-    // --- NEW: Close all currently expanded detail rows BEFORE applying new filters ---
-    // This ensures a clean state after filtering/searching.
-    // Find all rows that are currently expanded
-    const expandedDetailRows = document.querySelectorAll('tr.detail-row.expanded');
-    expandedDetailRows.forEach(detailRow => {
-        // Find the corresponding main row (the one before the detail row)
-        const mainRow = detailRow.previousElementSibling; // Should be the main paper row
-        if (mainRow && mainRow.matches('tr[data-paper-id]')) { // Ensure it's the right type of row
-            // Find the toggle button within the main row
-            const toggleButton = mainRow.querySelector('.toggle-btn'); // Adjust selector if needed
-            if (toggleButton) {
-                // Remove the 'expanded' class from the detail row
-                detailRow.classList.remove('expanded');
-                // Update the button text back to 'Show'
-                toggleButton.innerHTML = '<span>Show</span>';
-                // Optional: Remove any specific listeners added dynamically to this detail row's content container if applicable
-                // e.g., if you stored listeners on the container like in the previous static export example:
-                // const container = detailRow.querySelector('.detail-flex-container');
-                // if (container && container._clickableItemListener) {
-                //     container.removeEventListener('click', container._clickableItemListener);
-                //     container._clickableItemListener = null;
-                // }
-            }
-        }
-    });
-    // --- END NEW ---
-
-    filterTimeoutId = setTimeout(() => { 
         // --- Pre-cache data for all rows to avoid repeated DOM queries ---
         const rows = tbody.querySelectorAll('tr[data-paper-id]');
         
@@ -371,6 +360,9 @@ function applyLocalFilters() {
 
         // --- Cache data for all rows in a single pass ---
         for (let i = 0; i < rows.length; i++) {
+            // Check if operation was cancelled during the loop
+            if (signal.aborted) return;
+            
             const row = rows[i];
             // Cache status cells
             const surveyCell = row.querySelector('.editable-status[data-field="is_survey"]');
@@ -381,6 +373,9 @@ function applyLocalFilters() {
             // Cache feature cell values
             const featureValues = {};
             for (let j = 0; j < ALL_FEATURE_FIELDS.length; j++) {
+                // Check if operation was cancelled during the loop
+                if (signal.aborted) return;
+                
                 const fieldName = ALL_FEATURE_FIELDS[j];
                 const cell = row.querySelector(`[data-field="${fieldName}"]`);
                 featureValues[fieldName] = cell ? cell.textContent.trim() : '';
@@ -389,6 +384,9 @@ function applyLocalFilters() {
             // Determine group membership based on cached feature values
             let hasPCBFeature = false;
             for (let j = 0; j < FEATURE_GROUPS.pcb.length; j++) {
+                // Check if operation was cancelled during the loop
+                if (signal.aborted) return;
+                
                 if (featureValues[FEATURE_GROUPS.pcb[j]] === '✔️') {
                     hasPCBFeature = true;
                     break;
@@ -397,6 +395,9 @@ function applyLocalFilters() {
 
             let hasSolderFeature = false;
             for (let j = 0; j < FEATURE_GROUPS.solder.length; j++) {
+                // Check if operation was cancelled during the loop
+                if (signal.aborted) return;
+                
                 if (featureValues[FEATURE_GROUPS.solder[j]] === '✔️') {
                     hasSolderFeature = true;
                     break;
@@ -405,6 +406,9 @@ function applyLocalFilters() {
 
             let hasPCBAFeature = false;
             for (let j = 0; j < FEATURE_GROUPS.pcba.length; j++) {
+                // Check if operation was cancelled during the loop
+                if (signal.aborted) return;
+                
                 if (featureValues[FEATURE_GROUPS.pcba[j]] === '✔️') {
                     hasPCBAFeature = true;
                     break;
@@ -413,6 +417,9 @@ function applyLocalFilters() {
 
             let hasOtherFeature = false;
             for (let j = 0; j < FEATURE_GROUPS.other.length; j++) {
+                // Check if operation was cancelled during the loop
+                if (signal.aborted) return;
+                
                 if (featureValues[FEATURE_GROUPS.other[j]] === '✔️') {
                     hasOtherFeature = true;
                     break;
@@ -423,12 +430,18 @@ function applyLocalFilters() {
             let hiddenDataText = '';
             const hiddenDataCells = row.querySelectorAll('td.hidden-data-cell');
             for (let j = 0; j < hiddenDataCells.length; j++) {
+                // Check if operation was cancelled during the loop
+                if (signal.aborted) return;
+                
                 hiddenDataText += ' ' + (hiddenDataCells[j].textContent || '').toLowerCase();
             }
 
             // Cache main row text content (excluding hidden data cells)
             let visibleRowText = '';
             for (let j = 0; j < row.cells.length; j++) {
+                // Check if operation was cancelled during the loop
+                if (signal.aborted) return;
+                
                 if (!row.cells[j].classList.contains('hidden-data-cell')) {
                     visibleRowText += ' ' + row.cells[j].textContent.toLowerCase();
                 }
@@ -457,15 +470,19 @@ function applyLocalFilters() {
                 year: row.cells[yearCellIndex]?.textContent?.trim() || ''
             });
         }
+
         /* ---------- 1.  shared batch containers ---------- */
         const toHide = [];
         const toShow = [];
 
         /* ---------- 2.  single walk over every <tr> using cached data ---------- */
         for (let i = 0; i < rows.length; i++) {
+            // Check if operation was cancelled during the loop
+            if (signal.aborted) return;
+            
             const row = rows[i];
             // Get cached data from the WeakMap
-            const cachedData = rowCache.get(row); // Use rowCache.get(row) instead of row._cachedData
+            const cachedData = rowCache.get(row);
 
             let showRow = true;
 
@@ -474,20 +491,20 @@ function applyLocalFilters() {
             ---------------------------------------------------- */
             if (document.body.id === 'html-export') {
                 if (showRow && hideOfftopicChecked) {
-                    if (cachedData.offtopicStatus === '✔️') { // Access via cachedData
+                    if (cachedData.offtopicStatus === '✔️') {
                         showRow = false;
                     }
                 }
 
                 if (showRow && minPageCountValue > 0) {
-                    const pageCount = parseInt(cachedData.pageCount, 10); // Access via cachedData
+                    const pageCount = parseInt(cachedData.pageCount, 10);
                     if (!isNaN(pageCount) && pageCount < minPageCountValue) {
                         showRow = false;
                     }
                 }
 
                 if (showRow && (yearFromValue || yearToValue)) {
-                    const year = cachedData.year ? parseInt(cachedData.year, 10) : NaN; // Access via cachedData
+                    const year = cachedData.year ? parseInt(cachedData.year, 10) : NaN;
                     if (isNaN(year) || (yearFromValue && year < yearFromValue) || (yearToValue && year > yearToValue)) {
                         showRow = false;
                     }
@@ -500,7 +517,7 @@ function applyLocalFilters() {
             // Search Term
             if (showRow && searchTerm) {
                 // Fast string inclusion check first
-                if (!cachedData.visibleRowText.includes(searchTerm) && !cachedData.hiddenDataText.includes(searchTerm)) { // Access via cachedData
+                if (!cachedData.visibleRowText.includes(searchTerm) && !cachedData.hiddenDataText.includes(searchTerm)) {
                     showRow = false;
                 }
 
@@ -512,7 +529,7 @@ function applyLocalFilters() {
 
             // Apply the tri-state survey filter logic
             if (showRow) {
-                const surveyStatus = cachedData.surveyStatus; // Access via cachedData
+                const surveyStatus = cachedData.surveyStatus;
 
                 switch (currentSurveyFilterState) {
                     case SURVEY_FILTER_STATES.ONLY_SURVEYS:
@@ -531,21 +548,21 @@ function applyLocalFilters() {
 
             // Existing filters (X-Ray, Survey, Approved)
             if (showRow && hideXrayChecked) {
-                if (cachedData.xrayStatus === '✔️') { // Access via cachedData
+                if (cachedData.xrayStatus === '✔️') {
                     showRow = false;
                 }
             }
             if (showRow && hideApprovedChecked) {
-                if (cachedData.verifiedStatus === '✔️') { // Access via cachedData
+                if (cachedData.verifiedStatus === '✔️') {
                     showRow = false;
                 }
             }
 
             // --- Feature Group Filters ---
             if (showRow && (showPCBChecked || showSolderChecked || showPCBAChecked || showOtherChecked)) {
-                if (!( (showPCBChecked && cachedData.hasPCBFeature) || // Access via cachedData
-                        (showSolderChecked && cachedData.hasSolderFeature) || // Access via cachedData
-                        (showPCBAChecked && cachedData.hasPCBAFeature) || // Access via cachedData
+                if (!( (showPCBChecked && cachedData.hasPCBFeature) ||
+                        (showSolderChecked && cachedData.hasSolderFeature) ||
+                        (showPCBAChecked && cachedData.hasPCBAFeature) ||
                         (showOtherChecked && cachedData.hasOtherFeature) )) {
                     showRow = false;
                 }
@@ -555,7 +572,7 @@ function applyLocalFilters() {
             if (showRow && showNoFeaturesChecked) {
                 let hasAnyFeatureFilled = false;
                 for (let j = 0; j < ALL_FEATURE_FIELDS.length; j++) {
-                    const cellText = cachedData.featureValues[ALL_FEATURE_FIELDS[j]]; // Access via cachedData
+                    const cellText = cachedData.featureValues[ALL_FEATURE_FIELDS[j]];
                     if (cellText !== '' && cellText !== '❌' && cellText !== '❔') {
                         hasAnyFeatureFilled = true;
                         break;
@@ -584,31 +601,44 @@ function applyLocalFilters() {
         /* ---------- 3.  one RAF to flush all changes ---------- */
         // Batch DOM operations
         for (let i = 0; i < toHide.length; i++) {
+            // Check if operation was cancelled during the loop
+            if (signal.aborted) return;
+            
             toHide[i].classList.add('filter-hidden');
         }
         for (let i = 0; i < toShow.length; i++) {
+            // Check if operation was cancelled during the loop
+            if (signal.aborted) return;
+            
             toShow[i].classList.remove('filter-hidden');
         }
 
-        rafId = requestAnimationFrame(() => {       // 1 layout + 1 paint
-            applyAlternatingShading();
+        rafId = requestAnimationFrame(() => {
+            if (signal.aborted) return;
+            
 
             if (document.body.id !== 'html-export') {
-                // Pass only visible rows to duplicate shading
-                // const visibleRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)'); // This line was already correct
-                // Use the same query or the 'rows' variable if filtered correctly before the loop
-                // It's better to get the visible rows *after* the visibility classes are applied
-                // but *before* applyDuplicateShading runs. Since applyLocalFilters batch applies
-                // visibility changes before the rAF, the query inside rAF will be accurate.
                 const visibleRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
-                applyDuplicateShading(visibleRows); // Pass the NodeList
+                applyDuplicateShading(visibleRows);
                 const applyButton = document.getElementById('apply-serverside-filters');
                 applyButton.style.opacity = '0';
                 applyButton.style.pointerEvents = 'none';
             }
+            // Apply the current sort after filtering
+            if (currentClientSort.column) {
+                performSort(currentClientSort.column, currentClientSort.direction);
+            }
             updateUrlWithClientFilters();
+            applyAlternatingShading();
             updateCounts();
+            restoreDetailState(); // Call the new function to open rows based on the set and current DOM state
+
             document.documentElement.classList.remove('busyCursor');
+
+            // Clean up the abort controller when operation completes successfully
+            if (currentFilterAbortController?.signal === signal) {
+                currentFilterAbortController = null;
+            }
         });
     }, FILTER_DEBOUNCE_DELAY);
 }
@@ -634,121 +664,125 @@ const NON_EDITABLE_STATUS_FIELDS = new Set([
     // e.g., 'some_other_field_name'
 ]);
 
+function performSort(sortBy, direction, visibleRows = null) {
+    if (!sortBy) return;
+    
+    // Use provided visible rows or get them from DOM
+    const rowsToSort = visibleRows || tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
+    if (rowsToSort.length === 0) return;
+    
+    // Calculate the header index based on the sort column
+    const sortHeader = document.querySelector(`th[data-sort="${sortBy}"]`);
+    if (!sortHeader) return;
+    const headerIndex = Array.prototype.indexOf.call(sortHeader.parentNode.children, sortHeader);
+    
+    const sortData = new Array(rowsToSort.length);
+
+    // Pre-calculate sort type to avoid repeated checks inside the loop
+    const isNumericSort = ['year', 'estimated_score', 'page_count', 'relevance'].includes(sortBy);
+    const isPDFSort = sortBy === 'pdf-link';
+    const isEditableStatusSort = !isNumericSort && !isPDFSort && !NON_EDITABLE_STATUS_FIELDS.has(sortBy) && !['title', 'journal', 'changed_by', 'changed'].includes(sortBy);
+
+    for (let i = 0; i < rowsToSort.length; i++) {
+        const mainRow = rowsToSort[i];
+        const paperId = mainRow.getAttribute('data-paper-id');
+        let cellValue;
+
+        if (isNumericSort) {
+            const cell = mainRow.cells[headerIndex];
+            cellValue = cell ? parseFloat(cell.textContent.trim()) || 0 : 0;
+        } else if (isPDFSort) {
+            const cell = mainRow.cells[headerIndex];
+            cellValue = SYMBOL_PDF_WEIGHTS[cell?.textContent.trim()] ?? 0;
+        } else if (isEditableStatusSort) {
+            const cell = mainRow.querySelector(`.editable-status[data-field="${sortBy}"]`);
+            cellValue = SYMBOL_SORT_WEIGHTS[cell?.textContent.trim()] ?? 0;
+        } else {
+            const cell = mainRow.cells[headerIndex];
+            const cellText = cell ? cell.textContent.trim() : '';
+            if (sortBy === 'type') {
+                cellValue = cellText;
+            } else if (NON_EDITABLE_STATUS_FIELDS.has(sortBy)) {
+                cellValue = SYMBOL_SORT_WEIGHTS[cellText] ?? 0;
+            } else {
+                cellValue = cellText;
+            }
+        }
+        const detailRow = mainRow.nextElementSibling;
+        sortData[i] = { value: cellValue, mainRow, detailRow, paperId };
+    }
+
+    // Sort the data array
+    sortData.sort((a, b) => {
+        let comparison = 0;
+        const aValue = a.value;
+        const bValue = b.value;
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+            comparison = aValue.localeCompare(bValue, undefined, { sensitivity: 'base' });
+        } else {
+            if (aValue > bValue) comparison = 1;
+            else if (aValue < bValue) comparison = -1;
+        }
+
+        if (comparison === 0) {
+            if (a.paperId > b.paperId) comparison = 1;
+            else if (a.paperId < b.paperId) comparison = -1;
+        }
+
+        return direction === 'DESC' ? -comparison : comparison;
+    });
+
+    // Batch update the DOM
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < sortData.length; i++) {
+        fragment.appendChild(sortData[i].mainRow);
+        if (sortData[i].detailRow) {
+            fragment.appendChild(sortData[i].detailRow);
+        }
+    }
+    tbody.appendChild(fragment); // Single DOM append operation
+
+    // Update the sort indicator
+    document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
+    const indicator = sortHeader.querySelector('.sort-indicator');
+    if (indicator) {
+        indicator.textContent = direction === 'ASC' ? '▲' : '▼';
+    }
+}
+
 function sortTable() {
+    //console.log("sortTable called for column:", this.getAttribute('data-sort'));
     document.documentElement.classList.add('busyCursor');
+    
     setTimeout(() => {
         const sortBy = this.getAttribute('data-sort');
-        if (!sortBy) return; // Guard clause if data-sort is missing
+        if (!sortBy) return;
 
         let newDirection = 'DESC';
         if (currentClientSort.column === sortBy) {
             newDirection = currentClientSort.direction === 'DESC' ? 'ASC' : 'DESC';
         }
-
-        // --- PRE-PROCESS: Extract Sort Values and Row References ---
-        const visibleMainRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
-        // Calculate the header index based on the clicked header's position
-        const headerIndex = Array.prototype.indexOf.call(this.parentNode.children, this);
-        const sortData = new Array(visibleMainRows.length);
-
-        // Pre-calculate sort type to avoid repeated checks inside the loop
-        const isNumericSort = ['year', 'estimated_score', 'page_count', 'relevance'].includes(sortBy);
-        const isPDFSort = sortBy === 'pdf-link';
-        // Determine if this field is a status field that uses .editable-status
-        // It's a status sort if it's not numeric, not PDF, not explicitly in the non-editable set, and not in the text-only set.
-        // The original 'isStatusSort' logic was implicitly: not numeric and not 'pdf-link' and not 'title'/'journal'/etc.
-        // So, it covered *most* status fields. We refine by excluding non-editable ones.
-        const isEditableStatusSort = !isNumericSort && !isPDFSort && !NON_EDITABLE_STATUS_FIELDS.has(sortBy);
-
-        let sortIndex = 0;
-        for (let i = 0; i < visibleMainRows.length; i++) {
-            const mainRow = visibleMainRows[i];
-            const paperId = mainRow.getAttribute('data-paper-id');
-            let cellValue;
-
-            // --- Extract cell value based on column type ---
-            if (isNumericSort) {
-                const cell = mainRow.cells[headerIndex]; // Use the direct cell index
-                cellValue = cell ? parseFloat(cell.textContent.trim()) || 0 : 0;
-            } else if (isPDFSort) {
-                 const cell = mainRow.cells[headerIndex]; // Use the direct cell index
-                 cellValue = SYMBOL_PDF_WEIGHTS[cell?.textContent.trim()] ?? 0;
-            } else if (isEditableStatusSort) {
-                // Use the selector for editable status cells (most status fields)
-                const cell = mainRow.querySelector(`.editable-status[data-field="${sortBy}"]`);
-                // Use SYMBOL_SORT_WEIGHTS for sorting based on symbols like ✔️, ❌, ❔
-                cellValue = SYMBOL_SORT_WEIGHTS[cell?.textContent.trim()] ?? 0;
-            } else { // Text columns or other non-editable status columns treated as text
-                // Use the direct cell index for text sorts (e.g., title, journal)
-                const cell = mainRow.cells[headerIndex];
-                const cellText = cell ? cell.textContent.trim() : '';
-                // *** CHANGE: Check if this NON_EDITABLE_STATUS_FIELDS column contains symbols and apply weights ***
-                if (NON_EDITABLE_STATUS_FIELDS.has(sortBy)) {
-                    // Assume these fields also contain symbols like ✔️, ❌, ❔ and should be sorted by weight
-                    cellValue = SYMBOL_SORT_WEIGHTS[cellText] ?? 0; // Use weight, default to 0 if symbol not found
-                } else {
-                    // For truly text columns like 'title', 'journal', use the raw text
-                    cellValue = cellText;
-                }
-            }
-
-            const detailRow = mainRow.nextElementSibling; // Get the associated detail row
-            sortData[sortIndex] = { value: cellValue, mainRow, detailRow, paperId };
-            sortIndex++;
-        }
-
-        // --- SORT the data array ---
-        sortData.sort((a, b) => {
-            let comparison = 0;
-            // Compare the extracted values
-            if (a.value > b.value) comparison = 1;
-            else if (a.value < b.value) comparison = -1;
-            else {
-                // If values are equal, sort by paperId as a secondary key to ensure stability
-                if (a.paperId > b.paperId) comparison = 1;
-                else if (a.paperId < b.paperId) comparison = -1;
-            }
-            // Return based on the desired sort direction
-            return newDirection === 'DESC' ? -comparison : comparison;
-        });
-
-        // --- BATCH UPDATE the DOM ---
-        const fragment = document.createDocumentFragment();
-        for (let i = 0; i < sortData.length; i++) {
-            fragment.appendChild(sortData[i].mainRow);
-            if (sortData[i].detailRow) {
-                fragment.appendChild(sortData[i].detailRow);
-            }
-        }
-        tbody.appendChild(fragment); // Single DOM append operation
-
-        // --- Schedule UI Updates after DOM change ---
-        requestAnimationFrame(() => {
-            applyAlternatingShading();
-            if (document.body.id !== 'html-export') {
-                // Pass the currently visible rows after sorting to applyDuplicateShading
-                const visibleRowsAfterSort = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
-                applyDuplicateShading(visibleRowsAfterSort); // Pass the NodeList
-            }
-            updateCounts();
-        });
-
-        // Update the global sort state
         currentClientSort = { column: sortBy, direction: newDirection };
-        // Clear indicators on all headers
-        document.querySelectorAll('th .sort-indicator').forEach(ind => ind.textContent = '');
-        // Set the indicator on the clicked header
-        const indicator = this.querySelector('.sort-indicator');
-        if (indicator) {
-            indicator.textContent = newDirection === 'ASC' ? '▲' : '▼';
-        }
 
-        // Remove the busy cursor after a short delay
-        setTimeout(() => {
+        // Perform the sort immediately on current visible rows
+        performSort(sortBy, currentClientSort.direction);
+        
+        // Then apply the same UI updates that happen in the filtering flow
+        requestAnimationFrame(() => {
+            if (document.body.id !== 'html-export') {
+                const visibleRows = tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
+                applyDuplicateShading(visibleRows);
+            }
+            updateUrlWithClientFilters();
+            // updateCounts();
+            applyAlternatingShading();
             document.documentElement.classList.remove('busyCursor');
-        }, 150); // Delay slightly longer than CSS delay
-    }, 20); // Initial defer for adding busy cursor
+        });
+    }, 20); // Keep the original timeout
 }
+
+
 // --- Add F3 Shortcut ---
 document.addEventListener('keydown', function(event) {
     // Check if F3 key is pressed
@@ -767,8 +801,7 @@ document.addEventListener('keydown', function(event) {
         }
     }
 });
-
-// Add this function to initialize client filters from DOM state and URL
+// In initializeClientFilters, remove the default sort setting:
 function initializeClientFilters() {
     const urlParams = new URLSearchParams(window.location.search);
     
@@ -788,10 +821,8 @@ function initializeClientFilters() {
     for (const [param, checkbox] of Object.entries(checkboxParams)) {
         const paramValue = urlParams.get(param);
         if (paramValue !== null) {
-            // If URL parameter exists, set checkbox accordingly
             checkbox.checked = paramValue === '1';
         }
-        // If no URL parameter, keep existing DOM state
     }
     
     // Handle search input
@@ -799,15 +830,50 @@ function initializeClientFilters() {
     if (searchValueFromUrl !== null) {
         searchInput.value = searchValueFromUrl;
     }
+
+
+    // Handle open detail IDs from URL
+    const openDetailsParam = urlParams.get('open_details');
+    if (openDetailsParam) {
+        const initialOpenIds = openDetailsParam.split(',').map(id => id.trim()).filter(id => id !== '');
+        // Limit and populate the set
+        openDetailIds = new Set(initialOpenIds.slice(0, MAX_STORED_OPEN_DETAILS));
+        //console.log("Initialized openDetailIds from URL:", [...openDetailIds]); // Debug log
+    } else {
+        // Ensure the set is initialized as empty if no param
+        openDetailIds = new Set();
+    }
+
     
     // Handle survey filter state
     const surveyFilterValue = urlParams.get('survey_filter');
     if (surveyFilterValue) {
         currentSurveyFilterState = surveyFilterValue;
-    } else {
-        // If no URL parameter, keep the default or existing state
-        // The default is already set in the global variable
     }
+    
+    // Handle sort parameters - only set if they exist in URL
+    const sortColumnFromUrl = urlParams.get('sort_by');
+    const sortDirectionFromUrl = urlParams.get('sort_dir');
+    
+    if (sortColumnFromUrl) {
+        currentClientSort = {
+            column: sortColumnFromUrl,
+            direction: sortDirectionFromUrl === 'DESC' ? 'DESC' : 'ASC'
+        };
+        
+        // Update the sort indicator in the UI
+        const sortHeader = document.querySelector(`th[data-sort="${currentClientSort.column}"]`);
+        if (sortHeader) {
+            const indicator = sortHeader.querySelector('.sort-indicator');
+            if (indicator) {
+                indicator.textContent = currentClientSort.direction === 'ASC' ? '▲' : '▼';
+            }
+        }
+    } else {
+        // If no sort parameters in URL, reset to null state (no sort applied)
+        currentClientSort = { column: null, direction: 'ASC' };
+    }
+    
     
     updateSurveyCheckboxUI();
     
@@ -815,10 +881,93 @@ function initializeClientFilters() {
     updateUrlWithClientFilters();
 }
 
+let openDetailIds = new Set();
+let detailStateUpdateTimeout = null;
+function updateUrlWithDetailState() {
+    clearTimeout(detailStateUpdateTimeout);
+    detailStateUpdateTimeout = setTimeout(() => {
+        const url = new URL(window.location);
+        // Convert set to sorted array to ensure consistent order (optional but good practice)
+        const sortedIds = [...openDetailIds].sort((a, b) => a - b).slice(0, MAX_STORED_OPEN_DETAILS);
+        if (sortedIds.length > 0) {
+             url.searchParams.set('open_details', sortedIds.join(','));
+        } else {
+             // Remove the parameter if no details are open
+             url.searchParams.delete('open_details');
+        }
+        // Use replaceState to avoid adding history entries
+        window.history.replaceState({}, '', url);
+         //console.log("URL updated with open detail IDs:", sortedIds); // Debug log
+    }, 100); // Debounce delay
+}
+
+function restoreDetailState() {
+    //console.log("Starting restoreDetailState. Intended open IDs:", [...openDetailIds]); // Debug log
+
+    // --- Phase 1: Open detail rows that are intended to be open and whose main row is visible ---
+    const idsToOpen = [...openDetailIds]; // Get a copy of the current set of intended open IDs
+    idsToOpen.forEach(paperId => {
+        // Find the main row in the CURRENTLY visible DOM
+        const mainRow = document.querySelector(`tr[data-paper-id="${paperId}"]:not(.filter-hidden)`);
+        if (mainRow) {
+            // Main row exists and is visible after filtering
+            const toggleButton = mainRow.querySelector('.toggle-btn');
+            if (toggleButton) {
+                // Check if the detail row is already expanded
+                const detailRow = mainRow.nextElementSibling;
+                const isCurrentlyExpanded = detailRow && detailRow.classList.contains('expanded');
+                
+                // Only call toggleDetails if it's not already expanded
+                if (!isCurrentlyExpanded) {
+                    //console.log(`Restoring (opening) detail row for paper ID ${paperId}`); // Debug log
+                    // Call the toggleDetails function (from comms.js or ghpages.js)
+                    // This handles the logic for showing/hiding and fetching content if needed
+                    toggleDetails(toggleButton);
+                    // The toggleDetails function should manage the openDetailIds Set and URL correctly.
+                } else {
+                    //console.log(`Detail row for paper ID ${paperId} is already expanded as intended.`); // Debug log
+                }
+            } else {
+                console.warn(`Toggle button not found for paper ID ${paperId} during restore.`); // Debug log
+            }
+        } else {
+            // Main row doesn't exist or is hidden by current filters.
+            // The ID remains in the set for potential future restoration.
+            // This handles the case where a filter hides a paper that was previously open.
+            //console.log(`Main row for paper ID ${paperId} not found or hidden, keeping ID for later.`); // Debug log
+        }
+    });
+
+    // --- REFINED Phase 2 in restoreDetailState ---
+    // Iterate through ALL *currently visible and expanded* detail rows
+    const allExpandedVisibleDetailRows = document.querySelectorAll('tr.detail-row.expanded:not(.filter-hidden)');
+    allExpandedVisibleDetailRows.forEach(detailRow => {
+        const mainRow = detailRow.previousElementSibling;
+        if (mainRow && mainRow.matches('tr[data-paper-id]')) { // Ensure it's a main row
+            const paperId = mainRow.getAttribute('data-paper-id');
+            // Check if the main row's ID is NOT in the intended open set
+            if (!openDetailIds.has(paperId)) {
+                // The detail row is expanded, but its ID is not in the intended open set.
+                // We need to close it. Find its toggle button and call toggleDetails.
+                const toggleButton = mainRow.querySelector('.toggle-btn');
+                if (toggleButton) {
+                    //console.log(`Closing unintended detail row for paper ID ${paperId}`); // Debug log
+                    // Call toggleDetails to close it. This should correctly update the set and URL.
+                    toggleDetails(toggleButton);
+                } else {
+                    console.warn(`Toggle button not found for paper ID ${paperId} when trying to close unintended detail row.`); // Debug log
+                }
+            }
+        }
+    });
+    //console.log("Finished restoreDetailState. Final open IDs:", [...openDetailIds]); // Debug log
+}
+
 // Existing DOMContentLoaded listener and other code follows...
 document.addEventListener('DOMContentLoaded', function () {
     // Apply client filters from URL first
     initializeClientFilters();
+    
     hideXrayCheckbox.addEventListener('change', applyLocalFilters);
     hideApprovedCheckbox.addEventListener('change', applyLocalFilters);
     onlySurveyCheckbox.addEventListener('click', cycleSurveyFilterState);
@@ -828,9 +977,25 @@ document.addEventListener('DOMContentLoaded', function () {
     noFeaturesCheckbox.addEventListener('change', applyLocalFilters);
     showOtherCheckbox.addEventListener('change', applyLocalFilters);
 
-    // Server-side search disabled... Using full-client-side search instead:
-    searchInput.addEventListener('input', applyLocalFilters); // Assumes searchInput is defined globally
-
+    searchInput.addEventListener('input', () => {
+        // For search specifically, we might want a shorter debounce time
+        clearTimeout(filterTimeoutId);
+        document.documentElement.classList.add('busyCursor');
+        
+        // Cancel any ongoing filter operation
+        if (currentFilterAbortController) {
+            currentFilterAbortController.abort();
+        }
+        
+        // Create a new abort controller for this operation
+        currentFilterAbortController = new AbortController();
+        const signal = currentFilterAbortController.signal;
+        
+        filterTimeoutId = setTimeout(() => {
+            if (signal.aborted) return;
+            applyLocalFilters();
+        }, 150); // Shorter debounce for search
+    });
     document.getElementById('clear-search-btn').addEventListener('click', function() {
         searchInput.value = '';
         searchInput.dispatchEvent(new Event('input'));
@@ -839,6 +1004,7 @@ document.addEventListener('DOMContentLoaded', function () {
     headers.forEach(header => {
         header.addEventListener('click', sortTable);
     });
+    
     applyLocalFilters(); // Apply initial filtering
     updateSurveyCheckboxUI();
-}); // End of DOMContentLoaded listener
+}); 

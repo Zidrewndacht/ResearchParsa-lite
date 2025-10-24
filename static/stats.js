@@ -474,7 +474,7 @@ function buildStatsLists() {
                     stats.conferences[journalConfName] = (stats.conferences[journalConfName] || 0) + 1;
                 } else {
                     // Optional: Handle other types or log them if needed
-                    // console.log(`Unrecognized type for ${journalConfName}: ${typeValue}`);
+                    // //console.log(`Unrecognized type for ${journalConfName}: ${typeValue}`);
                     // You could add them to a 'miscellaneous' category if desired
                 }
             }
@@ -700,7 +700,7 @@ function prepareScopeData(totalVisiblePaperCount, totalAllPaperCount) {
         offtopicCount = Math.max(0, totalAllPaperCount - totalVisiblePaperCount); // Ensure non-negative
     }
 
-    console.log(`[prepareScopeData] Document ID: ${document.body.id}, Total Loaded (Export) / Total DB (Main): ${document.body.id === 'html-export' ? document.querySelectorAll('#papersTable tbody tr[data-paper-id]').length : totalAllPaperCount}, Visible (On-topic): ${ontopicCount}, Calculated Off-topic: ${offtopicCount}`); // Debug log
+    //console.log(`[prepareScopeData] Document ID: ${document.body.id}, Total Loaded (Export) / Total DB (Main): ${document.body.id === 'html-export' ? document.querySelectorAll('#papersTable tbody tr[data-paper-id]').length : totalAllPaperCount}, Visible (On-topic): ${ontopicCount}, Calculated Off-topic: ${offtopicCount}`); // Debug log
 
     return {
         labels: ['On-topic', 'Off-topic'],
