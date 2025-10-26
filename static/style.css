@@ -27,21 +27,21 @@
     --export-xlsx-btn-color: rgb(58, 136, 47);
     --restore-btn-color: var(--primary-ui-color-darker);
     --backup-btn-color: var(--primary-ui-color);
-    --light-colored-btn-color: rgb(185, 209, 209);
+    --light-colored-btn-color: rgb(207, 227, 227);
     --light-colored-btn-text: #0a5662;
     --dark-shadow: 1px 0 5px #0006;
     --light-shadow: 1px 0 5px #fff6;
     --th-border-color: #0000003b;
     --link-color: rgb(0, 45, 115);
     --detail-button-background: linear-gradient(180deg, hsl(210, 24%, 87%) 0%, hsl(210, 32%, 93%) 60%);
-    --min-width: 1660px;
+    --min-width: 1660px
 }
 
 body {
     font-family: "Inter Tight",Arial,sans-serif;
     margin: 8px;
     background-color: var(--background-color);
-    color: var(--text-color);
+    color: var(--text-color)
 }
 
 html.busyCursor body,html.busyCursor body * {
@@ -67,12 +67,12 @@ html.busyCursor body,html.busyCursor body * {
     border-radius: 8px;
     background: var(--modal-wrapper-background);
     flex-direction: column;
-    gap: 40px;
+    gap: 40px
 }
 
 html.busyCursor .loading-overlay {
     opacity: 1;
-    pointer-events: all;
+    pointer-events: all
 }
 
 .loading-spinner {
@@ -96,12 +96,12 @@ html.busyCursor .loading-overlay {
 h3,th {
     position: sticky;
     top: 0;
-    text-shadow: var(--dark-shadow);
-    z-index: 100;
-    font-size: 0.9em;
+    text-shadow: var(--dark-shadow)
 }
 
 h3 {
+    z-index: 100;
+    font-size: .9em;
     margin: 0;
     padding: 8px 0 8px 10px;
     background: var(--stats-primary-ui-color);
@@ -110,46 +110,6 @@ h3 {
     font-weight: 400;
     width: calc(100% - 10px);
     background: linear-gradient(180deg,var(--primary-ui-color) 50%,var(--primary-ui-color-darker) 100%)
-}
-
-table {
-    border-collapse: collapse;
-    width: 100%;
-    background-color: #fff;
-    min-width: var(--min-width);
-    border-radius: 6px;
-}
-
-td {
-    padding: 9px 6px;
-}
-
-th.rotate-header {
-    white-space: nowrap;
-    padding: 0
-}
-
-
-.header-branding{
-    font-size: 24pt;
-    justify-self: center;
-    font-family: "Arial Narrow";
-    font-weight: 400;
-    color: #3f8d82;
-    text-shadow: var(--light-shadow);
-}
-
-
-th.rotate-header>div {
-    transform: rotate(-90deg) translateX(-40px);
-    width: 27px;
-    margin: 52px 0;
-}
-
-th.rotate-header>div>span {
-    display: block;
-    text-align: left;
-    max-height: 100px
 }
 
 th {
@@ -162,6 +122,44 @@ th {
     text-align: left;
     z-index: 10;
     font-size: 8.5pt
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    background-color: #fff;
+    min-width: var(--min-width);
+    border-radius: 6px
+}
+
+td {
+    padding: 9px 6px
+}
+
+th.rotate-header {
+    white-space: nowrap;
+    padding: 0
+}
+
+.header-branding {
+    font-size: 24pt;
+    justify-self: center;
+    font-family: "Arial Narrow";
+    font-weight: 400;
+    color: #3f8d82;
+    text-shadow: var(--light-shadow)
+}
+
+th.rotate-header>div {
+    transform: rotate(-90deg) translateX(-40px);
+    width: 27px;
+    margin: 52px 0
+}
+
+th.rotate-header>div>span {
+    display: block;
+    text-align: left;
+    max-height: 100px
 }
 
 tr:nth-child(4) th:not(.inferred-header) {
@@ -177,12 +175,12 @@ td.highlight-status {
     background: var(--highlighted-col-background)
 }
 
-.alt-shade-1,li:nth-child(even),  #metricsTableStatsList :nth-child(even) {
-    background-color: var(--table-row-even);
+#metricsTableStatsList :nth-child(even),.alt-shade-1,li:nth-child(even) {
+    background-color: var(--table-row-even)
 }
 
-.alt-shade-2,li:nth-child(odd),  #metricsTableStatsList :nth-child(odd) {
-    background-color: var(--table-row-odd);
+#metricsTableStatsList :nth-child(odd),.alt-shade-2,li:nth-child(odd) {
+    background-color: var(--table-row-odd)
 }
 
 .secondary-text-cell {
@@ -206,7 +204,7 @@ td.highlight-status {
     box-shadow: inset 0 0 0 .5px #0006
 }
 
-.toggle-btn:hover {
+#apply-serverside-filters:hover,#html-export .action-btn:hover,.bibtex-copy-btn:hover,.id-copy-btn:hover,.toggle-btn:hover {
     filter: saturate(200%) contrast(110%)
 }
 
@@ -282,7 +280,6 @@ input[type=search]::-webkit-input-placeholder {
 
 .action-btn {
     margin: 0 2px;
-    /*! padding: 10px 20px; */
     background-color: var(--primary-ui-color);
     color: #fff;
     border-radius: 4px;
@@ -293,15 +290,15 @@ input[type=search]::-webkit-input-placeholder {
     min-width: 160px;
     height: 40px;
     text-shadow: var(--dark-shadow);
-    border: 1px solid #0002;
+    border: 1px solid #0002
 }
 
 .action-btn:hover {
-    filter: contrast(1.2) brightness(1.2);
+    filter: contrast(1.25) brightness(1.25);
     box-shadow: 0 3px 5px rgba(0,0,0,.15)
 }
 
-.action-btn:active {
+.action-btn:active,.bibtex-copy-btn:active,.id-copy-btn:active {
     transform: translateY(1px);
     filter: contrast(1.2) brightness(.8);
     transition: all .1s ease
@@ -320,11 +317,6 @@ input[type=search]::-webkit-input-placeholder {
     filter: unset
 }
 
-.edit-section {
-    margin-top: 15px;
-    padding-top: 15px
-}
-
 form label {
     display: block;
     font-weight: 700;
@@ -334,9 +326,8 @@ form label {
     padding: 6px;
     margin: 2px;
     background: #ffffffa0;
-    font-size: 10pt;
+    font-size: 10pt
 }
-
 
 .changed-by-cell,.changed-cell {
     font-size: 9.5pt;
@@ -346,11 +337,11 @@ form label {
 .status-cell {
     text-align: center;
     font-size: 1.25em;
-    padding: 0px;
-    font-family: "Segoe UI Emoji Windows 11";
+    padding: 0;
+    font-family: "Segoe UI Emoji Windows 11"
 }
 
-.editable-status,.editable-verify, .pdf-status {
+.editable-status,.editable-verify,.pdf-status {
     cursor: pointer;
     transition: background-color .2s,transform .1s;
     border-radius: 3px;
@@ -361,13 +352,13 @@ form label {
     user-select: none
 }
 
-.editable-status:hover,.editable-verify:hover, .pdf-status:hover {
+.editable-status:hover,.editable-verify:hover,.pdf-status:hover {
     background-color: var(--light-colored-btn-color);
     transform: scale(1.1);
     box-shadow: 0 2px 4px rgba(0,0,0,.1)
 }
 
-.editable-status:active,.editable-verify:active, .pdf-status:active {
+.editable-status:active,.editable-verify:active,.pdf-status:active {
     transform: scale(.95);
     background-color: var(--light-colored-btn-color)
 }
@@ -409,7 +400,9 @@ form label {
     text-align: justify;
     white-space: normal;
     margin-bottom: .5em;
-    line-height: 1.3em
+    line-height: 1.3em;
+    margin-block-start: .5em;
+    margin-block-end: .5em
 }
 
 .detail-row>td {
@@ -417,12 +410,11 @@ form label {
 }
 
 .detail-edit input[type=text] {
-    /*! padding: 6px; */
-    border: 0px solid #dadada;
+    border: 0 solid #dadada;
     border-radius: 5px;
     font-family: inherit;
     font-size: 12pt;
-    background: #ffffffa0;
+    background: #ffffffa0
 }
 
 .save-btn {
@@ -436,7 +428,7 @@ form label {
 }
 
 #verify-all-btn,#verify-remaining-btn,.verify-btn {
-    background: var(--verify-btn-color);
+    background: var(--verify-btn-color)
 }
 
 #classify-all-btn strong,#verify-all-btn strong {
@@ -450,44 +442,48 @@ form label {
 #export-xlsx-btn {
     background: var(--export-xlsx-btn-color)
 }
-#backup-btn{
-    background: var(--backup-btn-color);
+
+#backup-btn {
+    background: var(--backup-btn-color)
 }
-#restore-btn{
+
+#restore-btn {
     background: var(--restore-btn-color)
 }
+
 #stats-btn {
     width: 160px;
     max-width: 160px;
     min-width: 160px;
-    background: var(--stats-primary-ui-color);
-}
-#parça-tools-btn{
-    background: var(--classify-btn-color);
+    background: var(--stats-primary-ui-color)
 }
 
-#batchModal, #importModal, #exportModal{
-    backdrop-filter: unset;
-    background: unset;
+#parça-tools-btn {
+    background: var(--classify-btn-color)
 }
-#apply-serverside-filters, #html-export #stats-btn {
-    background: var(--light-colored-btn-color);
+
+#batchModal,#exportModal,#importModal {
+    backdrop-filter: unset;
+    background: unset
+}
+
+#apply-serverside-filters,#html-export #stats-btn {
     width: 125px;
     max-width: 125px;
     min-width: 125px;
-    color: var(--light-colored-btn-text);
     font-size: 10pt;
-    text-shadow: var(--light-shadow);
     transition: .2s all ease-in-out;
-    padding: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,.15);
+    height: 40px;
+    border: 1px solid #0002
 }
 
-#html-export #about-btn {
+#apply-serverside-filters,#html-export #about-btn,#html-export #stats-btn {
     background: var(--light-colored-btn-color);
     color: var(--light-colored-btn-text);
-    width: 30px;
-    min-width: 30px;
-    padding: 0;
+    text-shadow: var(--light-shadow)
 }
 
 #fullscreen-btn {
@@ -501,7 +497,7 @@ form label {
     display: none
 }
 
-#about-btn {
+#about-btn,#html-export #about-btn {
     width: 30px;
     min-width: 30px;
     padding: 0
@@ -529,12 +525,12 @@ th.inferred-header-3 {
     background: linear-gradient(90deg,var(--inferred-ui-color),var(--inferred-gradient-end-color))
 }
 
-#inferred-header-title div, .inferred-header:not(.rotate-header) div {
+#inferred-header-title div,.inferred-header:not(.rotate-header) div {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-    padding: 0 6px 0 0px;
-    align-items: end;
+    padding: 0 6px 0 0;
+    align-items: end
 }
 
 .filter-item {
@@ -550,7 +546,7 @@ input[type=checkbox] {
     opacity: .5
 }
 
-input[type="checkbox"]:checked, input[type="checkbox"]:indeterminate {
+input[type=checkbox]:checked,input[type=checkbox]:indeterminate {
     opacity: 1;
     filter: hue-rotate(-50deg) brightness(1.3)
 }
@@ -565,7 +561,7 @@ tr.filter-hidden {
 
 #counts-footer {
     position: sticky;
-    bottom: 0px;
+    bottom: 0;
     z-index: 998;
     border-radius: 6px
 }
@@ -573,7 +569,7 @@ tr.filter-hidden {
 #counts-footer tr {
     background-color: var(--primary-ui-color);
     color: #fff;
-    font-weight: 700;
+    font-weight: 700
 }
 
 #counts-footer td {
@@ -586,16 +582,12 @@ tr.filter-hidden {
     white-space: pre-wrap;
     word-wrap: break-word;
     word-break: break-word;
-    padding: 8px 12px;
-    border: 1px solid #dadada;
-    background-color: #aaaaaa0b;
-    border-radius: 5px;
+    padding: 8px 0 0;
     height: 300px;
     overflow-y: auto;
     overflow-x: hidden;
-    margin: 6px 0 10px;
     font-size: 10.5pt;
-    grid-column: 1/3;
+    grid-column: 1/3
 }
 
 .detail-evaluator-trace,.detail-verifier-trace {
@@ -604,6 +596,11 @@ tr.filter-hidden {
     grid-template-columns: 1fr 170px;
     grid-template-rows: max-content max-content;
     align-items: end;
+    border: 1px solid #dadada;
+    background-color: #aaaaaa0b;
+    border-radius: 5px;
+    margin: 0 0 8px;
+    padding: 10px
 }
 
 #main-header-wrapper {
@@ -649,14 +646,13 @@ tr.filter-hidden {
 
 .menu-message {
     font-size: 10pt;
-    padding: 4px;
+    padding: 4px
 }
 
-#batch-actions, #import-actions, #export-actions{
+#batch-actions,#export-actions,#import-actions {
     z-index: 1000;
     overflow: auto;
     opacity: 1;
-    /*! pointer-events: none; */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -670,29 +666,28 @@ tr.filter-hidden {
     border-radius: 8px;
     background: #f5f7fad9;
     border: 1px solid #444;
-    box-shadow: 0 48px 96px 32px rgba(64,64,64, 0.5);
+    box-shadow: 0 48px 96px 32px rgba(64,64,64,.5);
     box-sizing: border-box;
-    transition: opacity .3s ease-in-out, transform .3s ease-out;
-    /*! background: linear-gradient(180deg,var(--classify-btn-color) 0%,var(--verify-btn-color) 48px,#f5f7fad9 20px); */
+    transition: opacity .3s ease-in-out,transform .3s ease-out;
     width: 358px;
-    text-align: justify;
-}
-#batch-actions{
-    top: 56px;
-    right: 220px;
-    transform: scale3d(.75,.66,1) translateY(-66px) translateX(40px);
-}
-#import-actions{
-    top: 56px;
-    left: 10px;
-    transform: scale3d(.75,.66,1) translateY(-66px) translateX(-40px);
-}
-#export-actions{
-    top: 56px;
-    left: 180px;
-    transform: scale3d(.75,.66,1) translateY(-66px) translateX(-40px);
+    text-align: justify
 }
 
+#batch-actions {
+    top: 56px;
+    right: 220px;
+    transform: scale3d(.75,.66,1) translateY(-66px) translateX(40px)
+}
+
+#export-actions,#import-actions {
+    top: 56px;
+    left: 10px;
+    transform: scale3d(.75,.66,1) translateY(-66px) translateX(-40px)
+}
+
+#export-actions {
+    left: 180px
+}
 
 .header-controls {
     margin: 0 4px
@@ -701,7 +696,7 @@ tr.filter-hidden {
 .detail-edit {
     display: grid;
     height: 100%;
-    padding: 0 12px 12px 0;
+    padding: 8px 8px 0 0;
     box-sizing: border-box
 }
 
@@ -710,7 +705,7 @@ tr.filter-hidden {
     grid-template-columns: 1fr 1fr 1fr 1fr 120px 120px;
     grid-template-rows: auto auto 1fr auto;
     gap: 4px;
-    height: calc(100% - 16px)
+    height: calc(100% - 8px)
 }
 
 .detail-edit form>label:nth-of-type(1) {
@@ -738,6 +733,10 @@ tr.filter-hidden {
     grid-row: 2/3
 }
 
+#html-export .detail-edit form {
+    height: calc(100% - 2px)
+}
+
 .detail-edit input[type=text] {
     width: 100%;
     box-sizing: border-box
@@ -760,11 +759,10 @@ tr.filter-hidden {
     display: block;
     resize: none;
     background: #ffffffa0;
-    border: 0px solid #dadada;
-    /*! padding: 8px; */
-    font-family: consolas, monospace;
-    font-size: 0.9em;
-    line-height: 1.25em;
+    border: 0 solid #dadada;
+    font-family: consolas,monospace;
+    font-size: .9em;
+    line-height: 1.25em
 }
 
 .detail-edit form>.row-actions {
@@ -785,10 +783,9 @@ tr.filter-hidden {
 }
 
 .modal-content,.modal-small-content {
-    background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px,/*#f5f7fad9*/ white 20px);
-    /*! border: 2px solid var(--stats-primary-ui-color); */
+    background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px,white 20px);
     border-radius: 8px;
-    box-shadow: 0 16px 96px -0px rgba(0,0,0,.66);
+    box-shadow: 0 16px 96px 0 rgba(0,0,0,.66);
     position: relative;
     box-sizing: border-box;
     overflow: hidden;
@@ -801,13 +798,13 @@ tr.filter-hidden {
     width: calc(100vw - 60px);
     min-width: calc(var(--min-width) + 0px);
     height: calc(100vh - 12px);
-    grid-template-columns: 640px 1fr;
+    grid-template-columns: 640px 1fr
 }
 
 .modal-small-content {
     width: 1400px;
     grid-template-columns: 1fr 340px;
-    min-width: 1400px;
+    min-width: 1400px
 }
 
 .modal-small-section h4,.modal-small-section p,.modal-small-section ul {
@@ -836,13 +833,12 @@ tr.filter-hidden {
     list-style-type: none;
     padding-left: 0;
     margin: 0;
-    overflow: hidden;
-    /*! border-right: 2px solid var(--stats-primary-ui-color); */
+    overflow: hidden
 }
 
 .stats-section li {
     padding: 4px 3px;
-    font-size: 9pt;
+    font-size: 9pt
 }
 
 .stats-section li span.count {
@@ -859,8 +855,7 @@ tr.filter-hidden {
 
 .stats-list-multicolumn-short {
     column-count: 3;
-    padding: 0 10px;
-    /*! max-height: 2048px; */
+    padding: 0 10px
 }
 
 .stats-list-multicolumn-2,.stats-list-multicolumn-short {
@@ -901,234 +896,266 @@ tr.filter-hidden {
     transition-delay: .3s
 }
 
-.modal.modal-active .modal-content,
-.modal.modal-active .modal-small-content,
-.modal.modal-active #batch-actions,
-.modal.modal-active #import-actions, 
-.modal.modal-active #export-actions {
+.modal.modal-active #batch-actions,.modal.modal-active #export-actions,.modal.modal-active #import-actions,.modal.modal-active .modal-content,.modal.modal-active .modal-small-content {
     transform: none;
     transition-delay: .2s
 }
 
 .stats-section {
     overflow-y: hidden;
-    overflow-x: hidden;
+    overflow-x: hidden
 }
 
 .stats-lists {
     display: grid;
-    /* grid-template-rows: 1fr 1fr 1.5fr 1fr 90px 1fr 1fr; */
     grid-template-rows: 2fr 328px 1fr 191px;
-
     grid-template-columns: 1fr 1fr;
-    min-height: 0;
-    /*! border-right: 2px solid var(--stats-primary-ui-color); */
+    min-height: 0
 }
+
 .stats-lists .stats-section {
     overflow-y: scroll;
     overflow-x: hidden;
-    border-right: 2px solid var(--stats-primary-ui-color);
+    border-right: 2px solid var(--stats-primary-ui-color)
 }
 
-.stats-charts{
+.stats-charts {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
-    /* grid-template-rows: calc(16vh - 6px) calc(16vh - 6px) calc(26vh) calc(26vh) calc(16vh); */
-    grid-template-rows: calc(26vh - 6px) calc(36vh - 6px) calc(20vh) calc(18vh);
-
+    grid-template-rows: calc(26vh - 6px) calc(36vh - 6px) calc(20vh) calc(18vh)
 }
-.stats-charts .stats-section:nth-child(1) { /*Publ. Type Distribution */
+
+.stats-charts .stats-section:nth-child(1) {
+ /*Publ. Type Distribution */
     grid-row: 4/5;
     grid-column: 3/4;
 }
-.stats-charts .stats-section:nth-child(2) { /* Survey vs Primary Distribution */
+
+.stats-charts .stats-section:nth-child(2) {
+ /* Survey vs Primary Distribution */
     grid-row: 4/5;
     grid-column: 4/5;
 }
-.stats-charts .stats-section:nth-child(3) { /* Techniques Distribution */
+
+.stats-charts .stats-section:nth-child(3) {
+ /* Techniques Distribution */
     grid-row: 1/2;
     grid-column: 1/3;
 }
-.stats-charts .stats-section:nth-child(4) { /* Features Distribution */
+
+.stats-charts .stats-section:nth-child(4) {
+ /* Features Distribution */
     grid-row: 2/3;
     grid-column: 1/3;
 }
 
-.stats-charts .stats-section:nth-child(5) { /*Publ.type per year*/
+.stats-charts .stats-section:nth-child(5) {
+ /*Publ.type per year*/
     grid-row: 3/4;
     grid-column: 1/5;
 }
-.stats-charts .stats-section:nth-child(6) { /*Survey vs Primary Papers per Year*/
+
+.stats-charts .stats-section:nth-child(6) {
+ /*Survey vs Primary Papers per Year*/
     grid-row: 4/3;
     grid-column: 5/9;
-    
 }
-.stats-charts .stats-section:nth-child(7) { /*Techniques per Year */
+
+.stats-charts .stats-section:nth-child(7) {
+ /*Techniques per Year */
     grid-row: 1/2;
-    grid-column: 3/9;    
+    grid-column: 3/9;
 }
-.stats-charts .stats-section:nth-child(8) { /*Features per Year */
+
+.stats-charts .stats-section:nth-child(8) {
+ /*Features per Year */
     grid-row: 2/3;
-    grid-column: 3/9;    
+    grid-column: 3/9;
 }
 
-
-.stats-charts .stats-section:nth-child(9) { /*relevance */
-    grid-row:  4/5;
-    grid-column: 9/7;    
-}
-.stats-charts .stats-section:nth-child(10) { /*verifier */
-    grid-row:  4/5;
-    grid-column: 5/7;    
+.stats-charts .stats-section:nth-child(9) {
+ /*relevance */
+    grid-row: 4/5;
+    grid-column: 9/7;
 }
 
-.stats-charts .stats-section:nth-child(11) { /* smt */
-    grid-row:  4/5;
-    grid-column: 2/3;    
-}
-.stats-charts .stats-section:nth-child(12) { /* scope */
-    grid-row:  4/5;
-    grid-column: 1/2;    
+.stats-charts .stats-section:nth-child(10) {
+ /*verifier */
+    grid-row: 4/5;
+    grid-column: 5/7;
 }
 
+.stats-charts .stats-section:nth-child(11) {
+ /* smt */
+    grid-row: 4/5;
+    grid-column: 2/3;
+}
 
+.stats-charts .stats-section:nth-child(12) {
+ /* scope */
+    grid-row: 4/5;
+    grid-column: 1/2;
+}
 
-
-
-/* Style for the search button inside the stats list items */
 .search-item-btn {
-    background: none;
-    border: none; /* Optional: Add a border */
-     /* Optional: Adjust color */
+    background: 0 0;
+    border: 0;
     cursor: pointer;
-    font-size: 0.9em; /* Make it smaller */
-     /* Space it from the text */
-     /* Small padding */
-    border-radius: 3px; /* Rounded corners */
+    font-size: .9em;
+    border-radius: 3px;
     padding: 1px 2px;
-    transform: scale(1.5) translate(-4px,-0.5px);
-    opacity: 0.5;
-    transition: 0.5s opacity ease;
+    transform: scale(1.5) translate(-4px,-.5px);
+    opacity: .5;
+    transition: .5s opacity ease
 }
 
 .search-item-btn:hover {
-    background-color: #f0f0f0; /* Light background on hover */
-    opacity: 1; /* Darker border on hover */
+    background-color: #f0f0f0;
+    opacity: 1
 }
 
-
-
-
-
-/* Ensure the list items layout accommodates the button */
 li {
-    display: flex; /* Use flexbox */
-    justify-content: space-between; /* Distribute space */
-    align-items: center; /* Align items vertically */
-    gap: 4px; /* Add a small gap between elements */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4px
 }
 
-.stats-list-multicolumn-2 li .count,
-.stats-list-multicolumn-short li .count {
-    flex-shrink: 0; /* Don't shrink the count */
+.stats-list-multicolumn-2 li .count,.stats-list-multicolumn-short li .count {
+    flex-shrink: 0
 }
 
-.stats-list-multicolumn-2 li .name,
-.stats-list-multicolumn-short li .name {
-    flex-grow: 1; /* Allow the name to grow */
-    word-break: break-word; /* Break long names if necessary */
+.stats-list-multicolumn-2 li .name,.stats-list-multicolumn-short li .name {
+    flex-grow: 1;
+    word-break: break-word
 }
 
-.stats-list-multicolumn-2 li .search-item-btn,
-.stats-list-multicolumn-short li .search-item-btn {
-    flex-shrink: 0; /* Don't shrink the button */
+.stats-list-multicolumn-2 li .search-item-btn,.stats-list-multicolumn-short li .search-item-btn {
+    flex-shrink: 0
 }
 
-
-
-/* Container for the search input and clear button */
 .search-container {
     position: relative;
-    display: inline-block; /* Or 'block' depending on desired layout behavior */
-    width: 100%; /* Adjust width as needed, often 100% to fill the table cell */
+    display: inline-block;
+    width: 100%
 }
 
-/* Style the clear button */
 .clear-btn {
     position: absolute;
-    right: 3px; 
-    top: 50%; 
+    right: 3px;
+    top: 50%;
     transform: translateY(-50%);
     border-radius: 0 6px 6px 0;
-    border: none;
-    color: white; 
+    border: 0;
+    color: #fff;
     cursor: pointer;
     font-size: 24px;
-    width: 32px; 
+    width: 32px;
     height: 40px;
     display: none;
-    transition: opacity 0.2s; /* Smooth opacity transition */
-    padding: 0px;
-    background: var(--primary-ui-color);
+    transition: opacity .2s;
+    padding: 0;
+    background: var(--primary-ui-color)
 }
 
-/* Show the clear button when search has content */
-#search-input:not(:placeholder-shown) + .clear-btn {
-    display: inline;
+#search-input:not(:placeholder-shown)+.clear-btn {
+    display: inline
 }
 
-/* Optional: Style the clear button on hover */
 .clear-btn:hover {
-    color: #eee; /* Darker color on hover */
+    color: #eee
 }
 
-#metricsTableStatsList{
+#metricsTableStatsList {
     min-width: 0;
     font-size: 10pt;
     background: #0000;
-    /*! border-right: 2px solid var(--stats-primary-ui-color); */
-    text-align: right;
+    text-align: right
 }
-#metricsTableStatsList td{
-    padding: 7px;
+
+#metricsTableStatsList td {
+    padding: 7px
 }
+
 #keywordCloud span {
-  display: inline-block;
-  margin: 4px 6px;
-  cursor: pointer;
-  transition: transform .15s;
-}
-#keywordCloud span:hover {
-  transform: scale(1.15);
-}
-
-
-/* Style for the clickable items (authors, keywords) */
-.clickable-item {
-    /* background-color: #f0f8ff; 
-    /* border: 1px solid #87ceeb;*/
-    border-radius: 5px;
-    padding: 3px 5px;
-    margin: 0;
-    /* display: inline-block; */
+    display: inline-block;
+    margin: 4px 6px;
     cursor: pointer;
-    font-size: 0.85em;
-    opacity: 0.7;
-    transition: 0.33s all ease;
+    transition: transform .15s
+}
+
+#keywordCloud span:hover {
+    transform: scale(1.15)
+}
+
+.clickable-item {
+    border-radius: 5px;
+    padding: 4px 6px;
+    margin: 0;
+    cursor: pointer;
+    font-size: .85em;
+    transition: .33s all ease
 }
 
 .clickable-item:hover {
-    background-color: #e0f0ff; /* Slightly darker on hover */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    background-color: var(--light-colored-btn-color);
+    box-shadow: 0 1px 2px rgba(0,0,0,.1);
     opacity: 1;
+    color: var(--light-colored-btn-text);
+    text-shadow: var(--light-shadow)
 }
 
-/* Optional: Style for the container spans if needed */
-.clickable-authors, .clickable-keywords {
-    /* line-height: 1.25; */
-    text-align: justify;
+.clickable-authors,.clickable-keywords {
+    text-align: justify
 }
 
+.id-section {
+    display: grid;
+    grid-template-columns: min-content 1fr min-content;
+    border: 1px solid #dadada;
+    border-radius: 6px;
+    padding: 6px;
+    margin: 6px 0;
+    background-color: #aaaaaa0b;
+    align-items: center;
+    gap: 8px
+}
+
+.bibtex-section {
+    display: grid;
+    grid-template-columns: 1fr min-content;
+    grid-template-rows: min-content 1fr
+}
+
+.bibtex-section,.searchable-section {
+    border: 1px solid #dadada;
+    border-radius: 6px;
+    padding: 6px;
+    margin: 6px 0 9px;
+    background-color: #aaaaaa0b;
+    align-items: center;
+}
+
+.bibtex-pre {
+    overflow: scroll;
+    grid-column: 1/3;
+    margin: 0;
+    font-size: 7.5pt;
+}
+
+.bibtex-copy-btn,.id-copy-btn {
+    background-color: var(--light-colored-btn-color);
+    color: var(--light-colored-btn-text);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .33s ease;
+    box-shadow: 0 1px 2px rgba(64,64,64,.1);
+    text-shadow: var(--light-shadow);
+    border: 1px solid #0002;
+    padding: 6px;
+    width: 66px;
+    font-size: 9pt
+}
 
 @media screen and (max-width:1880px) {
     body {
@@ -1152,22 +1179,26 @@ li {
     .main-header {
         border-radius: 0
     }
-    #batch-actions{
+
+    #batch-actions {
         top: 48px;
-        right: 216px;
+        right: 216px
     }
-    #import-actions{
+
+    #import-actions {
         top: 48px;
-        left: 6px;
+        left: 6px
     }
-    #export-actions{
+
+    #export-actions {
         top: 48px;
-        left: 176px;
+        left: 176px
     }
+
     .modal-content {
         width: calc(100vw);
         min-width: calc(var(--min-width) + 0px);
-        height: calc(100vh);
+        height: calc(100vh)
     }
 }
 
@@ -1176,51 +1207,54 @@ li {
     height: 0
 }
 
-
 /* Media query for high device pixel ratio (HiDPI) screens */
 /* This targets the *physical* pixel density of the screen */
-@media screen and (min-resolution: 2dppx) { /* Minimum 2 device pixels per CSS pixel */
+@media screen and (min-resolution: 2dppx) {
+ /* Minimum 2 device pixels per CSS pixel */
   /* Disable demanding visual effects on HiDPI screens */
-  * {
-    backdrop-filter: none !important;
-  }
+    * {
+        backdrop-filter: none !important;
+    }
   /* Specifically target the most demanding transition */
-  .detail-flex-container {
+    .detail-flex-container {
     /* Overrides max-height/opacity transitions */
-    transition: none !important;
-  }
+        transition: none !important;
+    }
 
   /* Target the spinner animation */
-  .loading-spinner {
-    animation: spin 1.5s linear infinite !important; /* Slows down the spin animation */
-  }
+    .loading-spinner {
+        animation: spin 1.5s linear infinite !important;
+ /* Slows down the spin animation */
+    }
 
   /* Target the modal backdrop filter specifically */
-  .loading-overlay,
+    .loading-overlay,
   .modal {
-    backdrop-filter: none !important;
-    background: #eeee
-  }
+        backdrop-filter: none !important;
+        background: #eeee
+    }
 
-  .modal-content,
+    .modal-content,
   .modal-small-content,
   #batch-actions,
   #import-actions,
   #export-actions {
-    transform: none !important; /* Removes initial modal scaling/rotation */
-  }
+        transform: none !important;
+ /* Removes initial modal scaling/rotation */
+    }
 
   /* Target potential hover effects causing frequent redraws */
-  .editable-status:hover,
+    .editable-status:hover,
   .editable-verify:hover,
   .pdf-status:hover,
   .action-btn:hover,
   .toggle-btn:hover {
     /* Override any hover effects that might rely on transitions or filters */
-    transform: none !important; /* Removes scale */
-  }
-    #batch-actions, #import-actions, #export-actions{
-        background:  var(--detail-button-background) /*remove translucid background as it requires backdrop-filter for legibility*/
+        transform: none !important;
+ /* Removes scale */
     }
 
+    #batch-actions, #import-actions, #export-actions {
+        background: var(--detail-button-background) /*remove translucid background as it requires backdrop-filter for legibility*/
+    }
 }

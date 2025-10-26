@@ -118,18 +118,18 @@ const featureColorGroups = {
 // Map field names (data-field values / structure keys) to user-friendly labels (based on your table headers)
 const FIELD_LABELS = {
     // Features
-    'features_tracks': 'Tracks',
-    'features_holes': 'Holes',
-    'features_bare_pcb_other': 'Other (bare) PCB',
-    'features_solder_insufficient': 'Insufficient Solder',
-    'features_solder_excess': 'Excess Solder',
-    'features_solder_void': 'Solder Voids',
-    'features_solder_crack': 'Solder Cracks',
-    'features_solder_other': 'Solder (Other)',
-    'features_orientation': 'Orientation/Polarity', // Combined as per previous logic
-    'features_wrong_component': 'Wrong Component',
-    'features_missing_component': 'Missing Component',
-    'features_component_other': 'Component (Other)',
+    'features_tracks': '(Bare PCB) Tracks',
+    'features_holes': '(Bare PCB) Holes',
+    'features_bare_pcb_other': '(Bare PCB) Other',
+    'features_solder_insufficient': '(Solder) Insufficient',
+    'features_solder_excess': '(Solder) Excess',
+    'features_solder_void': '(Solder) Voids',
+    'features_solder_crack': '(Solder) Cracks',
+    'features_solder_other': '(Solder) Other',
+    'features_orientation': '(PCBA) Orientation/Polarity', // Combined as per previous logic
+    'features_wrong_component': '(PCBA) Wrong Component',
+    'features_missing_component': '(PCBA) Missing Component',
+    'features_component_other': '(PCBA) Other',
     'features_cosmetic': 'Cosmetic',
     'features_other_state': 'Other',
     // Techniques
@@ -189,7 +189,8 @@ const COUNT_FIELDS = [
     'changed_by', 'verified', 'verified_by', 'user_comment_state' // user counting (Top-level)
 ];
 
-function updateCounts() {
+/** updateCounts() is used by filtering.js and comms.js! */
+function updateCounts() { 
     const counts = {};
     const yearlySurveyImpl = {}; // { year: { surveys: count, impl: count } }
     const yearlyTechniques = {}; // { year: { technique_field: count, ... } }
@@ -720,50 +721,115 @@ function prepareScopeData(totalVisiblePaperCount, totalAllPaperCount) {
 
 function prepareFeaturesData() {
     if (showPieCharts) {
-        // --- Grouped Data for Pie Chart ---
-        // Calculate aggregated values based on featureColorGroups
-        const groupedLabels = [];
-        const groupedValues = [];
-        const groupedBackgroundColors = [];
-        // const groupedBorderColors = [];
-        // Iterate through the defined groups
-        Object.keys(featureColorGroups).forEach(baseColorIndex => {
-            const group = featureColorGroups[baseColorIndex];
-            groupedLabels.push(group.label); // Use the group's label (e.g., 'PCB Features')
-            // Sum the counts for all features within this group
-            let groupSum = 0;
-            group.fields.forEach(field => {
-                groupSum += (latestCounts[field] || 0);
+        // --- Data for Pie Chart (Conditional Grouping Based on featureGroupToggle) ---
+        let labels = [];
+        let values = [];
+        let backgroundColors = [];
+
+        if (featureGroupToggle && featureGroupToggle.checked) {
+            // --- Grouped Pie Chart Data ---
+            // Calculate aggregated values based on featureColorGroups
+            Object.keys(featureColorGroups).forEach(baseColorIndex => {
+                const group = featureColorGroups[baseColorIndex];
+                labels.push(group.label); // Use the group's label (e.g., 'PCB Features')
+                // Sum the counts for all features within this group
+                let groupSum = 0;
+                group.fields.forEach(field => {
+                    groupSum += (latestCounts[field] || 0);
+                });
+                values.push(groupSum);
+                // Use the color associated with the base index for this group
+                const colorIndex = parseInt(baseColorIndex);
+                backgroundColors.push(featuresColorsOriginalOrder[colorIndex]);
             });
-            groupedValues.push(groupSum);
-            // Use the color associated with the base index for this group
-            const colorIndex = parseInt(baseColorIndex);
-            groupedBackgroundColors.push(featuresColorsOriginalOrder[colorIndex]);
-            // groupedBorderColors.push(featuresBorderColorsOriginalOrder[colorIndex]);
-        });
+        } else {
+            // --- Ungrouped Pie Chart Data (Shows Individual Features) ---
+            // Use the same logic as the ungrouped bar chart
+            const featuresData = FEATURE_FIELDS.map(field => ({
+                label: FIELD_LABELS[field] || field,
+                value: latestCounts[field] || 0,
+                originalIndex: FEATURE_FIELD_INDEX_MAP[field] !== undefined ? FEATURE_FIELD_INDEX_MAP[field] : -1 // Get original color index
+            }));
+
+            // Determine if sorting is enabled based on the checkbox state (applies to ungrouped pie too)
+            let processedData = featuresData; // Default to original order
+            processedData = [...featuresData].sort((a, b) => b.value - a.value); // Use spread to avoid mutating original
+
+            // Extract labels, values, and corresponding colors from the processed (or original) data
+            labels = processedData.map(item => item.label);
+            values = processedData.map(item => item.value);
+            backgroundColors = processedData.map(item => featuresColorsOriginalOrder[item.originalIndex] || 'rgba(0,0,0,0.1)');
+        }
+
         return {
-            labels: groupedLabels,
+            labels: labels,
             datasets: [{
-                label: 'Features Count (Grouped)',
-                data: groupedValues,
-                backgroundColor: groupedBackgroundColors,
+                label: 'Features Count',
+                data: values,
+                backgroundColor: backgroundColors,
                 borderColor: "#333",         // fixed color as the translucent mapping lacks contrast for bar or pie charts
                 borderWidth: 1,
                 hoverOffset: 4
             }]
         };
     } else {
-        // --- Original Data for Bar Chart ---
-        const featuresLabels = FEATURE_FIELDS.map(field => FIELD_LABELS[field] || field);
-        const featuresValues = FEATURE_FIELDS.map(field => latestCounts[field] || 0);
-        const featuresBackgroundColors = featuresColorsOriginalOrder; // Use original colors
-        // const featuresBorderColors = featuresBorderColorsOriginalOrder; // Use original border colors
+        // --- Data for Bar Chart (Conditional Sorting Within Groups) ---
+        let finalFeaturesLabels = [];
+        let finalFeaturesValues = [];
+        let finalFeaturesBackgroundColors = [];
+
+        if (featureGroupToggle && featureGroupToggle.checked) {
+            // --- Sorting Enabled: Sort each group by value, then concatenate ---
+            Object.keys(featureColorGroups).forEach(baseColorIndexStr => {
+                const baseColorIndex = parseInt(baseColorIndexStr);
+                const group = featureColorGroups[baseColorIndex];
+                const groupFields = group.fields;
+
+                // Create an array of objects for this group's fields with their data and original index
+                const groupData = groupFields.map(field => ({
+                    label: FIELD_LABELS[field] || field,
+                    value: latestCounts[field] || 0,
+                    originalIndex: FEATURE_FIELD_INDEX_MAP[field] !== undefined ? FEATURE_FIELD_INDEX_MAP[field] : -1
+                }));
+
+                // Sort *within* this group by value descending
+                groupData.sort((a, b) => b.value - a.value);
+
+                // Append the sorted data for this group to the final arrays
+                groupData.forEach(item => {
+                    finalFeaturesLabels.push(item.label);
+                    finalFeaturesValues.push(item.value);
+                    // Use the color associated with the *base* color index for the group
+                    // This ensures all items in the group have the same color
+                    finalFeaturesBackgroundColors.push(featuresColorsOriginalOrder[baseColorIndex]);
+                });
+            });
+        } else {
+            // --- Data for Bar Chart (Conditional Sorting) ---
+            const featuresData = FEATURE_FIELDS.map(field => ({
+                label: FIELD_LABELS[field] || field,
+                value: latestCounts[field] || 0,
+                originalIndex: FEATURE_FIELD_INDEX_MAP[field] !== undefined ? FEATURE_FIELD_INDEX_MAP[field] : -1 // Get original color index
+            }));
+
+            // Determine if sorting is enabled based on the checkbox state
+            let processedData = featuresData; // Default to original order
+            processedData = [...featuresData].sort((a, b) => b.value - a.value); // Use spread to avoid mutating original
+            // If checkbox is not checked or doesn't exist, processedData remains as original featuresData
+
+            // Extract labels, values, and corresponding colors from the processed (or original) data
+            finalFeaturesLabels = processedData.map(item => item.label);
+            finalFeaturesValues = processedData.map(item => item.value);
+            finalFeaturesBackgroundColors = processedData.map(item => featuresColorsOriginalOrder[item.originalIndex] || 'rgba(0,0,0,0.1)');
+            // const finalFeaturesBorderColors = processedData.map(item => featuresBorderColorsOriginalOrder[item.originalIndex] || 'rgba(0,0,0,1)'); // If needed later
+        }
+
         return {
-            labels: featuresLabels,
+            labels: finalFeaturesLabels,
             datasets: [{
                 label: 'Features Count',
-                data: featuresValues,
-                backgroundColor: featuresBackgroundColors,
+                data: finalFeaturesValues,
+                backgroundColor: finalFeaturesBackgroundColors, // Now reflects grouped sorting if enabled
                 borderColor: "#333",         // fixed color as the translucent mapping lacks contrast for bar or pie charts
                 borderWidth: 1,
                 hoverOffset: 4
@@ -992,15 +1058,16 @@ function renderBarOrPieChart(ctx, chartData, chartLabel, chartType) {
     /* -------------------------------------------------
        2.  PIE – show percentage inside every slice
        ------------------------------------------------- */
+       //known issue: the percentages are right only when all slices are enabled!
     if (!isBar && ChartDataLabels) {
         datalabelsPluginConfig = {
             datalabels: {
                 color: '#444',
                 font: ctx => {                       // ← dynamic font
-                    const h = ctx.chart.height || 280; // fallback
+                    const h = ctx.chart.width || 280; // fallback
                     return {
-                        size: Math.max(8, h * 0.035), // 6 px minimum
-                        weight: '400'
+                        size: Math.max(10, h * 0.035), // 10 px minimum
+                        weight: '300'
                     };
                 },
                 anchor: 'end',
@@ -1455,6 +1522,11 @@ function displayStats() {
         TECHNIQUE_FIELDS_FOR_YEARLY.forEach((field, index) => { TECHNIQUE_FIELD_COLOR_MAP[field] = index; });
         FEATURE_FIELDS_FOR_YEARLY.forEach((field, index) => { FEATURE_FIELD_INDEX_MAP[field] = index; });
 
+        // *** ADD THIS LINE: Clear the fields arrays in featureColorGroups ***
+        Object.keys(featureColorGroups).forEach(key => {
+            featureColorGroups[key].fields = [];
+        });
+
         // Populate the groups with the actual feature fields
         FEATURE_FIELDS_FOR_YEARLY.forEach(field => {
             const originalIndex = FEATURE_FIELD_INDEX_MAP[field];
@@ -1840,11 +1912,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const cumulativeToggle = document.getElementById('cumulativeToggle');
     const pieToggle = document.getElementById('pieToggle');
     const cloudToggle = document.getElementById('cloudToggle');
+    const featureGroupToggle = document.getElementById('featureGroupToggle');
 
     stackingToggle.checked = false;
     cumulativeToggle.checked = false;
     pieToggle.checked = false;
     cloudToggle.checked = false;
+    featureGroupToggle.checked = true; // default on for this one
 
     statsBtn.addEventListener('click', function () {
         document.documentElement.classList.add('busyCursor');
@@ -1925,6 +1999,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    featureGroupToggle.addEventListener('change', function () {
+        // Re-render the Features bar chart based on the new toggle state
+        if (window.featuresBarChartInstance) {
+            const featuresCtx = document.getElementById('featuresPieChart')?.getContext('2d');
+            if (featuresCtx) {
+                // Prepare data considering the new toggle state
+                const featuresChartData = prepareFeaturesData(); // This function now checks the toggle
+                // Destroy the old instance
+                window.featuresBarChartInstance.destroy();
+                // Create the new chart instance using the existing render function
+                window.featuresBarChartInstance = renderBarOrPieChart(featuresCtx, featuresChartData, 'Features Count', showPieCharts ? 'pie' : 'bar');
+            }
+        }
+    });
+    
     pieToggle.addEventListener('change', function () {
         showPieCharts = this.checked; // Update the state variable
 
@@ -2015,14 +2104,32 @@ document.addEventListener('DOMContentLoaded', function () {
     spanClose.addEventListener('click', closeModal);
     smallClose.addEventListener('click', closeSmallModal);
 
+    // --- Add F4 shortcut ---
     document.addEventListener('keydown', function (event) {
         // Check if the pressed key is 'Escape' and if the modal is currently active
-        if (event.key === 'Escape') { closeModal(); closeSmallModal(); 
-            if (document.body.id !== "html-export") { 
+        if (event.key === 'Escape') {
+            closeModal();
+            closeSmallModal();
+            if (document.body.id !== "html-export") {
+                // Assuming these functions exist in the global scope or are imported
                 closeBatchModal(); /* from comms.js */
-                closeExporthModal(); 
-                closeImportModal() 
-            } 
+                closeExporthModal();
+                closeImportModal()
+            }
+        }
+        // Add the F4 key check for opening the stats panel
+        if (event.key === 'F4') {
+            event.preventDefault(); // Prevent any default F4 behavior (though browsers often don't have one)
+            document.documentElement.classList.add('busyCursor');
+            closeSmallModal();
+            if (document.body.id !== "html-export") {
+                // Assuming these functions exist in the global scope or are imported
+                closeBatchModal(); /* from comms.js */
+                closeExporthModal();
+                closeImportModal()
+            }
+            buildStatsLists(); // Ensure lists are built before displaying
+            displayStats();
         }
     });
 

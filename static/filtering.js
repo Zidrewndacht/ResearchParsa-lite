@@ -666,19 +666,20 @@ const NON_EDITABLE_STATUS_FIELDS = new Set([
 
 function performSort(sortBy, direction, visibleRows = null) {
     if (!sortBy) return;
-    
     // Use provided visible rows or get them from DOM
     const rowsToSort = visibleRows || tbody.querySelectorAll('tr[data-paper-id]:not(.filter-hidden)');
     if (rowsToSort.length === 0) return;
-    
+
     // Calculate the header index based on the sort column
     const sortHeader = document.querySelector(`th[data-sort="${sortBy}"]`);
     if (!sortHeader) return;
     const headerIndex = Array.prototype.indexOf.call(sortHeader.parentNode.children, sortHeader);
-    
+
     const sortData = new Array(rowsToSort.length);
 
     // Pre-calculate sort type to avoid repeated checks inside the loop
+    // Assuming the header text or data-sort attribute for the date column is 'changed' based on the cell class 'changed-cell'
+    const isDateSort = sortBy === 'changed'; // Adjust 'changed' if your data-sort attribute is different
     const isNumericSort = ['year', 'estimated_score', 'page_count', 'relevance'].includes(sortBy);
     const isPDFSort = sortBy === 'pdf-link';
     const isEditableStatusSort = !isNumericSort && !isPDFSort && !NON_EDITABLE_STATUS_FIELDS.has(sortBy) && !['title', 'journal', 'changed_by', 'changed'].includes(sortBy);
@@ -688,7 +689,23 @@ function performSort(sortBy, direction, visibleRows = null) {
         const paperId = mainRow.getAttribute('data-paper-id');
         let cellValue;
 
-        if (isNumericSort) {
+        if (isDateSort) {
+            const cell = mainRow.cells[headerIndex];
+            const cellText = cell ? cell.textContent.trim() : '';
+            // Parse the date string DD/MM/YY HH:MM:SS
+            // Note: This assumes the date is always in this format. Adjust regex if format can vary.
+            const dateMatch = cellText.match(/(\d{2})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+            if (dateMatch) {
+                const [, day, month, year, hour, minute, second] = dateMatch;
+                // Create a Date object, assuming 20xx for the year (e.g., '25' -> 2025)
+                // Date constructor uses 0-indexed months (0-11), so subtract 1 from month
+                cellValue = new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+            } else {
+                // If the date string doesn't match the expected format, treat as invalid date (sorts last)
+                console.warn(`Invalid date format for sorting: ${cellText}`);
+                cellValue = new Date(NaN); // Invalid Date object
+            }
+        } else if (isNumericSort) {
             const cell = mainRow.cells[headerIndex];
             cellValue = cell ? parseFloat(cell.textContent.trim()) || 0 : 0;
         } else if (isPDFSort) {
@@ -708,6 +725,7 @@ function performSort(sortBy, direction, visibleRows = null) {
                 cellValue = cellText;
             }
         }
+
         const detailRow = mainRow.nextElementSibling;
         sortData[i] = { value: cellValue, mainRow, detailRow, paperId };
     }
@@ -718,18 +736,32 @@ function performSort(sortBy, direction, visibleRows = null) {
         const aValue = a.value;
         const bValue = b.value;
 
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
+        if (aValue instanceof Date && bValue instanceof Date) {
+            // Compare dates
+            if (isNaN(aValue)) { // Check if aValue is an invalid date
+                 if (isNaN(bValue)) { // Both invalid, keep original order
+                     comparison = 0;
+                 } else { // aValue invalid, bValue valid -> aValue comes last
+                     comparison = 1;
+                 }
+            } else if (isNaN(bValue)) { // aValue valid, bValue invalid -> bValue comes last
+                 comparison = -1;
+            } else { // Both valid dates
+                comparison = aValue - bValue; // Subtraction works for valid dates
+            }
+        } else if (typeof aValue === 'string' && typeof bValue === 'string') {
             comparison = aValue.localeCompare(bValue, undefined, { sensitivity: 'base' });
         } else {
+            // Handle comparisons between different types if necessary, defaulting to value comparison
             if (aValue > bValue) comparison = 1;
             else if (aValue < bValue) comparison = -1;
         }
 
         if (comparison === 0) {
+            // Secondary sort by paperId to ensure stability
             if (a.paperId > b.paperId) comparison = 1;
             else if (a.paperId < b.paperId) comparison = -1;
         }
-
         return direction === 'DESC' ? -comparison : comparison;
     });
 
@@ -750,6 +782,7 @@ function performSort(sortBy, direction, visibleRows = null) {
         indicator.textContent = direction === 'ASC' ? '▲' : '▼';
     }
 }
+
 
 function sortTable() {
     //console.log("sortTable called for column:", this.getAttribute('data-sort'));
@@ -775,33 +808,21 @@ function sortTable() {
                 applyDuplicateShading(visibleRows);
             }
             updateUrlWithClientFilters();
-            // updateCounts();
             applyAlternatingShading();
             document.documentElement.classList.remove('busyCursor');
         });
-    }, 20); // Keep the original timeout
+    }, 50);
 }
 
 
 // --- Add F3 Shortcut ---
 document.addEventListener('keydown', function(event) {
-    // Check if F3 key is pressed
-    // event.key is more reliable than event.keyCode, especially for function keys
     if (event.key === 'F3') {
-        // Prevent the browser's default F3 action (usually opening Find dialog)
         event.preventDefault();
-
-        // Focus the search input if it exists
-        if (searchInput && searchInput instanceof HTMLElement) {
-            searchInput.focus();
-            // Optional: Select all text in the search bar for easy replacement
-            // searchInput.select();
-        } else {
-            console.warn("Search input element not found for F3 shortcut.");
-        }
+        searchInput.focus();
     }
 });
-// In initializeClientFilters, remove the default sort setting:
+
 function initializeClientFilters() {
     const urlParams = new URLSearchParams(window.location.search);
     
@@ -963,6 +984,77 @@ function restoreDetailState() {
     //console.log("Finished restoreDetailState. Final open IDs:", [...openDetailIds]); // Debug log
 }
 
+
+
+
+/**
+ * Copies the provided paper ID to the clipboard.
+ * Provides user feedback by changing the button text to 'Copied!' temporarily.
+ * @param {string} paperId - The ID of the paper to copy.
+ * @param {HTMLElement} buttonElement - The button that was clicked.
+ */
+function copyPaperId(paperId, buttonElement) {
+    if (paperId) {
+        // Store original text
+        const originalText = buttonElement.textContent;
+
+        // Change button text immediately to provide feedback
+        buttonElement.textContent = 'Copied!';
+
+        navigator.clipboard.writeText(paperId)
+            .then(() => {
+                //console.log('Paper ID copied to clipboard:', paperId);
+                // The text is already 'Copied!', now reset it after a delay
+                setTimeout(() => {
+                    buttonElement.textContent = originalText;
+                }, 2000); // Reset text after 2 seconds
+            })
+            .catch(err => {
+                console.error('Failed to copy ID: ', err);
+                alert('Failed to copy ID to clipboard.');
+                // Reset text if copy failed
+                buttonElement.textContent = originalText;
+            });
+    } else {
+        console.warn('Paper ID is empty or undefined.');
+        alert('Paper ID is empty and cannot be copied.');
+    }
+}
+
+/**
+ * Copies the provided BibTeX string to the clipboard.
+ * Provides user feedback by changing the button text to 'Copied!' temporarily.
+ * @param {string} bibtexString - The BibTeX citation string to copy.
+ * @param {HTMLElement} buttonElement - The button that was clicked.
+ */
+function copyBibtex(bibtexString, buttonElement) {
+    if (bibtexString) {
+        // Store original text
+        const originalText = buttonElement.textContent;
+
+        // Change button text immediately to provide feedback
+        buttonElement.textContent = 'Copied!';
+
+        navigator.clipboard.writeText(bibtexString)
+            .then(() => {
+                //console.log('BibTeX copied to clipboard.');
+                // The text is already 'Copied!', now reset it after a delay
+                setTimeout(() => {
+                    buttonElement.textContent = originalText;
+                }, 2000); // Reset text after 2 seconds
+            })
+            .catch(err => {
+                console.error('Failed to copy BibTeX: ', err);
+                alert('Failed to copy BibTeX to clipboard.');
+                 // Reset text if copy failed
+                 buttonElement.textContent = originalText;
+            });
+    } else {
+        console.warn('BibTeX content is empty.');
+        alert('BibTeX content is empty and cannot be copied.');
+    }
+}
+
 // Existing DOMContentLoaded listener and other code follows...
 document.addEventListener('DOMContentLoaded', function () {
     // Apply client filters from URL first
@@ -1008,3 +1100,4 @@ document.addEventListener('DOMContentLoaded', function () {
     applyLocalFilters(); // Apply initial filtering
     updateSurveyCheckboxUI();
 }); 
+

@@ -96,56 +96,73 @@
     <tr class="detail-row">
         <td colspan="42">
             <div class="detail-flex-container">
-                <div class="detail-content detail-abstract">
-                    <p><strong>ID:</strong> {{ paper.id }} 
-                    <!-- <strong>Type:</strong> {{ paper.type }}</p> -->
-                    <p><strong>Abstract:</strong> {{ paper.abstract }}</p>
-                </div>
+                    <div class="detail-content detail-abstract">
+                        <div class="id-section">
+                            <strong>ID:</strong> {{ paper.id }} 
+                            <button type="button" class="id-copy-btn" onclick="copyPaperId('{{ paper.id }}', this)">Copy</button>
+                        </div>
+                        <!-- <strong>Type:</strong> {{ paper.type }}</p> -->
+                        <p><strong>Abstract:</strong> {{ paper.abstract }}</p>
+                    </div>
 
-                <div class="detail-content detail-metadata">
-                    <p><strong>Keywords:</strong>
-                        <span class="clickable-keywords">
-                            {% if paper.keywords %}
-                                {% set keywords_list = paper.keywords.split(';') %}
-                                {% for keyword in keywords_list %}
-                                    {% set trimmed_keyword = keyword.strip() %}
-                                    {% if trimmed_keyword %}
-                                        <span class="clickable-item" data-search-field="keywords" data-search-term="{{ trimmed_keyword }}">{{ trimmed_keyword }}🔍</span>
+                    <div class="detail-content detail-metadata">
+                        
+                        <div class="bibtex-section">
+                            <strong>BibTeX Citation:</strong> 
+                            <button type="button" class="bibtex-copy-btn" onclick="copyBibtex(`{{ paper | bibtex }}`, this)">Copy</button>
+                            <pre class="bibtex-pre">{{ paper | bibtex }}</pre>
+                        </div>
+
+                        <div class="searchable-section">
+                            <span style="font-size:0.8em">Click on any keyword or author below to search for it:</span>
+                            <p><strong>Keywords:</strong>
+                                <span class="clickable-keywords">
+                                    {% if paper.keywords %}
+                                        {% set keywords_list = paper.keywords.split(';') %}
+                                        {% for keyword in keywords_list %}
+                                            {% set trimmed_keyword = keyword.strip() %}
+                                            {% if trimmed_keyword %}
+                                                <span class="clickable-item" data-search-field="keywords" data-search-term="{{ trimmed_keyword }}">{{ trimmed_keyword }};<!--🔍--></span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        {{ paper.keywords }} <!-- In case it's empty or None -->
                                     {% endif %}
-                                {% endfor %}
-                            {% else %}
-                                {{ paper.keywords }} <!-- In case it's empty or None -->
-                            {% endif %}
-                        </span>
-                    </p>
-                    <p><strong>DOI:</strong>
-                        {% if paper.doi %}
-                            <a href="https://doi.org/{{ paper.doi }}" target="_blank">{{ paper.doi }}</a>
-                        {% else %}
-                            {{ paper.doi }}
-                        {% endif %}
-                    <strong> — ISSN:</strong> {{ paper.issn }}
-                    <strong> — Pages:</strong> {{ paper.pages }}</p></p>
-                    <p><strong>Authors:</strong>
-                        <span class="clickable-authors">
-                            {% if paper.authors %}
-                                {% set authors_list = paper.authors.split(';') %}
-                                {% for author in authors_list %}
-                                    {% set trimmed_author = author.strip() %}
-                                    {% if trimmed_author %}
-                                        <span class="clickable-item" data-search-field="authors" data-search-term="{{ trimmed_author }}">{{ trimmed_author }}🔍</span>
+                                </span>
+                            </p>
+                            <p><strong>Authors:</strong>
+                                <span class="clickable-authors">
+                                    {% if paper.authors %}
+                                        {% set authors_list = paper.authors.split(';') %}
+                                        {% for author in authors_list %}
+                                            {% set trimmed_author = author.strip() %}
+                                            {% if trimmed_author %}
+                                                <span class="clickable-item" data-search-field="authors" data-search-term="{{ trimmed_author }}">{{ trimmed_author }};<!--🔍--></span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        {{ paper.authors }} <!-- In case it's empty or None -->
                                     {% endif %}
-                                {% endfor %}
-                            {% else %}
-                                {{ paper.authors }} <!-- In case it's empty or None -->
-                            {% endif %}
-                        </span>
-                    </p>
-                    <!-- <p><strong>Year:</strong> {{ paper.year }}</p> -->
-                    
-                    <p><strong>BibTeX Citation:</strong></p>
-                    <pre style="overflow:scroll">{{ paper | bibtex }}</pre>
-                </div>
+                                </span>
+                            </p>
+                        </div>
+                        <p>
+                            <strong>DOI:</strong>
+                                {% if paper.doi %}
+                                    <a href="https://doi.org/{{ paper.doi }}" target="_blank">{{ paper.doi }}</a>
+                                {% else %}
+                                    {{ paper.doi }}
+                                {% endif %}
+                            <br>
+                            <strong> ISSN:</strong>             
+                                {% if paper.issn %}
+                                    {{ paper.issn }}
+                                {% else %}
+                                    None
+                                {% endif %}
+                            <strong> — Page Range/Start:</strong> {{ paper.pages }}
+                        </p>
+                    </div>
                 <div class="edit-section detail-edit">
                     <form id="form-{{ paper.id }}" data-paper-id="{{ paper.id }}">
                         <label>Research Area:
@@ -166,7 +183,7 @@
                         <label>User comments:
                             <textarea class="editable" name="user_trace" disabled>{{ paper.user_trace or '' }}</textarea>
                         </label>
-                        <div class="row-actions">
+                        <div class="row-actions" style="display:none">
                             <div>
                                 <button type="button" class="action-btn classify-btn" data-paper-id="{{ paper.id }}">Classify <strong>this paper</strong></button>
                                 <button type="button" class="action-btn verify-btn" data-paper-id="{{ paper.id }}">Verify <strong>this paper</strong></button>

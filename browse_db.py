@@ -874,13 +874,22 @@ def generate_bibtex_string(paper):
         'author': paper.get('authors'), # Assuming authors are stored as a semicolon-separated string, might need reformatting for BibTeX
         'year': paper.get('year'),
         'journal': paper.get('journal'),
+        'booktitle': paper.get('journal'), # For inproceedings, conference papers - using journal field which contains conference name
         'volume': paper.get('volume'),
         'number': paper.get('number'), # Add number if it exists in DB (mapped from issue)
         'pages': paper.get('pages'), # Already normalized, might need further cleaning for BibTeX range format
         'doi': paper.get('doi'),
         'issn': paper.get('issn'),
         'month': paper.get('month'),
-        # Add other fields as needed, e.g., 'booktitle' for 'inproceedings'
+        'keywords': paper.get('keywords'),
+        'abstract': paper.get('abstract'),  # Note: this will be excluded later
+        # Add other fields as needed
+        'publisher': paper.get('publisher'),  # Might be needed for books
+        'institution': paper.get('institution'),  # For tech reports
+        'school': paper.get('school'),  # For theses
+        'chapter': paper.get('chapter'),  # For inbook entries
+        'note': paper.get('note'),  # General notes
+        'howpublished': paper.get('howpublished'),  # For misc entries
     }
 
     # Handle author formatting (semicolon-separated to ' and ' separated, potentially)
@@ -889,6 +898,12 @@ def generate_bibtex_string(paper):
         # Split by semicolon and join with ' and '
         authors_list = [author.strip() for author in field_mapping['author'].split(';')]
         field_mapping['author'] = ' and '.join(authors_list)
+
+    # Handle keywords formatting (semicolon-separated to comma-separated)
+    if field_mapping['keywords']:
+        # Split by semicolon and join with comma for BibTeX keywords
+        keywords_list = [keyword.strip() for keyword in field_mapping['keywords'].split(';')]
+        field_mapping['keywords'] = ', '.join(keywords_list)
 
     # Handle pages formatting for BibTeX range (e.g., "123 - 125" -> "123--125")
     if field_mapping['pages']:
@@ -915,6 +930,10 @@ def generate_bibtex_string(paper):
         'conference': ['title', 'author', 'booktitle', 'year'], # Treat like inproceedings
     }
 
+    # Update the field_mapping to use the actual conference name for booktitle when type is inproceedings or conference
+    if entry_type in ['inproceedings', 'conference'] and paper.get('journal'):
+        field_mapping['booktitle'] = paper.get('journal')
+
     relevant_fields = type_required_fields.get(entry_type, ['title', 'author', 'year']) # Default fields
 
     # Start building the BibTeX string
@@ -929,12 +948,20 @@ def generate_bibtex_string(paper):
             lines.append(f"  {field} = {{{bibtex_value}}},") # Use braces for safety
 
     # Add other potentially relevant fields that aren't strictly "required"
-    other_fields = ['volume', 'number', 'pages', 'doi', 'issn', 'month']
+    # Include all available fields from the database schema
+    other_fields = [
+        'volume', 'number', 'pages', 'doi', 'issn', 'month', 'keywords',
+        'publisher', 'institution', 'school', 'chapter', 'note', 'howpublished'
+    ]
     for field in other_fields:
         value = field_mapping.get(field)
         if value is not None and str(value).strip() != "" and field not in relevant_fields:
              bibtex_value = str(value)
              lines.append(f"  {field} = {{{bibtex_value}}},") # Use braces
+
+    # Remove trailing comma from the last field
+    if lines and lines[-1].endswith(','):
+        lines[-1] = lines[-1][:-1]
 
     lines.append("}") # Close the entry
     return "\n".join(lines)
