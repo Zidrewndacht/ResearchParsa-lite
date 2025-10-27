@@ -318,15 +318,14 @@ input[type=search]::-webkit-input-placeholder {
 }
 
 form label {
-    display: block;
     font-weight: 700;
-    line-height: 1.em;
     border: 1px solid #dadada;
     border-radius: 6px;
     padding: 6px;
     margin: 2px;
     background: #ffffffa0;
-    font-size: 10pt
+    font-size: 10pt;
+    color: var(--light-colored-btn-text);
 }
 
 .changed-by-cell,.changed-cell {
@@ -452,9 +451,9 @@ form label {
 }
 
 #stats-btn {
-    width: 160px;
-    max-width: 160px;
-    min-width: 160px;
+    width: 180px;
+    max-width: 180px;
+    min-width: 180px;
     background: var(--stats-primary-ui-color)
 }
 
@@ -506,7 +505,7 @@ form label {
 a {
     text-decoration: none;
     color: var(--link-color);
-    font-weight: 400
+    font-weight: 400;
 }
 
 th.inferred-header {
@@ -1140,7 +1139,7 @@ li {
     overflow: scroll;
     grid-column: 1/3;
     margin: 0;
-    font-size: 7.5pt;
+    font-size: 7pt;
 }
 
 .bibtex-copy-btn,.id-copy-btn {

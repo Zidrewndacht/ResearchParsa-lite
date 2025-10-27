@@ -436,16 +436,21 @@ function applyLocalFilters() {
                 hiddenDataText += ' ' + (hiddenDataCells[j].textContent || '').toLowerCase();
             }
 
-            // Cache main row text content (excluding hidden data cells)
+            // Cache main row text content (excluding hidden data cells) and the paper ID
             let visibleRowText = '';
+            // Include the paper ID in the searchable text
+            const paperId = row.getAttribute('data-paper-id'); // Get the paper ID
+            if (paperId) {
+                visibleRowText += ' ' + paperId.toLowerCase(); // Add it to the searchable text
+            }
             for (let j = 0; j < row.cells.length; j++) {
                 // Check if operation was cancelled during the loop
                 if (signal.aborted) return;
-                
                 if (!row.cells[j].classList.contains('hidden-data-cell')) {
                     visibleRowText += ' ' + row.cells[j].textContent.toLowerCase();
                 }
             }
+
 
             // Cache frequently accessed text values
             const journalText = row.cells[journalCellIndex]?.textContent?.trim().toLowerCase() || '';
