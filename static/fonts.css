@@ -31,13 +31,13 @@
 /* noto-color-emoji-regular */
 @font-face {
     font-display: swap; /* or 'optional' or 'swap' depending on your preference */
-    font-family: 'Noto Color Emoji'; /* Use the standard name for the font */
+    font-family: 'Twemoji Mozilla'; /* Use the standard name for the font */
     font-style: normal;
     font-weight: 400;
-    src: url('./fonts/NotoColorEmoji-Regular.ttf') format('truetype'); /* Path to your local TTF file */
+    src: url('./fonts/Twemoji.Mozilla.ttf') format('truetype'); /* Path to your local TTF file */
 }
 
-/* SegoeUIEmojiWin11 */
+/* SegoeUIEmojiWin11 - not shared - you have to add your own file to the according folder if desired (for consistent Win11 emojis in e.g. Win10 instead of the horrible stock ones */
 @font-face {
     font-display: swap; /* or 'optional' or 'swap' depending on your preference */
     font-family: 'Segoe UI Emoji Windows 11'; /* Use the standard name for the font */

@@ -3,22 +3,22 @@
     <h3><strong>Quick Help</strong> Guide</h3>
     <p style="margin-bottom: 0"><strong>Understanding the Symbols:</strong></p>
     <ul style="list-style-type: none;  padding-left: 0;  margin: 0; column-count: 2; gap: 0">
-        <li><p style="margin: 0"><strong style="font-size:1.75em">✔️</strong>: Confirmed "Yes" (e.g., paper is a Survey, uses SMT, etc.);</p></li>
-        <li><p style="margin: 0"><strong style="font-size:1.75em">❌</strong>: Confirmed "No";</p></li>
-        <li><p style="margin: 0"><strong style="font-size:1.75em">❔</strong>: Unknown / Not Classified / Not Applicable;</p></li>
-        <li><p style="margin: 0"><strong style="font-size:1.75em">👤</strong>: Last changed or verified by the (hopefully human) user;</p></li>
-        <li><p style="margin: 0"><strong style="font-size:1.75em">🖥️</strong>: Last changed or verified by an AI Model (hover for model name);</p></li>
-        <li><p style="margin: 0"><strong style="font-size:1.75em">📕</strong>: A PDF is attached to this paper;</li></li>
-        <li><p style="margin: 0"><strong style="font-size:1.75em">📗</strong>: An <strong>annotated</strong> PDF is attached to this paper;</li>
-        <li><p style="margin: 0"><strong style="font-size:1.75em">💰</strong>: The PDF for this paper is <strong>paywalled</strong></li>
-        <li><p style="margin: 0"><strong style="font-size:1.75em">📄</strong>: This is a <strong>Journal</strong> paper</li>
-        <li><p style="margin: 0"><strong style="font-size:1.75em">📚</strong>: This is a <strong>Conference</strong> paper</li>
+        <li><p style="margin: 0"><strong class="about-emoji-table">✔️</strong>: Confirmed "Yes" (e.g., paper is a Survey, uses SMT, etc.);</p></li>
+        <li><p style="margin: 0"><strong class="about-emoji-table">❌</strong>: Confirmed "No";</p></li>
+        <li><p style="margin: 0"><strong class="about-emoji-table">❔</strong>: Unknown / Not Classified / Not Applicable;</p></li>
+        <li><p style="margin: 0"><strong class="about-emoji-table">👤</strong>: Last changed or verified by the (hopefully human) user;</p></li>
+        <li><p style="margin: 0"><strong class="about-emoji-table">🖥️</strong>: Last changed or verified by an AI Model (hover for model name);</p></li>
+        <li><p style="margin: 0"><strong class="about-emoji-table">📕</strong>: A PDF is attached to this paper;</li></li>
+        <li><p style="margin: 0"><strong class="about-emoji-table">📗</strong>: An <strong>annotated</strong> PDF is attached to this paper;</li>
+        <li><p style="margin: 0"><strong class="about-emoji-table">💰</strong>: The PDF for this paper is <strong>paywalled</strong></li>
+        <li><p style="margin: 0"><strong class="about-emoji-table">📄</strong>: This is a <strong>Journal</strong> paper</li>
+        <li><p style="margin: 0"><strong class="about-emoji-table">📚</strong>: This is a <strong>Conference</strong> paper</li>
     </ul>
     <p><strong>How to Use:</strong></p>
         <p><strong>Filter Papers:</strong> Use the year range, minimum page count, and the search bar at the top. Press "Apply" (appears on change) for server-side filters.</p>
         <p><strong>Checkbox filters:</strong> Use checkboxes like "Hide Offtopic", "Hide X-Ray", or "Only Survey" for quick client-side filtering. As the checkboxes have no permanent labels, hover each checkbox to identify the purpose for each.</p>
         <p><strong>Classify/Verify:</strong> Click the "Classify this paper" or "Verify this paper" button in the detail row to run LLM-based classification on a single paper. Use the top buttons in the "Batch Actions" menu to classify or verify<em>remaining</em>  or <em>all</em> papers.</p>
-        <p><strong>Edit Data:</strong> Click on any <strong style="padding-left: 9px; padding-right: 9px; display: inline-block;transform: scale(1.25)">✔️  ❌  ❔</strong> symbol in the main table to cycle its value (this is automatically saved on change). Click 'show' in the details column to edit text fields (like "Model Name" or "Other Defects").
+        <p><strong>Edit Data:</strong> Click on any <strong class="about-emoji-text">✔️  ❌  ❔</strong> symbol in the main table to cycle its value (this is automatically saved on change). Click 'show' in the details column to edit text fields (like "Model Name" or "Other Defects").
             These have to be saved manually by clicking on "Save Changes". <em>Unavailable inside HTML exports.</em></p> 
         <p><strong>Search:</strong> Type on the search bar for instant search on all relevant fields. User comments are searchable. Classifier/Verifier traces are not (to avoid false-positives/noise)</p>
         <p><strong>View Statistics:</strong> Click the "View Statistics" button to see charts and lists of repeating journals, authors, keywords, and mentioned features/models as well as relevant charts. 
@@ -28,9 +28,9 @@
             Backups include the database, original and annotated PDFs, HTML export and a XLSX spreadsheet. <em>Unavailable inside HTML exports.</em>
         </p>
         <p><strong>Import Data:</strong> Use the "Import BibTeX" button to add new papers to the database from a .bib file. <em>Unavailable inside HTML exports.</em></p>
-        <p><strong>Attach PDF:</strong> Click on the <strong style="padding-left: 9px; padding-right: 9px; display: inline-block;transform: scale(1.25)">❔</strong> in the PDF column of a paper to upload a PDF to it. <em>Unavailable inside HTML exports.</em></p>
-        <p><strong>Read/Annotate PDF:</strong> Click on the <strong style="padding-left: 9px; padding-right: 9px; display: inline-block;transform: scale(1.25)">📕</strong> or <strong style="padding-left: 9px; padding-right: 9px; display: inline-block;transform: scale(1.25)">📗</strong> of an existing PDF to open the integrated PDF.js annotator. 
-            All annotations are autosaved after 5 seconds. The annotated status only changes from <strong style="padding-left: 9px; padding-right: 9px; display: inline-block;transform: scale(1.25)">📕</strong> to <strong style="padding-left: 9px; padding-right: 9px; display: inline-block;transform: scale(1.25)">📗</strong> after a page reload. This doesn't affect annotation saving.
+        <p><strong>Attach PDF:</strong> Click on the <strong class="about-emoji-text">❔</strong> in the PDF column of a paper to upload a PDF to it. <em>Unavailable inside HTML exports.</em></p>
+        <p><strong>Read/Annotate PDF:</strong> Click on the <strong class="about-emoji-text">📕</strong> or <strong class="about-emoji-text">📗</strong> of an existing PDF to open the integrated PDF.js annotator. 
+            All annotations are autosaved after 5 seconds. The annotated status only changes from <strong class="about-emoji-text">📕</strong> to <strong class="about-emoji-text">📗</strong> after a page reload. This doesn't affect annotation saving.
             For the HTML export, the PDF is loaded directly (read-only) on the user's default reader instead. This requires the PDF to be in the correct folder structure, as obtained from a full backup.</p>
     <p><strong>Tip:</strong> The table is pre-sorted to show papers with user comments first. You can click any column header to sort by that field.</p>
 </div>

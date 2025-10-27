@@ -492,18 +492,89 @@ def get_default_filter_values(hide_offtopic_param, year_from_param, year_to_para
 
     return hide_offtopic, year_from_value, year_to_value, min_page_count_value
 
-# --- Core Export Generation Functions ---
+def font_to_data_uri(font_path):
+    """Converts a font file to a Base64 data URI string."""
+    with open(font_path, 'rb') as font_file:
+        font_data = font_file.read()
+        base64_data = base64.b64encode(font_data).decode('ascii')
+        
+    # Determine format from file extension
+    if font_path.lower().endswith('.woff2'):
+        mime_type = 'font/woff2'
+        format_str = 'woff2'
+    elif font_path.lower().endswith('.woff'):
+        mime_type = 'font/woff'
+        format_str = 'woff'
+    elif font_path.lower().endswith('.ttf'):
+        mime_type = 'font/ttf'
+        format_str = 'truetype'
+    else:
+        mime_type = 'application/octet-stream'
+        format_str = 'truetype'  # fallback
+        
+    return f"data:{mime_type};base64,{base64_data}", format_str
 
+def embed_fonts_in_css(static_dir):
+    """Convert font files to Base64 data URIs and return CSS with embedded fonts."""
+    fonts_dir = os.path.join(static_dir, 'fonts')
+    
+    # Define font files to embed
+    font_files = [
+        ('Twemoji.mozilla.ttf', 'Twemoji Mozilla', 400, 'normal'),
+        ('inter-tight-v7-latin_latin-ext-300.woff2', 'Inter Tight', 300, 'normal'),
+        ('inter-tight-v7-latin_latin-ext-regular.woff2', 'Inter Tight', 400, 'normal'),
+        ('inter-tight-v7-latin_latin-ext-600.woff2', 'Inter Tight', 600, 'normal'),
+    ]
+    
+    css_content = "/* Embedded Fonts */\n"
+    
+    # Group fonts by family to create proper @font-face rules
+    font_faces = {}
+    
+    for filename, font_family, font_weight, font_style in font_files:
+        font_path = os.path.join(fonts_dir, filename)
+        try:
+            data_uri, format_str = font_to_data_uri(font_path)
+            
+            key = (font_family, font_weight, font_style)
+            if key not in font_faces:
+                font_faces[key] = []
+            
+            font_faces[key].append((data_uri, format_str))
+        except FileNotFoundError:
+            print(f"Warning: Font file not found: {font_path}")
+            continue
+    
+    # Generate @font-face CSS rules
+    for (font_family, font_weight, font_style), sources in font_faces.items():
+        css_content += f"""
+/* {font_family} - {font_weight} */
+@font-face {{
+    font-display: swap;
+    font-family: '{font_family}';
+    font-style: {font_style};
+    font-weight: {font_weight};
+    src: """
+        
+        # Add all sources for this font face
+        src_parts = []
+        for data_uri, format_str in sources:
+            src_parts.append(f"url('{data_uri}') format('{format_str}')")
+        
+        css_content += ",\n        ".join(src_parts) + ";\n}\n"
+    
+    return css_content
+
+# --- Core Export Generation Functions ---
 def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to_value, min_page_count_value, is_lite_export=False):
     """Generates the full HTML content string for the static export."""
     # Strip fat text for lite export:
-    if is_lite_export:
+    if is_lite_export: # Blank Abstract, AI traces;
         for paper in papers:
-            paper['abstract'] = '' # Blank Abstract
-            paper['reasoning_trace'] = '' # Blank Classifier Trace
-            paper['verifier_trace'] = '' # Blank Verifier Trace
+            paper['abstract'] = '' 
+            paper['reasoning_trace'] = ''
+            paper['verifier_trace'] = ''
 
-    fonts_css_content = ""
     style_css_content = ""
     chart_js_content = ""
     chart_js_datalabels_content = ""
@@ -512,6 +583,10 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
     ghpages_js_content = ""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     static_dir = os.path.join(script_dir, 'static')
+    
+    # Load and embed fonts as Base64 data URIs
+    fonts_css_content = embed_fonts_in_css(static_dir)
+    
     try:
         with open(os.path.join(static_dir, 'libs/chart.min.js'), 'r', encoding='utf-8') as f:
             chart_js_content = f.read()
@@ -522,8 +597,6 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
         with open(os.path.join(static_dir, 'libs/d3-cloud.min.js'), 'r', encoding='utf-8') as f:
             d3_cloud_js_content = f.read()
 
-        with open(os.path.join(static_dir, 'fonts.css'), 'r', encoding='utf-8') as f:
-            fonts_css_content = f.read()
         with open(os.path.join(static_dir, 'style.css'), 'r', encoding='utf-8') as f:
             style_css_content = f.read()
         with open(os.path.join(static_dir, 'ghpages.js'), 'r', encoding='utf-8') as f:
@@ -534,11 +607,12 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
             filtering_js_content = f.read()
     except FileNotFoundError as e:
         print(f"Warning: Static file not found during HTML export generation: {e}")
-        # Handle missing files gracefully if possible, or raise an error
         raise
 
-    fonts_css_content = rcssmin.cssmin(fonts_css_content)
-    style_css_content = rcssmin.cssmin(style_css_content)
+    # Combine fonts CSS with main CSS
+    style_css_content = fonts_css_content + "\n" + style_css_content
+    
+    # style_css_content = rcssmin.cssmin(style_css_content)
     
     chart_js_content = rjsmin.jsmin(chart_js_content)
     chart_js_datalabels_content = rjsmin.jsmin(chart_js_datalabels_content)
@@ -552,9 +626,9 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
     # --- Render the static export template ---
     papers_table_static_export = render_template(
         'papers_table_static_export.html',
-        papers=papers, # Pass the potentially modified papers list
+        papers=papers,
         type_emojis=globals.TYPE_EMOJIS,
-        pdf_emojis=globals.PDF_EMOJIS, # Pass the PDF emojis dictionary
+        pdf_emojis=globals.PDF_EMOJIS,
         default_type_emoji=globals.DEFAULT_TYPE_EMOJI,
         hide_offtopic=hide_offtopic,
         year_from_value=str(year_from_value),
@@ -565,11 +639,10 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
         'index_static_export.html',
         papers_table_static_export=papers_table_static_export,
         hide_offtopic=hide_offtopic,
-        year_from_value=year_from_value, # Pass raw values if needed by template logic
+        year_from_value=year_from_value,
         year_to_value=year_to_value,
         min_page_count_value=min_page_count_value,
-        # --- Pass potentially minified static content ---
-        fonts_css_content=Markup(fonts_css_content), # Markup was already applied if needed, or content is minified
+
         style_css_content=Markup(style_css_content),
         
         chart_js_content=Markup(chart_js_content),
@@ -593,7 +666,6 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
             pako_js_content = f.read()
     except FileNotFoundError as e:
         print(f"Warning: pako.min.js not found during HTML export generation: {e}")
-        # Handle missing pako.js gracefully or raise an error
         raise
 
     # --- Render the LOADER template, passing the compressed data ---
