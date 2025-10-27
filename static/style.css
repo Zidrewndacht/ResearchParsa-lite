@@ -34,14 +34,16 @@
     --th-border-color: #0000003b;
     --link-color: rgb(0, 45, 115);
     --detail-button-background: linear-gradient(180deg, hsl(210, 24%, 87%) 0%, hsl(210, 32%, 93%) 60%);
-    --min-width: 1660px
+    --min-width: 1660px;
+    --max-width: 2340px;
 }
 
 body {
     font-family: "Inter Tight",Arial,sans-serif;
     margin: 8px;
     background-color: var(--background-color);
-    color: var(--text-color)
+    color: var(--text-color);
+    background: linear-gradient(90deg, #eaecf0 0%, var(--background-color) 13%, var(--background-color) 87%, #eaecf0 100%);
 }
 
 html.busyCursor body,html.busyCursor body * {
@@ -51,7 +53,7 @@ html.busyCursor body,html.busyCursor body * {
 .loading-overlay {
     position: fixed;
     top: 58px;
-    left: 9px;
+    /*! left: 9px; */
     margin: 0;
     padding: 0;
     width: calc(100% - 18px);
@@ -67,7 +69,12 @@ html.busyCursor body,html.busyCursor body * {
     border-radius: 8px;
     background: var(--modal-wrapper-background);
     flex-direction: column;
-    gap: 40px
+    gap: 40px;
+    min-width: var(--min-width);
+    /* max-width: var(--max-width); */ /* breaks batch tasks and export/backup modals positions*/
+}
+#html-export .loading-overlay {
+    max-width: var(--max-width); 
 }
 
 html.busyCursor .loading-overlay {
@@ -90,7 +97,13 @@ html.busyCursor .loading-overlay {
     overflow-y: auto;
     max-height: calc(100vh - 18px);
     position: relative;
-    border-radius: 8px
+    border-radius: 8px;
+    min-width: var(--min-width);
+    /* max-width: var(--max-width); */ /* breaks batch tasks and export/backup modals positions*/
+    margin: auto;
+}
+#html-export .table-container {
+    max-width: var(--max-width); 
 }
 
 h3,th {
@@ -129,7 +142,11 @@ table {
     width: 100%;
     background-color: #fff;
     min-width: var(--min-width);
+    /* max-width: var(--max-width); */ /* breaks batch tasks and export/backup modals positions*/
     border-radius: 6px
+}
+#html-export table {
+    max-width: var(--max-width); 
 }
 
 td {
@@ -615,11 +632,15 @@ tr.filter-hidden {
     background-color: #e0e6ed;
     box-shadow: 0 1px 3px rgba(0,0,0,.1);
     min-width: var(--min-width);
+    /* max-width: var(--max-width); */ /* breaks batch tasks and export/backup modals positions*/
     height: 48px;
     background: var(--detail-button-background);
     border-radius: 8px 8px 0 0
 }
 
+#html-export .main-header {
+    max-width: var(--max-width); 
+}
 .header-title h2 {
     margin: 0;
     color: #2c3e50;
@@ -674,7 +695,7 @@ tr.filter-hidden {
 
 #batch-actions {
     top: 56px;
-    right: 220px;
+    right: 240px;
     transform: scale3d(.75,.66,1) translateY(-66px) translateX(40px)
 }
 
@@ -799,6 +820,7 @@ tr.filter-hidden {
     height: calc(100vh - 12px);
     grid-template-columns: 640px 1fr
 }
+
 
 .modal-small-content {
     width: 1400px;
@@ -1181,7 +1203,7 @@ li {
 
     #batch-actions {
         top: 48px;
-        right: 216px
+        right: 232px;
     }
 
     #import-actions {
@@ -1209,51 +1231,45 @@ li {
 /* Media query for high device pixel ratio (HiDPI) screens */
 /* This targets the *physical* pixel density of the screen */
 @media screen and (min-resolution: 2dppx) {
- /* Minimum 2 device pixels per CSS pixel */
-  /* Disable demanding visual effects on HiDPI screens */
-    * {
-        backdrop-filter: none !important;
-    }
-  /* Specifically target the most demanding transition */
+    /* Minimum 2 device pixels per CSS pixel */
+    /* Specifically target the most demanding transition */
     .detail-flex-container {
     /* Overrides max-height/opacity transitions */
         transition: none !important;
     }
 
-  /* Target the spinner animation */
+    /* Slows down the spin animation */
     .loading-spinner {
         animation: spin 1.5s linear infinite !important;
- /* Slows down the spin animation */
     }
 
-  /* Target the modal backdrop filter specifically */
-    .loading-overlay,
-  .modal {
+    /* Target the modal backdrop filter specifically */
+    .loading-overlay, .modal {
         backdrop-filter: none !important;
         background: #eeee
     }
 
-    .modal-content,
-  .modal-small-content,
-  #batch-actions,
-  #import-actions,
-  #export-actions {
-        transform: none !important;
- /* Removes initial modal scaling/rotation */
-    }
-
-  /* Target potential hover effects causing frequent redraws */
-    .editable-status:hover,
-  .editable-verify:hover,
-  .pdf-status:hover,
-  .action-btn:hover,
-  .toggle-btn:hover {
-    /* Override any hover effects that might rely on transitions or filters */
-        transform: none !important;
- /* Removes scale */
-    }
-
+    /*remove translucid background as it requires backdrop-filter for legibility otherwise*/
     #batch-actions, #import-actions, #export-actions {
-        background: var(--detail-button-background) /*remove translucid background as it requires backdrop-filter for legibility*/
+        background: var(--detail-button-background) 
     }
+
+    /* Removes initial modal 3D scaling/rotation */
+    .modal-content,
+    .modal-small-content,
+    #batch-actions,
+    #import-actions,
+    #export-actions {
+        transform: none !important;
+    }
+
+    /* Target potential hover effects causing frequent redraws */
+    .editable-status:hover,
+    .editable-verify:hover,
+    .pdf-status:hover,
+    .action-btn:hover,
+    .toggle-btn:hover {
+        transform: none !important;
+    }
+
 }
