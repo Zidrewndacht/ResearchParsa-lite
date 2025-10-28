@@ -24,6 +24,7 @@ import base64
 import zstandard as zstd
 import tarfile
 import shutil
+import subprocess
 
 # Import globals, the classification and verification modules
 import globals
@@ -74,7 +75,7 @@ def render_papers_table(hide_offtopic_param=None, year_from_param=None, year_to_
     )
     return rendered_table
 
-# DB functions:
+# DB functions - should not be moved away from Flask process here:
 def get_db_connection():
     """Create a connection to the SQLite database and ensure FTS tables."""
     conn = sqlite3.connect(DATABASE)
@@ -455,8 +456,7 @@ def fetch_updated_paper_data(paper_id):
     finally:
         conn.close()
 
-# --- DB Helper Functions ---
-
+# Helpers:
 def format_changed_timestamp(changed_str):
     """Format the ISO timestamp string to dd/mm/yy hh:mm:ss"""
     if not changed_str:
@@ -468,7 +468,7 @@ def format_changed_timestamp(changed_str):
         # If parsing fails, return the original string or a placeholder
         return changed_str
 
-# used for HTML and XLSX exports: 
+# Helpers used for HTML and XLSX exports: 
 def get_default_filter_values(hide_offtopic_param, year_from_param, year_to_param, min_page_count_param):
     """Extracts and validates filter parameters, returning default values if invalid/missing."""
     hide_offtopic = True 
@@ -565,7 +565,7 @@ def embed_fonts_in_css(static_dir):
     
     return css_content
 
-# --- Core Export Generation Functions ---
+# Core Export Generation Functions
 def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to_value, min_page_count_value, is_lite_export=False):
     """Generates the full HTML content string for the static export."""
     # Strip fat text for lite export:
@@ -885,6 +885,83 @@ def generate_filename(base_name, year_from, year_to, min_page_count, hide_offtop
         filename_parts.append(extra_suffix)
     return "_".join(filename_parts)
 
+# Standalone batch classification/verification
+def run_classification_subprocess(mode, paper_id, db_file):
+    """Launches automate_classification as a separate process."""
+    # Prepare the command
+    # Use sys.executable to ensure the same Python interpreter is used
+    cmd = [sys.executable, '-m', 'automate_classification'] # Assumes the script can be run as a module
+    # Or if it's designed to run as a script directly: cmd = [sys.executable, 'automate_classification.py']
+    
+    # Add arguments based on mode
+    if mode == 'id' and paper_id:
+        cmd.extend(['--mode', 'id', '--paper_id', str(paper_id)])
+    elif mode in ['all', 'remaining', 'no_features', 'on_topic_implementation']: # Add new modes here
+        cmd.extend(['--mode', mode])
+    else:
+        print(f"Warning: Invalid mode '{mode}' for subprocess classification.")
+        return # Or handle error appropriately
+
+    # Add the database file argument if needed by the script
+    # cmd.extend(['--db_file', db_file]) # Uncomment if needed
+
+    try:
+        print(f"Starting classification subprocess: {' '.join(cmd)}")
+        # Use subprocess.Popen to start the process independently
+        # On Windows, using 'start' command might be needed to detach the window
+        if sys.platform.startswith('win'):
+            # This creates a new console window and detaches the process
+            # The 'cmd /c' part runs the command, 'start' launches it detached
+            # The empty string "" is the title for the new window (can be a specific title)
+            subprocess.Popen(['cmd', '/c', 'start', 'Classification Process', '/D', os.getcwd(), 'python'] + cmd[1:], 
+                             close_fds=True, # Close file descriptors in child (good practice)
+                             creationflags=subprocess.CREATE_NEW_CONSOLE) # Create new console on Windows
+        else:
+            # On Unix-like systems, you might use os.setsid or preexec_fn to detach
+            # subprocess.Popen(cmd, close_fds=True, start_new_session=True) # POSIX
+            subprocess.Popen(cmd, close_fds=True) # Simple detach might work, start_new_session is better on POSIX
+        print(f"Classification subprocess initiated for mode={mode}, paper_id={paper_id}")
+    except FileNotFoundError:
+        print(f"Error: Python interpreter or script 'automate_classification.py' not found.")
+    except Exception as e:
+        print(f"Error starting classification subprocess: {e}")
+
+def run_verification_subprocess(mode, paper_id, db_file):
+    """Launches verify_classification as a separate process."""
+    # Prepare the command
+    cmd = [sys.executable, '-m', 'verify_classification'] # Assumes the script can be run as a module
+    # Or if it's designed to run as a script directly: cmd = [sys.executable, 'verify_classification.py']
+
+    # Add arguments based on mode
+    if mode == 'id' and paper_id:
+        cmd.extend(['--mode', 'id', '--paper_id', str(paper_id)])
+    elif mode == 'all':
+        cmd.extend(['--mode', 'all'])
+    elif mode == 'remaining':
+        cmd.extend(['--mode', 'remaining'])
+    else:
+        print(f"Warning: Invalid mode '{mode}' for subprocess verification.")
+        return # Or handle error appropriately
+
+    # Add the database file argument if needed by the script
+    # cmd.extend(['--db_file', db_file]) # Uncomment if needed
+
+    try:
+        print(f"Starting verification subprocess: {' '.join(cmd)}")
+        # Use subprocess.Popen to start the process independently
+        if sys.platform.startswith('win'):
+            subprocess.Popen(['cmd', '/c', 'start', 'Verification Process', '/D', os.getcwd(), 'python'] + cmd[1:], 
+                             close_fds=True, 
+                             creationflags=subprocess.CREATE_NEW_CONSOLE)
+        else:
+            # subprocess.Popen(cmd, close_fds=True, start_new_session=True) # POSIX
+            subprocess.Popen(cmd, close_fds=True) # Simple detach might work, start_new_session is better on POSIX
+        print(f"Verification subprocess initiated for mode={mode}, paper_id={paper_id}")
+    except FileNotFoundError:
+        print(f"Error: Python interpreter or script 'verify_classification.py' not found.")
+    except Exception as e:
+        print(f"Error starting verification subprocess: {e}")
+
 
 # --- Jinja2-like filters ---
 def render_status(value):
@@ -998,7 +1075,7 @@ def generate_bibtex_string(paper):
         'phdthesis': ['title', 'author', 'school', 'year'],
         'mastersthesis': ['title', 'author', 'school', 'year'],
         'manual': ['title'],
-        'misc': ['title'], # Default, might add author, howpublished, note
+        'misc': ['title','author', 'year'], # Default, might add author, howpublished, note
         'conference': ['title', 'author', 'booktitle', 'year'], # Treat like inproceedings
     }
 
@@ -1590,44 +1667,28 @@ def update_paper():
         print(f"Error updating paper {paper_id}: {e}") # Log error
         return jsonify({'status': 'error', 'message': 'Failed to update database'}), 500
 
-# LLM inference routes (used for both single-paper and batch actions):
+
 @app.route('/classify', methods=['POST'])
 def classify_paper():
     """Endpoint to handle classification requests (single or batch)."""
     data = request.get_json()
     mode = data.get('mode', 'id') # Default to 'id' for single paper
     paper_id = data.get('paper_id')
-    
     # Determine DB file (use command-line arg or global default)
     db_file = DATABASE 
 
-    def run_classification_task():
-        """Background task to run classification."""
-        try:
-            print(f"Starting classification task: mode={mode}, paper_id={paper_id}")
-            # Call the appropriate function from automate_classification
-            # Pass db_file explicitly or rely on its internal defaults/globals
-            automate_classification.run_classification(
-                mode=mode,
-                paper_id=paper_id,
-                db_file=db_file
-                # grammar_file=..., prompt_template=..., server_url=... # Use defaults or override if needed
-            )
-            print(f"Classification task completed: mode={mode}, paper_id={paper_id}")
-        except Exception as e:
-            print(f"Error during background classification (mode={mode}, paper_id={paper_id}): {e}")
-            # Consider logging this error more formally
+    # Valid modes for batch classification subprocess
+    valid_batch_modes = ['all', 'remaining', 'no_features', 'on_topic_implementation']
 
-    if mode in ['all', 'remaining']:
-        # Run batch classification in a background thread to avoid blocking
-        thread = threading.Thread(target=run_classification_task)
-        thread.daemon = True # Dies with main process
-        thread.start()
+    if mode in valid_batch_modes:
+        # Run batch classification as a separate process
+        run_classification_subprocess(mode, paper_id, db_file) # Pass paper_id even if None for batch modes
         # Return immediately
-        return jsonify({'status': 'started', 'message': f'Batch classification ({mode}) initiated.'})
+        return jsonify({'status': 'started', 'message': f'<p>Batch classification ({mode}) initiated as a separate process. Reload the webpage after a while to see updated results.</p> <p>You should still be able to run single-paper classifications and verifications in the meantime, but results may take longer.</p>'})
+
     elif mode == 'id' and paper_id:
         try:
-            # Run single paper classification synchronously
+            # Run single paper classification synchronously (still within the server process)
             # The function updates the DB directly
             automate_classification.run_classification(
                 mode=mode,
@@ -1644,7 +1705,7 @@ def classify_paper():
             print(f"Error classifying paper {paper_id}: {e}")
             return jsonify({'status': 'error', 'message': f'Classification failed: {str(e)}'}), 500
     else:
-        return jsonify({'status': 'error', 'message': 'Invalid mode or missing paper_id for single classification.'}), 400
+        return jsonify({'status': 'error', 'message': f'Invalid mode or missing paper_id for single classification. Valid batch modes: {valid_batch_modes}.'}), 400
 
 @app.route('/verify', methods=['POST'])
 def verify_paper():
@@ -1652,35 +1713,18 @@ def verify_paper():
     data = request.get_json()
     mode = data.get('mode', 'id') # Default to 'id' for single paper
     paper_id = data.get('paper_id')
-    
     # Determine DB file (use command-line arg or global default)
     db_file = DATABASE
 
-    def run_verification_task():
-        """Background task to run verification."""
-        try:
-            print(f"Starting verification task: mode={mode}, paper_id={paper_id}")
-            # Call the appropriate function from verify_classification
-            verify_classification.run_verification(
-                mode=mode,
-                paper_id=paper_id,
-                db_file=db_file
-            )
-            print(f"Verification task completed: mode={mode}, paper_id={paper_id}")
-        except Exception as e:
-            print(f"Error during background verification (mode={mode}, paper_id={paper_id}): {e}")
-            # Consider logging this error more formally
-
     if mode in ['all', 'remaining']:
-        # Run batch verification in a background thread to avoid blocking
-        thread = threading.Thread(target=run_verification_task)
-        thread.daemon = True
-        thread.start()
+        # Run batch verification as a separate process
+        run_verification_subprocess(mode, paper_id, db_file) # Pass paper_id even if None for 'all'/'remaining'
         # Return immediately
-        return jsonify({'status': 'started', 'message': f'Batch verification ({mode}) initiated.'})
+        return jsonify({'status': 'started', 'message': f'Batch verification ({mode}) initiated as a separate process.'})
+
     elif mode == 'id' and paper_id:
         try:
-            # Run single paper verification synchronously
+            # Run single paper verification synchronously (still within the server process)
             verify_classification.run_verification(
                 mode=mode,
                 paper_id=paper_id,

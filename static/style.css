@@ -439,7 +439,8 @@ form label {
     font-weight: 700
 }
 
-#classify-all-btn,#classify-remaining-btn,.classify-btn {
+#classify-all-btn, #classify-remaining-btn, #classify-impl-btn, #classify-misclassified-btn, 
+.classify-btn {
     background: var(--classify-btn-color)
 }
 

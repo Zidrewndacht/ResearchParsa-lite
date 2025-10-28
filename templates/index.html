@@ -256,13 +256,18 @@
     <div id="batch-actions">
         <div>
             <button class="action-btn" id="classify-remaining-btn">Classify <strong>Remaining</strong> </button>
+            <button class="action-btn" id="classify-impl-btn">Re-Classify <strong>Primary</strong></button>
+        </div>
+        <div>
+            <button class="action-btn" id="classify-misclassified-btn">Re-Classify <strong>Suspects</strong> </button>
             <button class="action-btn" id="classify-all-btn">Re-Classify <strong>All</strong></button>
         </div>
+        <span class="menu-message">Batch classifications also run corresponding verifications automatically. Run the tasks below if you still need just verification (e.g., if an earlier run was aborted after classification)</span>
         <div>
             <button class="action-btn" id="verify-remaining-btn">Verify <strong>Remaining</strong></button>
             <button class="action-btn" id="verify-all-btn">Re-Verify <strong>All</strong></button>
         </div>
-        <span class="menu-message">These tools stay running in background after being called. Reload the webpage (not the server) after a while to see updated results.
+        <span class="menu-message" id="batch-status-message">These tools stay running in background after being called. Reload the webpage after a while to see updated results.
             <br><br> For actions on single papers, user the buttons in the corresponding paper's detail pane instead.
         </span> 
     </div>

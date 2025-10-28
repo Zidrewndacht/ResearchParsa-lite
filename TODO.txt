@@ -172,8 +172,7 @@ OK                      Get rid of querySelectors();
 OL                      Search directly onto hidden cells;
 OK                      Extensive caching;
 OK              Add CSS media query for weak HiDPI laptops:
-OK                      Force-disable most eyecandy entirely if density is larger than most desktops (as it's likely a ~4K laptop suffering on battery);
-OK                              Backdrop-filtering alone was mauling the poor UHD 620 on the 4K C630 Yoga ex-Chromebook...
+OK                      Force-disable eyecandy if density is larger than most desktops (as it's likely a ~4K laptop suffering on battery); Backdrop-filtering alone was mauling the poor UHD 620 on the 4K C630 Yoga ex-Chromebook
 
 OK      Refactor stats.js for smaller functions
 OK              Fix cumulative stacked charts not stacking in right order
@@ -201,15 +200,31 @@ OK             Add client sorting to URL
 OK                      Fix sorting regression
 OK             Add open detail rows to URL
 
+OK		Improve batch tasks from Web GUI;
+OK				Run batches in a separate process
+OK				Add no_features and on_topic_implementations batch modes to Web
+OK				Auto-verify after classification by default from Web.
+
+OK		Embed fonts (Inter Tight / Twemoji) in HTML export for consistency;
+
+OK		Fix sort by alphabetic fields
+OK		Fix sort by last changed date
+
         Improve ugly/inconsistent default checkboxes
 OK                Show negative vs positive checkboxes differently (tri-state) 
 
-
         Refactor browse_db.py (too large)?
-OK              Getting rid of server-side stats and search already reduced it a bit, still unwieldy;
+OK              Getting rid of server-side stats and search already reduced it a bit, still unwieldy at ~1900 lines though;
                 Moving SQLite logic to a separate file for DB operations may cause 
                         'sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 34640 and this is thread id 16976.'
-                Moving helpers away is fine, but there are only three.
+                Moving helpers away is fine, but there are few.
+
+		Add some 'agentic' functionality:
+				Automatic de-annualize conferences on import onto a separate DB field (to be used for more reliable stats generation) - check existing conference names before creating to ensure no two names for the same conference;
+				Automatic re-run misclassifications indefinitely (with some way to avoid eternal loop in the same ambiguous paper?);
+				Potential tools: 
+						PDF parsing (when available), tool collects PDF intro and conclusions to be added to classification/verification
+						...?
 
         Refactor comms.js
                 Works fine, just need some better mantainability. Low priority.
@@ -229,4 +244,4 @@ OK              Getting rid of server-side stats and search already reduced it a
                 Update commented&other field displays on save.
                 Update PDF icon on first annotation without manual reload.
 
-        Automatic add/remove paywalled icon to papers based on user trace containing 'paywalled' string;
+        Automatic add/remove paywalled icon to papers based on user trace containing 'paywalled' string?

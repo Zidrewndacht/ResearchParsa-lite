@@ -567,6 +567,8 @@ const applyButton = document.getElementById('apply-serverside-filters');
 // --- Batch Action Button Event Listeners ---
 const parçaToolsBtn = document.getElementById('parça-tools-btn');
 const classifyAllBtn = document.getElementById('classify-all-btn');
+const classifyMisclassifiedBtn = document.getElementById('classify-misclassified-btn');
+const classifyImplBtn = document.getElementById('classify-impl-btn');
 const classifyRemainingBtn = document.getElementById('classify-remaining-btn');
 const verifyAllBtn = document.getElementById('verify-all-btn');
 const verifyRemainingBtn = document.getElementById('verify-remaining-btn');
@@ -604,23 +606,43 @@ function closeExporthModal() { exportModal.classList.remove('modal-active'); }
 function showApplyButton(){  applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; }
 
 
+// Define all batch buttons so they can be managed together
+const allBatchButtons = [
+    classifyAllBtn,
+    classifyRemainingBtn,
+    classifyMisclassifiedBtn, // Add the new button
+    classifyImplBtn,          // Add the new button
+    verifyAllBtn,
+    verifyRemainingBtn
+];
+
 function runBatchAction(mode, actionType) { // actionType: 'classify' or 'verify'
     if (isBatchRunning) {
         alert(`A ${actionType} batch is already running.`);
         return;
     }
 
-    if (!confirm(`Are you sure you want to ${actionType} ${mode === 'all' ? 'ALL' : 'REMAINING'} papers? This might take a while.`)) {
+    let modeDescription = mode; // Default to the raw mode string
+    if (mode === 'all') {
+        modeDescription = 'ALL';
+    } else if (mode === 'remaining') {
+        modeDescription = 'remaining'; // Keep 'REMAINING' for 'remaining' mode
+    } else if (mode === 'no_features') {
+        modeDescription = 'misclassification suspect'; // Custom description for 'no_features'
+    } else if (mode === 'on_topic_implementation') {
+        modeDescription = 'on-topic primary/implementation'; // Custom description for 'on_topic_implementation'
+    }
+    if (!confirm(`Are you sure you want to ${actionType} ${modeDescription} papers? This might take a while.`)) {
         return;
     }
 
     isBatchRunning = true;
-    const btnToDisable = mode === 'all' ? (actionType === 'classify' ? classifyAllBtn : verifyAllBtn) :
-                                            (actionType === 'classify' ? classifyRemainingBtn : verifyRemainingBtn);
-    const otherBtns = [classifyAllBtn, classifyRemainingBtn, verifyAllBtn, verifyRemainingBtn].filter(btn => btn !== btnToDisable);
 
-    if (btnToDisable) btnToDisable.disabled = true;
-    otherBtns.forEach(btn => btn.disabled = true);
+    // Disable ALL batch buttons when any batch action starts
+    allBatchButtons.forEach(btn => {
+        if (btn) btn.disabled = true; // Check if btn exists before disabling
+    });
+
     if (batchStatusMessage) batchStatusMessage.textContent = `Starting ${actionType} (${mode})...`;
 
     const endpoint = actionType === 'classify' ? '/classify' : '/verify';
@@ -643,18 +665,21 @@ function runBatchAction(mode, actionType) { // actionType: 'classify' or 'verify
             return response.json();
     })
     .then(data => {
-        batchStatusMessage.textContent = data.message;
+        batchStatusMessage.innerHTML = data.message;
+        // Optionally, you could add logic here to re-enable buttons after a certain time
+        // or based on some other signal if the process is known to have finished.
     })
     .catch(error => {
         console.error(`Error initiating batch ${actionType} (${mode}):`, error);
         alert(`Failed to start ${actionType} (${mode}): ${error.message}`);
         isBatchRunning = false;
-        if (btnToDisable) btnToDisable.disabled = false;
-        otherBtns.forEach(btn => btn.disabled = false);
-        if (batchStatusMessage) batchStatusMessage.textContent = '';
+        // Re-enable ALL batch buttons on error
+        allBatchButtons.forEach(btn => {
+            if (btn) btn.disabled = false; // Check if btn exists before enabling
+        });
+        if (batchStatusMessage) batchStatusMessage.innerHTML = '';
     });
 }
-
 
 document.addEventListener('DOMContentLoaded', function () {
     
@@ -772,6 +797,8 @@ document.addEventListener('DOMContentLoaded', function () {
     parçaToolsBtn.addEventListener('click', showBatchActions);
     classifyAllBtn.addEventListener('click', () => runBatchAction('all', 'classify'));
     classifyRemainingBtn.addEventListener('click', () => runBatchAction('remaining', 'classify'));
+    classifyMisclassifiedBtn.addEventListener('click', () => runBatchAction('no_features', 'classify'));
+    classifyImplBtn.addEventListener('click', () => runBatchAction('on_topic_implementation', 'classify'));
     verifyAllBtn.addEventListener('click', () => runBatchAction('all', 'verify'));
     verifyRemainingBtn.addEventListener('click', () => runBatchAction('remaining', 'verify'));
 
@@ -1208,5 +1235,36 @@ document.addEventListener('DOMContentLoaded', function () {
         fileInput.click();
         document.body.removeChild(fileInput);
     });
+    
+    // --- Ctrl+S Save Functionality ---
+    document.addEventListener('keydown', function(event) {
+        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+            event.preventDefault(); // Prevent the browser's default save action
+
+            // Get the currently focused element
+            const focusedElement = document.activeElement;
+
+            // Check if the focused element is within a form inside an expanded detail row
+            // The form should have the data-paper-id attribute
+            const formContainingFocus = focusedElement.closest('tr.detail-row.expanded form[data-paper-id]');
+
+            if (formContainingFocus) {
+                const paperId = formContainingFocus.getAttribute('data-paper-id');
+                if (paperId) {
+                    // console.log("Ctrl+S pressed, saving changes for focused form (paper ID):", paperId);
+                    // Call the existing saveChanges function for the identified paper ID
+                    saveChanges(paperId);
+                } else {
+                    // This case should ideally not happen if the selector is correct
+                    console.warn("Ctrl+S pressed, focused element is in an expanded detail row form, but data-paper-id is missing.");
+                }
+            } else {
+                // Focus is not within an expanded detail row form.
+                // Optionally, provide feedback or do nothing.
+                console.log("Ctrl+S pressed, but focus is not inside an expanded detail row form.");
+            }
+        }
+    });
+    // --- End Ctrl+S Save Functionality ---
 
 });

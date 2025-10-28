@@ -13,6 +13,8 @@ import signal
 
 import globals  #globals.py for global settings and variables used by multiple files.
 
+import verify_classification
+
 # Using a simple boolean guarded by a lock for absolute immediacy
 shutdown_lock = threading.Lock()
 shutdown_flag = False
@@ -372,9 +374,9 @@ def run_classification(mode='remaining', paper_id=None, db_file=None, grammar_fi
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Automate LLM classification for papers in the database.')
     parser.add_argument('--mode', '-m',
-                choices=['all', 'remaining', 'id', 'no_features', 'on_topic_implementation'], # <-- Updated choices
+                choices=['all', 'remaining', 'id', 'no_features', 'on_topic_implementation'],
                 default='remaining',
-                help="Processing mode: 'all', 'remaining', 'id', 'no_features' (papers with no features set), or 'on_topic_implementation' (papers classified as on-topic and non-survey). Default: 'remaining'.") # <-- Updated help text
+                help="Processing mode: 'all', 'remaining', 'id', 'no_features', or 'on_topic_implementation'. Default: 'remaining'.")
     parser.add_argument('--paper_id', '-i', type=int, help='Paper ID to classify (required if --mode id).')
     parser.add_argument('--db_file', default=globals.DATABASE_FILE,
                        help=f'SQLite database file path (default: {globals.DATABASE_FILE})')
@@ -384,9 +386,11 @@ if __name__ == "__main__":
                        help=f'Path to the prompt template file (default: {globals.PROMPT_TEMPLATE})')
     parser.add_argument('--server_url', default=globals.LLM_SERVER_URL,
                        help=f'Base URL of the LLM server (default: {globals.LLM_SERVER_URL})')
-    
-    args = parser.parse_args()
+    # NEW: Add the --no-verify argument
+    parser.add_argument('--no-verify', action='store_true',
+                        help="Skip automatic verification run after classification finishes.")
 
+    args = parser.parse_args()
     signal.signal(signal.SIGINT, globals.signal_handler)
 
     if args.mode == 'id' and args.paper_id is None:
@@ -401,9 +405,46 @@ if __name__ == "__main__":
         server_url=args.server_url
     )
 
-    # Exit code is less critical now as signal_handler does os._exit(1)
-    # But good practice to indicate success/failure for non-abort cases
+    # NEW: Conditional verification run
+    if success and not globals.is_shutdown_flag_set() and not args.no_verify:
+        print("\n--- Starting Automatic Verification ---")
+        # Determine the verification mode based on the classification mode
+        # 'remaining' and 'no_features' in classification might correspond to 'remaining' in verification
+        # 'all' in classification corresponds to 'all' in verification
+        # 'id' in classification means only that specific paper was classified, so verify only that ID if it was updated
+        # 'on_topic_implementation' in classification might correspond to 'remaining' in verification (or could be 'all' if re-classified)
+        # Using 'remaining' as default for verification seems safest after classification modes like 'remaining', 'no_features', 'on_topic_implementation'
+        verification_mode = 'remaining' # Default
+        verification_paper_id = None
+        if args.mode == 'all':
+            verification_mode = 'all'
+        elif args.mode == 'id':
+            # Only verify the specific paper ID if the classification run was successful
+            verification_mode = 'id'
+            verification_paper_id = args.paper_id
+
+        # Call the verification run function directly
+        verification_success = verify_classification.run_verification(
+            mode=verification_mode,
+            paper_id=verification_paper_id, # Will be None for modes other than 'id'
+            db_file=args.db_file,
+            grammar_file=args.grammar_file, # Use the same grammar file if applicable, or default verification grammar
+            prompt_template=globals.VERIFIER_TEMPLATE, # Use the dedicated verifier template
+            server_url=args.server_url
+        )
+        if verification_success:
+            print("\n--- Automatic Verification Completed Successfully ---")
+        else:
+            print("\n--- Automatic Verification Finished (Possibly with Errors or Shutdown) ---")
+    elif args.no_verify:
+        print("\n--- Automatic Verification Skipped as Requested (--no-verify) ---")
+    else:
+        print("\n--- Skipping Automatic Verification due to Classification Failure or Shutdown ---")
+
+    # Exit code logic remains, but consider verification outcome if needed
+    # For simplicity, we'll keep the original logic based on classification success
+    # If verification failure should also trigger an exit code, add that check here.
     if not success and not globals.is_shutdown_flag_set():
-        exit(1) 
+        exit(1)
     # If shutdown_flag is set, signal_handler already called os._exit(1)
     # Normal exit code 0 is implicit
