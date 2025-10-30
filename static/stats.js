@@ -1690,15 +1690,14 @@ function displayStats() {
         }
 
         populateMetricsTableDirectly();
-
-        // Trigger reflow to ensure styles are applied before adding the active class
-        // This helps ensure the transition plays correctly on the first open
-        modal.offsetHeight;
-        // Add the active class to trigger the animation
-        modal.classList.add('modal-active');
         setTimeout(() => {
+            // Trigger reflow to ensure styles are applied before adding the active class
+            // This helps ensure the transition plays correctly on the first open
+            modal.offsetHeight;
+            // Add the active class to trigger the animation
+            modal.classList.add('modal-active');
             document.documentElement.classList.remove('busyCursor');
-        }, 500);
+        }, 250);
     }, 0);
 }
 

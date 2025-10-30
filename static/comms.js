@@ -300,24 +300,23 @@ function toggleDetails(element) {
         element.innerHTML = '<span>Show</span>';
         // Remove ID from set and update URL
         openDetailIds.delete(paperId);
-        updateUrlWithDetailState(); // Update URL immediately after hiding
+        updateUrlWithDetailState();
         //console.log(`Closed detail for ${paperId}, set now:`, [...openDetailIds]); // Debug log
     } else {
         // Showing the detail row
-        detailRow.classList.add('expanded');
-        element.innerHTML = '<span>Hide</span>';
         // Add ID to set immediately, update URL after potential fetch
         openDetailIds.add(paperId);
         updateUrlWithDetailState(); // Update URL immediately after showing
         //console.log(`Opened detail for ${paperId}, set now:`, [...openDetailIds]); // Debug log
-
         const contentPlaceholder = detailRow.querySelector('.detail-content-placeholder');
+
         fetch(`/get_detail_row?paper_id=${encodeURIComponent(paperId)}`)
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success' && data.html) {
+                    // 1. Insert the content
                     contentPlaceholder.innerHTML = data.html;
-                    // --- ADD EVENT LISTENER AFTER INSERTING HTML ---
+
                     const detailContainer = contentPlaceholder;
                     if (detailContainer) {
                         detailContainer.addEventListener('click', function(event) {
@@ -333,32 +332,30 @@ function toggleDetails(element) {
                     } else {
                         console.warn("Detail container for click delegation not found for paper", paperId);
                     }
+                    requestAnimationFrame(() => {
+                        detailRow.offsetHeight;
+                        detailRow.classList.add('expanded');
+                    });
+
+                    element.innerHTML = '<span>Hide</span>';
                 } else {
                     console.error(`Error loading detail row for paper ${paperId}:`, data.message);
                     if (contentPlaceholder) {
                         contentPlaceholder.innerHTML = `<p>Error loading details: ${data.message || 'Unknown error'}</p>`;
                     }
-                    // If fetch fails, maybe remove the ID again? Or keep it if the error is temporary?
-                    // For now, let's keep it as the user intended to open it.
-                    // openDetailIds.delete(paperId); // Maybe not?
                 }
-                // Update URL after content is loaded (or attempted) - redundant here as it's already updated above
-                // updateUrlWithDetailState(); // Probably not needed again immediately
             })
             .catch(error => {
                 console.error(`Error fetching detail row for paper ${paperId}:`, error);
                 if (contentPlaceholder) {
                     contentPlaceholder.innerHTML = `<p>Error loading details: ${error.message}</p>`;
                 }
-                 // If fetch fails, maybe remove the ID again? Or keep it if the error is temporary?
+                 // If fetch fails, maybe remove the ID again? Or keep it as the user intended to open it?
                  // For now, let's keep it as the user intended to open it.
                  // openDetailIds.delete(paperId); // Maybe not?
-                 // Update URL even if fetch fails - already updated above
-                 // updateUrlWithDetailState(); // Probably not needed again immediately
             });
     }
 }
-
 
 function applyServerSideFilters() {     //moved from filtering as it has server-based
     document.documentElement.classList.add('busyCursor');

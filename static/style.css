@@ -36,6 +36,7 @@
     --detail-button-background: linear-gradient(180deg, hsl(210, 24%, 87%) 0%, hsl(210, 32%, 93%) 60%);
     --min-width: 1660px;
     --max-width: 2340px;
+    --detail-border-color: #dfdfdf
 }
 
 body {
@@ -114,15 +115,17 @@ h3,th {
 
 h3 {
     z-index: 100;
-    font-size: .9em;
     margin: 0;
     padding: 8px 0 8px 10px;
     background: var(--stats-primary-ui-color);
     color: #fefefe;
-    display: inline-block;
     font-weight: 400;
     width: calc(100% - 10px);
-    background: linear-gradient(180deg,var(--primary-ui-color) 50%,var(--primary-ui-color-darker) 100%)
+    background: linear-gradient(180deg,var(--primary-ui-color) 50%,var(--primary-ui-color-darker) 100%);
+    display: inline-flex;
+    align-items: center;
+    /*! padding: 5px; */
+    font-size: 10.5pt;
 }
 
 th {
@@ -176,11 +179,12 @@ th.rotate-header>div {
 th.rotate-header>div>span {
     display: block;
     text-align: left;
-    max-height: 100px
+    max-height: 100px;
 }
 
 tr:nth-child(4) th:not(.inferred-header) {
-    background: linear-gradient(180deg,var(--primary-ui-color) 50%,var(--primary-ui-color-darker) 100%)
+    background: linear-gradient(180deg,var(--primary-ui-color) 50%,var(--primary-ui-color-darker) 100%);
+    filter: contrast(1);  /*Fix blurry transformed fonts on Firefox*/
 }
 
 th[data-sort]:hover {
@@ -336,7 +340,7 @@ input[type=search]::-webkit-input-placeholder {
 
 form label {
     font-weight: 700;
-    border: 1px solid #dadada;
+    border: 1px solid var( --detail-border-color);
     border-radius: 6px;
     padding: 6px;
     margin: 2px;
@@ -382,7 +386,7 @@ form label {
 .detail-flex-container {
     max-height: 0;
     overflow: hidden;
-    transition: max-height .25s ease-in-out,opacity .3s ease-in-out;
+    transition: max-height .33s ease-in-out,opacity .5s ease-in-out;
     display: grid;
     grid-template-columns: 1fr 1fr 720px;
     grid-template-rows: auto;
@@ -390,13 +394,14 @@ form label {
     box-sizing: border-box;
     width: 100%;
     padding: 0 0 0 10px;
-    margin: 0
+    margin: 0;
+    opacity: 0;
 }
 
 .detail-row.expanded .detail-flex-container {
-    max-height: 3000px;
+    max-height: 1000px;
     opacity: 1;
-    transition: max-height .5s ease-in-out,opacity .4s ease-in-out;
+    /* transition: max-height 0s; */
     border-bottom: 1px solid #e0e0e0
 }
 
@@ -426,12 +431,14 @@ form label {
 }
 
 .detail-edit input[type=text] {
-    border: 0 solid #dadada;
-    border-radius: 5px;
     font-family: inherit;
     font-size: 12pt;
-    background: #ffffffa0
+    background: #ffffffa0;
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
 }
+
 
 .save-btn {
     background-color: var(--save-btn-color);
@@ -527,11 +534,12 @@ a {
 }
 
 th.inferred-header {
-    background: var(--inferred-ui-color)
+    background: var(--inferred-ui-color);
+    filter: contrast(1.0); /*Fix blurry transformed fonts on Firefox*/
 }
 
 th.inferred-header-2 {
-    filter: contrast(1.1) saturate(.95) hue-rotate(-16deg)
+    filter: contrast(1.1) saturate(.95) hue-rotate(-16deg);
 }
 
 th.inferred-header-3 {
@@ -613,7 +621,7 @@ tr.filter-hidden {
     grid-template-columns: 1fr 170px;
     grid-template-rows: max-content max-content;
     align-items: end;
-    border: 1px solid #dadada;
+    border: 1px solid var( --detail-border-color);
     background-color: #aaaaaa0b;
     border-radius: 5px;
     margin: 0 0 8px;
@@ -758,11 +766,6 @@ tr.filter-hidden {
     height: calc(100% - 2px)
 }
 
-.detail-edit input[type=text] {
-    width: 100%;
-    box-sizing: border-box
-}
-
 .detail-edit form>label:nth-of-type(6) {
     grid-column: 1/-1;
     grid-row: 3/4;
@@ -780,10 +783,10 @@ tr.filter-hidden {
     display: block;
     resize: none;
     background: #ffffffa0;
-    border: 0 solid #dadada;
     font-family: consolas,monospace;
     font-size: .9em;
-    line-height: 1.25em
+    line-height: 1.25em;
+    border: none;
 }
 
 .detail-edit form>.row-actions {
@@ -795,6 +798,14 @@ tr.filter-hidden {
     justify-content: space-between
 }
 
+.detail-edit form textarea.editable:focus, .detail-edit form input.editable:focus {
+   outline: none;
+   border: none;
+}
+.detail-edit form label:focus-within {
+   border: 1px solid #338592;
+}
+
 .number-cell {
     text-align: center
 }
@@ -804,7 +815,8 @@ tr.filter-hidden {
 }
 
 .modal-content,.modal-small-content {
-    background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px,white 20px);
+/*     background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px,white 20px); */
+    background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px, #f8fbfef0 20px);
     border-radius: 8px;
     box-shadow: 0 16px 96px 0 rgba(0,0,0,.66);
     position: relative;
@@ -819,7 +831,7 @@ tr.filter-hidden {
     width: calc(100vw - 60px);
     min-width: calc(var(--min-width) + 0px);
     height: calc(100vh - 12px);
-    grid-template-columns: 640px 1fr
+    grid-template-columns: 640px 1fr;
 }
 
 
@@ -1135,7 +1147,7 @@ li {
 .id-section {
     display: grid;
     grid-template-columns: min-content 1fr min-content;
-    border: 1px solid #dadada;
+    border: 1px solid var( --detail-border-color);
     border-radius: 6px;
     padding: 6px;
     margin: 6px 0;
@@ -1151,7 +1163,7 @@ li {
 }
 
 .bibtex-section,.searchable-section {
-    border: 1px solid #dadada;
+    border: 1px solid var( --detail-border-color);
     border-radius: 6px;
     padding: 6px;
     margin: 6px 0 9px;
@@ -1197,6 +1209,7 @@ li {
     font-family: "Segoe UI Emoji Windows 11", "Twemoji Mozilla"
 }
 
+
 @media screen and (max-width:1880px) {
     body {
         margin: 0
@@ -1238,7 +1251,12 @@ li {
     .modal-content {
         width: calc(100vw);
         min-width: calc(var(--min-width) + 0px);
-        height: calc(100vh)
+        height: calc(100vh);
+        border-radius: 0;
+    }
+    .modal-content,.modal-small-content  {
+        background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px,white 20px);
+        backdrop-filter: none !important;
     }
 }
 
@@ -1255,6 +1273,10 @@ li {
     .detail-flex-container {
     /* Overrides max-height/opacity transitions */
         transition: none !important;
+    }
+    .modal-content,.modal-small-content  {
+        background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px,white 20px);
+        backdrop-filter: none !important;
     }
 
     /* Slows down the spin animation */
@@ -1290,5 +1312,7 @@ li {
     .toggle-btn:hover {
         transform: none !important;
     }
-
+    .detail-flex-container, .detail-row.expanded .detail-flex-container{
+        transition: none;
+    }
 }
