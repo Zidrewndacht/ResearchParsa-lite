@@ -1,6 +1,6 @@
 # ResearchParça-Lite
 
-Minimal, generalized (not domain-specific) Lite version of ResearchParça. Also check the [full version repository]().
+Minimal, generalized (not domain-specific) Lite version of ResearchParça. Also check the [full version repository](https://github.com/Zidrewndacht/bibtex-custom-parser).
 
 Automatic classification/verification functionality is stripped out (as the classifier would require domain-specific tables, etc.), but frontend goodies are kept:
 
