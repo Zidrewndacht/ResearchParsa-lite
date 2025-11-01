@@ -73,12 +73,6 @@
             <label>Research Area:
                 <input type="text" class="editable" name="research_area" value="{{ paper.research_area or '' }}">
             </label>
-            <label>Model Name:
-                <input type="text" class="editable" name="model_name" value="{{ paper.technique.model or '' }}">
-            </label>
-            <label>Other defects:
-                <input type="text" class="editable" name="features_other" value="{{ paper.features.other or '' }}">
-            </label>
             <label>Page count:
                 <input type="text" class="editable" name="page_count" value="{{ paper.page_count or '' }}">
             </label>
@@ -90,23 +84,11 @@
             </label>
             <!-- NEW: Per-Row Action Buttons -->
             <div class="row-actions">
-                <div>
-                    <button type="button" class="action-btn classify-btn" data-paper-id="{{ paper.id }}">Classify <strong>this paper</strong></button>
-                    <button type="button" class="action-btn verify-btn" data-paper-id="{{ paper.id }}">Verify <strong>this paper</strong></button>
-                </div>
+                <button type="button" class="action-btn del-btn" onclick="deletePaper('{{ paper.id }}')"><strong>Delete</strong> Record</button>
                 <button type="button" class="action-btn save-btn" onclick="saveChanges('{{ paper.id }}')">Save Changes</button>
             </div>
             
         </form>
-    </div>
-
-    <div class="detail-content detail-trace detail-evaluator-trace">
-        <strong>Evaluator Reasoning Trace:</strong>
-        <div class="trace-content">{{ paper.reasoning_trace or 'No trace available.' }}</div> <!-- Load trace directly -->
-    </div>
-    <div class="detail-content detail-trace detail-verifier-trace">
-        <strong>Verifier Reasoning Trace:</strong>
-        <div class="trace-content">{{ paper.verifier_trace or 'No trace available.' }}</div> <!-- Load trace directly -->
     </div>
 </div>
 {% endblock %}

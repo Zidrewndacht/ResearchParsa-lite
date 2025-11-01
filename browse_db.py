@@ -5,31 +5,26 @@ import argparse
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, abort, send_from_directory, Response, send_file
 from markupsafe import Markup 
-import argparse
 import tempfile
 import os
 import sys
 import threading
 import webbrowser
-from collections import Counter
-import rcssmin
 import rjsmin
 import io
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill 
-from openpyxl.worksheet.table import Table, TableStyleInfo
-from werkzeug.utils import secure_filename # Ensure this is imported
+# from openpyxl import Workbook
+# from openpyxl.styles import Font, PatternFill 
+# from openpyxl.worksheet.table import Table, TableStyleInfo
+from werkzeug.utils import secure_filename 
 import gzip
 import base64
 import zstandard as zstd
 import tarfile
 import shutil
-import subprocess
+# import subprocess
 
 # Import globals, the classification and verification modules
 import globals
-import automate_classification
-import verify_classification
 
 # Define default year range - For this app:
 DEFAULT_YEAR_FROM = 2011
@@ -677,198 +672,199 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
     return loader_html_content
 
 def generate_xlsx_export_content(papers):
-    """Generates the Excel file content as bytes."""
-    output = io.BytesIO()
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "PCB Inspection Papers"
+    # """Generates the Excel file content as bytes."""
+    # output = io.BytesIO()
+    # wb = Workbook()
+    # ws = wb.active
+    # ws.title = "PCB Inspection Papers"
 
-    # --- Define Headers (Updated Order - Corrected Boolean Features) ---
-    headers = [
-        "Type", "Title", "Year", "Journal/Conf name", "Pages count",
-        # Classification Summary
-        "Off-topic", "Relevance", "Survey", "THT", "SMT", "X-Ray",
-        # Features Summary (Updated Order - Corrected Boolean Features)
-        "Tracks", "Holes / Vias", "Bare PCB Other", # Boolean (e.g., bare_pcb_other)
-        "Solder Insufficient", "Solder Excess", "Solder Void", "Solder Crack", "Solder Other", # Boolean (e.g., solder_other)
-        "Missing Comp", "Wrong Comp", "Orientation", "Comp Other", # Boolean (e.g., component_other)
-        "Cosmetic", "Other State", # Boolean for state (based on 'other' text content)
-        "Other Defects Text", # Text for content (the 'other' field)
-        # Techniques Summary (Updated Order)
-        "Classic CV", "ML", "CNN Classifier", "CNN Detector",
-        "R-CNN Detector", "Transformers", "Other DL", "Hybrid", "Datasets", "Model name",
-        # Metadata
-        "Last Changed", "Changed By", "Verified", "Accr. Score", "Verified By",
-        "User Comment State", "User Comments" # Boolean for state, Text for content
-    ]
+    # # --- Define Headers (Updated Order - Corrected Boolean Features) ---
+    # headers = [
+    #     "Type", "Title", "Year", "Journal/Conf name", "Pages count",
+    #     # Classification Summary
+    #     "Off-topic", "Relevance", "Survey", "THT", "SMT", "X-Ray",
+    #     # Features Summary (Updated Order - Corrected Boolean Features)
+    #     "Tracks", "Holes / Vias", "Bare PCB Other", # Boolean (e.g., bare_pcb_other)
+    #     "Solder Insufficient", "Solder Excess", "Solder Void", "Solder Crack", "Solder Other", # Boolean (e.g., solder_other)
+    #     "Missing Comp", "Wrong Comp", "Orientation", "Comp Other", # Boolean (e.g., component_other)
+    #     "Cosmetic", "Other State", # Boolean for state (based on 'other' text content)
+    #     "Other Defects Text", # Text for content (the 'other' field)
+    #     # Techniques Summary (Updated Order)
+    #     "Classic CV", "ML", "CNN Classifier", "CNN Detector",
+    #     "R-CNN Detector", "Transformers", "Other DL", "Hybrid", "Datasets", "Model name",
+    #     # Metadata
+    #     "Last Changed", "Changed By", "Verified", "Accr. Score", "Verified By",
+    #     "User Comment State", "User Comments" # Boolean for state, Text for content
+    # ]
 
-    # --- Write Headers ---
-    for col_num, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col_num, value=header)
-        cell.font = Font(bold=True)
+    # # --- Write Headers ---
+    # for col_num, header in enumerate(headers, 1):
+    #     cell = ws.cell(row=1, column=col_num, value=header)
+    #     cell.font = Font(bold=True)
 
-    # --- Write Data Rows ---
-    for row_num, paper in enumerate(papers, 2): # Start from row 2
-        # --- Helper function for consistent Excel value conversion ---
-        def format_excel_value(val):
-            """
-            Converts Python/DB values to Excel-friendly values:
-            - True/1   -> TRUE (Excel boolean)
-            - False/0  -> FALSE (Excel boolean)
-            - None/''/etc. -> "" (Empty string for blank Excel cell)
-            - Other    -> str(val) (Text)
-            """
-            if val is True or (isinstance(val, (int, float)) and val == 1):
-                return True # Excel TRUE
-            elif val is False or (isinstance(val, (int, float)) and val == 0):
-                return False # Excel FALSE
-            elif val is None or val == "":
-                 return "" # Explicitly empty cell for NULL/empty
-            else:
-                # Handle potential string representations of booleans from inconsistent DB
-                if isinstance(val, str):
-                    lower_val = val.lower()
-                    if lower_val in ('true', '1'):
-                        return True
-                    elif lower_val in ('false', '0'):
-                        return False
-                # Default: Convert to string for text fields
-                return str(val)
+    # # --- Write Data Rows ---
+    # for row_num, paper in enumerate(papers, 2): # Start from row 2
+    #     # --- Helper function for consistent Excel value conversion ---
+    #     def format_excel_value(val):
+    #         """
+    #         Converts Python/DB values to Excel-friendly values:
+    #         - True/1   -> TRUE (Excel boolean)
+    #         - False/0  -> FALSE (Excel boolean)
+    #         - None/''/etc. -> "" (Empty string for blank Excel cell)
+    #         - Other    -> str(val) (Text)
+    #         """
+    #         if val is True or (isinstance(val, (int, float)) and val == 1):
+    #             return True # Excel TRUE
+    #         elif val is False or (isinstance(val, (int, float)) and val == 0):
+    #             return False # Excel FALSE
+    #         elif val is None or val == "":
+    #              return "" # Explicitly empty cell for NULL/empty
+    #         else:
+    #             # Handle potential string representations of booleans from inconsistent DB
+    #             if isinstance(val, str):
+    #                 lower_val = val.lower()
+    #                 if lower_val in ('true', '1'):
+    #                     return True
+    #                 elif lower_val in ('false', '0'):
+    #                     return False
+    #             # Default: Convert to string for text fields
+    #             return str(val)
 
-        # Extract and format data
-        features = paper.get('features', {})
-        technique = paper.get('technique', {})
+    #     # Extract and format data
+    #     features = paper.get('features', {})
+    #     technique = paper.get('technique', {})
 
-        # --- Format the 'Last Changed' date ---
-        changed_timestamp_str = paper.get('changed', '')
-        formatted_changed_date = ""
-        if changed_timestamp_str:
-            try:
-                # Parse the ISO format timestamp
-                dt = datetime.fromisoformat(changed_timestamp_str.replace('Z', '+00:00'))
-                # Format as 'YYYY-MM-DD HH:MM:SS' for Excel compatibility
-                formatted_changed_date = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                # If parsing fails, keep the original string or leave blank
-                formatted_changed_date = changed_timestamp_str # Or ""
+    #     # --- Format the 'Last Changed' date ---
+    #     changed_timestamp_str = paper.get('changed', '')
+    #     formatted_changed_date = ""
+    #     if changed_timestamp_str:
+    #         try:
+    #             # Parse the ISO format timestamp
+    #             dt = datetime.fromisoformat(changed_timestamp_str.replace('Z', '+00:00'))
+    #             # Format as 'YYYY-MM-DD HH:MM:SS' for Excel compatibility
+    #             formatted_changed_date = dt.strftime("%Y-%m-%d %H:%M:%S")
+    #         except ValueError:
+    #             # If parsing fails, keep the original string or leave blank
+    #             formatted_changed_date = changed_timestamp_str # Or ""
 
-        row_data = [
-            paper.get('type', ''),                    # Type (text)
-            paper.get('title', ''),                   # Title (text)
-            paper.get('year'),                        # Year (integer)
-            paper.get('journal', ''),                 # Journal/Conf name (text)
-            paper.get('page_count'),                  # Pages count (integer)
-            # --- Classification Summary ---
-            format_excel_value(paper.get('is_offtopic')), # Off-topic (boolean/null)
-            paper.get('relevance'),                   # Relevance (integer)
-            format_excel_value(paper.get('is_survey')), # Survey (boolean/null)
-            format_excel_value(paper.get('is_through_hole')), # THT (boolean/null)
-            format_excel_value(paper.get('is_smt')),    # SMT (boolean/null)
-            format_excel_value(paper.get('is_x_ray')),  # X-Ray (boolean/null)
-            # --- Features Summary (Updated Order - Corrected Boolean Features) ---
-            format_excel_value(features.get('tracks')), # Tracks (boolean/null)
-            format_excel_value(features.get('holes')),  # Holes / Vias (boolean/null)
-            format_excel_value(features.get('bare_pcb_other')), # Bare PCB Other (boolean/null) - ADDED
-            format_excel_value(features.get('solder_insufficient')), # Solder Insufficient (boolean/null)
-            format_excel_value(features.get('solder_excess')), # Solder Excess (boolean/null)
-            format_excel_value(features.get('solder_void')), # Solder Void (boolean/null)
-            format_excel_value(features.get('solder_crack')), # Solder Crack (boolean/null)
-            format_excel_value(features.get('solder_other')), # Solder Other (boolean/null) - ADDED
-            format_excel_value(features.get('missing_component')), # Missing Comp (boolean/null)
-            format_excel_value(features.get('wrong_component')), # Wrong Comp (boolean/null)
-            format_excel_value(features.get('orientation')), # Orientation (boolean/null)
-            format_excel_value(features.get('component_other')), # Comp Other (boolean/null) - ADDED
-            format_excel_value(features.get('cosmetic')), # Cosmetic (boolean/null)
-            # Other State (boolean based on 'other' text content) - CORRECTED COMMENT
-            format_excel_value(features.get('other') is not None and str(features.get('other', '')).strip() != ""),
-            features.get('other', ''),               # Other Defects Text (text) - This one shows the text
-            # --- Techniques Summary (Updated Order) ---
-            format_excel_value(technique.get('classic_cv_based')), # Classic CV (boolean/null)
-            format_excel_value(technique.get('ml_traditional')), # ML (boolean/null)
-            format_excel_value(technique.get('dl_cnn_classifier')), # CNN Classifier (boolean/null)
-            format_excel_value(technique.get('dl_cnn_detector')), # CNN Detector (boolean/null)
-            format_excel_value(technique.get('dl_rcnn_detector')), # R-CNN Detector (boolean/null)
-            format_excel_value(technique.get('dl_transformer')), # Transformers (boolean/null)
-            format_excel_value(technique.get('dl_other')), # Other DL (boolean/null)
-            format_excel_value(technique.get('hybrid')), # Hybrid (boolean/null)
-            format_excel_value(technique.get('available_dataset')), # Datasets (boolean/null)
-            technique.get('model', ''),              # Model name (text)
-            # --- Metadata ---
-            formatted_changed_date,                 # Last Changed (formatted date string)
-            paper.get('changed_by', ''),            # Changed By (text)
-            format_excel_value(paper.get('verified')), # Verified (boolean/null)
-            paper.get('estimated_score'),           # Accr. Score (integer)
-            paper.get('verified_by', ''),           # Verified By (text)
-            # User comments state (boolean based on 'user_trace' text content) - CORRECTED COMMENT
-            format_excel_value(paper.get('user_trace') is not None and str(paper.get('user_trace', '')).strip() != ""),
-            paper.get('user_trace', '')             # User comments contents (text) - This one shows the text
-        ]
+    #     row_data = [
+    #         paper.get('type', ''),                    # Type (text)
+    #         paper.get('title', ''),                   # Title (text)
+    #         paper.get('year'),                        # Year (integer)
+    #         paper.get('journal', ''),                 # Journal/Conf name (text)
+    #         paper.get('page_count'),                  # Pages count (integer)
+    #         # --- Classification Summary ---
+    #         format_excel_value(paper.get('is_offtopic')), # Off-topic (boolean/null)
+    #         paper.get('relevance'),                   # Relevance (integer)
+    #         format_excel_value(paper.get('is_survey')), # Survey (boolean/null)
+    #         format_excel_value(paper.get('is_through_hole')), # THT (boolean/null)
+    #         format_excel_value(paper.get('is_smt')),    # SMT (boolean/null)
+    #         format_excel_value(paper.get('is_x_ray')),  # X-Ray (boolean/null)
+    #         # --- Features Summary (Updated Order - Corrected Boolean Features) ---
+    #         format_excel_value(features.get('tracks')), # Tracks (boolean/null)
+    #         format_excel_value(features.get('holes')),  # Holes / Vias (boolean/null)
+    #         format_excel_value(features.get('bare_pcb_other')), # Bare PCB Other (boolean/null) - ADDED
+    #         format_excel_value(features.get('solder_insufficient')), # Solder Insufficient (boolean/null)
+    #         format_excel_value(features.get('solder_excess')), # Solder Excess (boolean/null)
+    #         format_excel_value(features.get('solder_void')), # Solder Void (boolean/null)
+    #         format_excel_value(features.get('solder_crack')), # Solder Crack (boolean/null)
+    #         format_excel_value(features.get('solder_other')), # Solder Other (boolean/null) - ADDED
+    #         format_excel_value(features.get('missing_component')), # Missing Comp (boolean/null)
+    #         format_excel_value(features.get('wrong_component')), # Wrong Comp (boolean/null)
+    #         format_excel_value(features.get('orientation')), # Orientation (boolean/null)
+    #         format_excel_value(features.get('component_other')), # Comp Other (boolean/null) - ADDED
+    #         format_excel_value(features.get('cosmetic')), # Cosmetic (boolean/null)
+    #         # Other State (boolean based on 'other' text content) - CORRECTED COMMENT
+    #         format_excel_value(features.get('other') is not None and str(features.get('other', '')).strip() != ""),
+    #         features.get('other', ''),               # Other Defects Text (text) - This one shows the text
+    #         # --- Techniques Summary (Updated Order) ---
+    #         format_excel_value(technique.get('classic_cv_based')), # Classic CV (boolean/null)
+    #         format_excel_value(technique.get('ml_traditional')), # ML (boolean/null)
+    #         format_excel_value(technique.get('dl_cnn_classifier')), # CNN Classifier (boolean/null)
+    #         format_excel_value(technique.get('dl_cnn_detector')), # CNN Detector (boolean/null)
+    #         format_excel_value(technique.get('dl_rcnn_detector')), # R-CNN Detector (boolean/null)
+    #         format_excel_value(technique.get('dl_transformer')), # Transformers (boolean/null)
+    #         format_excel_value(technique.get('dl_other')), # Other DL (boolean/null)
+    #         format_excel_value(technique.get('hybrid')), # Hybrid (boolean/null)
+    #         format_excel_value(technique.get('available_dataset')), # Datasets (boolean/null)
+    #         technique.get('model', ''),              # Model name (text)
+    #         # --- Metadata ---
+    #         formatted_changed_date,                 # Last Changed (formatted date string)
+    #         paper.get('changed_by', ''),            # Changed By (text)
+    #         format_excel_value(paper.get('verified')), # Verified (boolean/null)
+    #         paper.get('estimated_score'),           # Accr. Score (integer)
+    #         paper.get('verified_by', ''),           # Verified By (text)
+    #         # User comments state (boolean based on 'user_trace' text content) - CORRECTED COMMENT
+    #         format_excel_value(paper.get('user_trace') is not None and str(paper.get('user_trace', '')).strip() != ""),
+    #         paper.get('user_trace', '')             # User comments contents (text) - This one shows the text
+    #     ]
 
-        # Write the row data to Excel
-        for col_num, cell_value in enumerate(row_data, 1):
-            ws.cell(row=row_num, column=col_num, value=cell_value)
+    #     # Write the row data to Excel
+    #     for col_num, cell_value in enumerate(row_data, 1):
+    #         ws.cell(row=row_num, column=col_num, value=cell_value)
 
-    # Optional: Auto-adjust column widths (basic attempt)
-    for column in ws.columns:
-        max_length = 0
-        column_letter = column[0].column_letter # Get the column name
-        for cell in column:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
-        adjusted_width = (max_length + 2)
-        # Cap the width to prevent extremely wide columns
-        ws.column_dimensions[column_letter].width = min(adjusted_width, 50)
+    # # Optional: Auto-adjust column widths (basic attempt)
+    # for column in ws.columns:
+    #     max_length = 0
+    #     column_letter = column[0].column_letter # Get the column name
+    #     for cell in column:
+    #         try:
+    #             if len(str(cell.value)) > max_length:
+    #                 max_length = len(str(cell.value))
+    #         except:
+    #             pass
+    #     adjusted_width = (max_length + 2)
+    #     # Cap the width to prevent extremely wide columns
+    #     ws.column_dimensions[column_letter].width = min(adjusted_width, 50)
 
-    # Optional: Format the data as a table (requires openpyxl >= 2.5)
-    try:
-        if len(papers) > 0:
-            # Adjust the column reference to 'AQ' (assuming 37 columns now: A through AQ)
-            # Headers are row 1, data starts row 2, so last row is len(papers) + 1
-            tab = Table(displayName="PCBPapersTable", ref=f"A1:AQ{len(papers) + 1}")
-            style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
-                                   showLastColumn=False, showRowStripes=True, showColumnStripes=False)
-            tab.tableStyleInfo = style
-            ws.add_table(tab)
-    except Exception as e:
-        print(f"Warning: Could not create Excel table: {e}")
+    # # Optional: Format the data as a table (requires openpyxl >= 2.5)
+    # try:
+    #     if len(papers) > 0:
+    #         # Adjust the column reference to 'AQ' (assuming 37 columns now: A through AQ)
+    #         # Headers are row 1, data starts row 2, so last row is len(papers) + 1
+    #         tab = Table(displayName="PCBPapersTable", ref=f"A1:AQ{len(papers) + 1}")
+    #         style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
+    #                                showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+    #         tab.tableStyleInfo = style
+    #         ws.add_table(tab)
+    # except Exception as e:
+    #     print(f"Warning: Could not create Excel table: {e}")
 
-    # --- NEW: Apply Conditional Formatting for Boolean Cells ---
-    # Define fills for TRUE and FALSE
-    true_fill = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid") # Light Green
-    false_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid") # Light Red
-    # Updated boolean column indices based on corrected new order (1-based indexing)
-    boolean_columns = [
-        # Classification Summary
-        6, 8, 9, 10, 11,
-        # Features Summary (Boolean Features)
-        12, 13, 14, # Tracks, Holes, Bare PCB Other
-        15, 16, 17, 18, 19, # Solder Insufficient, Excess, Void, Crack, Solder Other
-        20, 21, 22, 23, # Missing Comp, Wrong Comp, Orientation, Comp Other
-        24, 25, 27, # Cosmetic, Other State, User Comment State
-        # Techniques Summary
-        28, 29, 30, 31, 32, 33, 34, 35, 36,
-        # Metadata
-        39 # Verified (column 39)
-    ]
+    # # --- NEW: Apply Conditional Formatting for Boolean Cells ---
+    # # Define fills for TRUE and FALSE
+    # true_fill = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid") # Light Green
+    # false_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid") # Light Red
+    # # Updated boolean column indices based on corrected new order (1-based indexing)
+    # boolean_columns = [
+    #     # Classification Summary
+    #     6, 8, 9, 10, 11,
+    #     # Features Summary (Boolean Features)
+    #     12, 13, 14, # Tracks, Holes, Bare PCB Other
+    #     15, 16, 17, 18, 19, # Solder Insufficient, Excess, Void, Crack, Solder Other
+    #     20, 21, 22, 23, # Missing Comp, Wrong Comp, Orientation, Comp Other
+    #     24, 25, 27, # Cosmetic, Other State, User Comment State
+    #     # Techniques Summary
+    #     28, 29, 30, 31, 32, 33, 34, 35, 36,
+    #     # Metadata
+    #     39 # Verified (column 39)
+    # ]
 
-    # Iterate through rows and specified boolean columns to apply formatting
-    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-        for col_idx in boolean_columns:
-            # Adjust for 0-based indexing in the row list
-            cell = row[col_idx - 1] # col_idx is 1-based, list index is 0-based
-            if cell.value is True:
-                cell.fill = true_fill
-            elif cell.value is False:
-                cell.fill = false_fill
-            # If cell.value is None or "", it remains unformatted (blank cell)
+    # # Iterate through rows and specified boolean columns to apply formatting
+    # for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+    #     for col_idx in boolean_columns:
+    #         # Adjust for 0-based indexing in the row list
+    #         cell = row[col_idx - 1] # col_idx is 1-based, list index is 0-based
+    #         if cell.value is True:
+    #             cell.fill = true_fill
+    #         elif cell.value is False:
+    #             cell.fill = false_fill
+    #         # If cell.value is None or "", it remains unformatted (blank cell)
 
-    # --- Save Workbook to BytesIO object ---
-    wb.save(output)
-    output.seek(0)
-    return output.getvalue()
+    # # --- Save Workbook to BytesIO object ---
+    # wb.save(output)
+    # output.seek(0)
+    # return output.getvalue()
+    return
 
 def generate_filename(base_name, year_from, year_to, min_page_count, hide_offtopic, extra_suffix=""):
     """Generates a filename based on filters."""
@@ -884,84 +880,6 @@ def generate_filename(base_name, year_from, year_to, min_page_count, hide_offtop
     if extra_suffix:
         filename_parts.append(extra_suffix)
     return "_".join(filename_parts)
-
-# Standalone batch classification/verification
-def run_classification_subprocess(mode, paper_id, db_file):
-    """Launches automate_classification as a separate process."""
-    # Prepare the command
-    # Use sys.executable to ensure the same Python interpreter is used
-    cmd = [sys.executable, '-m', 'automate_classification'] # Assumes the script can be run as a module
-    # Or if it's designed to run as a script directly: cmd = [sys.executable, 'automate_classification.py']
-    
-    # Add arguments based on mode
-    if mode == 'id' and paper_id:
-        cmd.extend(['--mode', 'id', '--paper_id', str(paper_id)])
-    elif mode in ['all', 'remaining', 'no_features', 'on_topic_implementation']: # Add new modes here
-        cmd.extend(['--mode', mode])
-    else:
-        print(f"Warning: Invalid mode '{mode}' for subprocess classification.")
-        return # Or handle error appropriately
-
-    # Add the database file argument if needed by the script
-    # cmd.extend(['--db_file', db_file]) # Uncomment if needed
-
-    try:
-        print(f"Starting classification subprocess: {' '.join(cmd)}")
-        # Use subprocess.Popen to start the process independently
-        # On Windows, using 'start' command might be needed to detach the window
-        if sys.platform.startswith('win'):
-            # This creates a new console window and detaches the process
-            # The 'cmd /c' part runs the command, 'start' launches it detached
-            # The empty string "" is the title for the new window (can be a specific title)
-            subprocess.Popen(['cmd', '/c', 'start', 'Classification Process', '/D', os.getcwd(), 'python'] + cmd[1:], 
-                             close_fds=True, # Close file descriptors in child (good practice)
-                             creationflags=subprocess.CREATE_NEW_CONSOLE) # Create new console on Windows
-        else:
-            # On Unix-like systems, you might use os.setsid or preexec_fn to detach
-            # subprocess.Popen(cmd, close_fds=True, start_new_session=True) # POSIX
-            subprocess.Popen(cmd, close_fds=True) # Simple detach might work, start_new_session is better on POSIX
-        print(f"Classification subprocess initiated for mode={mode}, paper_id={paper_id}")
-    except FileNotFoundError:
-        print(f"Error: Python interpreter or script 'automate_classification.py' not found.")
-    except Exception as e:
-        print(f"Error starting classification subprocess: {e}")
-
-def run_verification_subprocess(mode, paper_id, db_file):
-    """Launches verify_classification as a separate process."""
-    # Prepare the command
-    cmd = [sys.executable, '-m', 'verify_classification'] # Assumes the script can be run as a module
-    # Or if it's designed to run as a script directly: cmd = [sys.executable, 'verify_classification.py']
-
-    # Add arguments based on mode
-    if mode == 'id' and paper_id:
-        cmd.extend(['--mode', 'id', '--paper_id', str(paper_id)])
-    elif mode == 'all':
-        cmd.extend(['--mode', 'all'])
-    elif mode == 'remaining':
-        cmd.extend(['--mode', 'remaining'])
-    else:
-        print(f"Warning: Invalid mode '{mode}' for subprocess verification.")
-        return # Or handle error appropriately
-
-    # Add the database file argument if needed by the script
-    # cmd.extend(['--db_file', db_file]) # Uncomment if needed
-
-    try:
-        print(f"Starting verification subprocess: {' '.join(cmd)}")
-        # Use subprocess.Popen to start the process independently
-        if sys.platform.startswith('win'):
-            subprocess.Popen(['cmd', '/c', 'start', 'Verification Process', '/D', os.getcwd(), 'python'] + cmd[1:], 
-                             close_fds=True, 
-                             creationflags=subprocess.CREATE_NEW_CONSOLE)
-        else:
-            # subprocess.Popen(cmd, close_fds=True, start_new_session=True) # POSIX
-            subprocess.Popen(cmd, close_fds=True) # Simple detach might work, start_new_session is better on POSIX
-        print(f"Verification subprocess initiated for mode={mode}, paper_id={paper_id}")
-    except FileNotFoundError:
-        print(f"Error: Python interpreter or script 'verify_classification.py' not found.")
-    except Exception as e:
-        print(f"Error starting verification subprocess: {e}")
-
 
 # --- Jinja2-like filters ---
 def render_status(value):
@@ -1668,80 +1586,6 @@ def update_paper():
         return jsonify({'status': 'error', 'message': 'Failed to update database'}), 500
 
 
-@app.route('/classify', methods=['POST'])
-def classify_paper():
-    """Endpoint to handle classification requests (single or batch)."""
-    data = request.get_json()
-    mode = data.get('mode', 'id') # Default to 'id' for single paper
-    paper_id = data.get('paper_id')
-    # Determine DB file (use command-line arg or global default)
-    db_file = DATABASE 
-
-    # Valid modes for batch classification subprocess
-    valid_batch_modes = ['all', 'remaining', 'no_features', 'on_topic_implementation']
-
-    if mode in valid_batch_modes:
-        # Run batch classification as a separate process
-        run_classification_subprocess(mode, paper_id, db_file) # Pass paper_id even if None for batch modes
-        # Return immediately
-        return jsonify({'status': 'started', 'message': f'<p>Batch classification ({mode}) initiated as a separate process. Reload the webpage after a while to see updated results.</p> <p>You should still be able to run single-paper classifications and verifications in the meantime, but results may take longer.</p>'})
-
-    elif mode == 'id' and paper_id:
-        try:
-            # Run single paper classification synchronously (still within the server process)
-            # The function updates the DB directly
-            automate_classification.run_classification(
-                mode=mode,
-                paper_id=paper_id,
-                db_file=db_file
-            )
-            # Fetch the updated data from the database
-            updated_data = fetch_updated_paper_data(paper_id)
-            if updated_data['status'] == 'success':
-                return jsonify(updated_data)
-            else:
-                return jsonify(updated_data), 404 # Or 500 if it's a server error fetching data
-        except Exception as e:
-            print(f"Error classifying paper {paper_id}: {e}")
-            return jsonify({'status': 'error', 'message': f'Classification failed: {str(e)}'}), 500
-    else:
-        return jsonify({'status': 'error', 'message': f'Invalid mode or missing paper_id for single classification. Valid batch modes: {valid_batch_modes}.'}), 400
-
-@app.route('/verify', methods=['POST'])
-def verify_paper():
-    """Endpoint to handle verification requests (single or batch)."""
-    data = request.get_json()
-    mode = data.get('mode', 'id') # Default to 'id' for single paper
-    paper_id = data.get('paper_id')
-    # Determine DB file (use command-line arg or global default)
-    db_file = DATABASE
-
-    if mode in ['all', 'remaining']:
-        # Run batch verification as a separate process
-        run_verification_subprocess(mode, paper_id, db_file) # Pass paper_id even if None for 'all'/'remaining'
-        # Return immediately
-        return jsonify({'status': 'started', 'message': f'Batch verification ({mode}) initiated as a separate process.'})
-
-    elif mode == 'id' and paper_id:
-        try:
-            # Run single paper verification synchronously (still within the server process)
-            verify_classification.run_verification(
-                mode=mode,
-                paper_id=paper_id,
-                db_file=db_file
-            )
-            # Fetch the updated data from the database
-            updated_data = fetch_updated_paper_data(paper_id)
-            if updated_data['status'] == 'success':
-                return jsonify(updated_data)
-            else:
-                return jsonify(updated_data), 404 # Or 500
-        except Exception as e:
-            print(f"Error verifying paper {paper_id}: {e}")
-            return jsonify({'status': 'error', 'message': f'Verification failed: {str(e)}'}), 500
-    else:
-        return jsonify({'status': 'error', 'message': 'Invalid mode or missing paper_id for single verification.'}), 400
-
 @app.route('/upload_bibtex', methods=['POST'])
 def upload_bibtex():
     """Endpoint to handle BibTeX file upload and import."""
@@ -1861,15 +1705,15 @@ if __name__ == '__main__':
         def open_browser():
             import time
             time.sleep(2)  # Wait for the server to start
-            webbrowser.open("http://127.0.0.1:5000")
+            webbrowser.open("http://127.0.0.1:5001")
 
         # Start the browser opener in a separate thread
         threading.Thread(target=open_browser, daemon=True).start()
-        print(" * Visit http://127.0.0.1:5000 to view the table.")
+        print(" * Visit http://127.0.0.1:5001 to view the table.")
     
     # Ensure the templates and static folders exist
     if not os.path.exists('templates'):
         os.makedirs('templates')
     if not os.path.exists('static'):
         os.makedirs('static')
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)

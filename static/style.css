@@ -14,34 +14,34 @@
     --table-row-even: #00000006;
     --table-row-odd: #0000;
     --highlighted-col-background: #bbccbb22;
-    --primary-ui-color: hsl(188, 31%, 29%);
-    --primary-ui-color-darker: hsl(188, 34%, 27%);
+    --primary-ui-color: hsl(210, 24%, 37%);
+    --primary-ui-color-darker: hsl(210, 24%, 34%);
     --inferred-ui-color: hsl(154.6, 35.8%, 32.4%);
     --inferred-gradient-end-color: rgb(57, 106, 53);
     --stats-primary-ui-color: var(--primary-ui-color);
     --modal-wrapper-background: #eee6;
-    --classify-btn-color: hsl(246, 29%, 40%);
+    --del-btn-color: hsl(346, 49%, 40%);
     --verify-btn-color: hsl(276, 29%, 40%);
     --save-btn-color: rgb(58, 136, 47);
     --export-html-btn-color: rgb(54, 90, 145);
     --export-xlsx-btn-color: rgb(58, 136, 47);
     --restore-btn-color: var(--primary-ui-color-darker);
     --backup-btn-color: var(--primary-ui-color);
-    --light-colored-btn-color: rgb(207, 227, 227);
-    --light-colored-btn-text: #0a5662;
+    --light-colored-btn-color: hsl(210, 24%, 87%);
+    --light-colored-btn-text: hsl(210, 24%, 44%);
     --dark-shadow: 1px 0 5px #0006;
     --light-shadow: 1px 0 5px #fff6;
     --th-border-color: #0000003b;
     --link-color: rgb(0, 45, 115);
     --detail-button-background: linear-gradient(180deg, hsl(210, 24%, 87%) 0%, hsl(210, 32%, 93%) 60%);
-    --min-width: 1660px;
-    --max-width: 2340px;
+    --min-width: 1024px;
+    --max-width: 1440px;
     --detail-border-color: #dfdfdf
 }
 
 body {
     font-family: "Inter Tight",Arial,sans-serif;
-    margin: 8px;
+    margin: 16px;
     background-color: var(--background-color);
     color: var(--text-color);
     background: linear-gradient(90deg, #eaecf0 0%, var(--background-color) 13%, var(--background-color) 87%, #eaecf0 100%);
@@ -72,7 +72,7 @@ html.busyCursor body,html.busyCursor body * {
     flex-direction: column;
     gap: 40px;
     min-width: var(--min-width);
-    /* max-width: var(--max-width); */ /* breaks batch tasks and export/backup modals positions*/
+    max-width: var(--max-width); /* breaks batch tasks and export/backup modals positions*/
 }
 #html-export .loading-overlay {
     max-width: var(--max-width); 
@@ -96,11 +96,11 @@ html.busyCursor .loading-overlay {
     box-shadow: 0 2px 8px rgba(0,0,0,.35);
     border: 1px solid var(--primary-ui-color);
     overflow-y: auto;
-    max-height: calc(100vh - 18px);
+    max-height: calc(100vh - 32px);
     position: relative;
     border-radius: 8px;
     min-width: var(--min-width);
-    /* max-width: var(--max-width); */ /* breaks batch tasks and export/backup modals positions*/
+    max-width: var(--max-width); /* breaks batch tasks and export/backup modals positions*/
     margin: auto;
 }
 #html-export .table-container {
@@ -134,7 +134,7 @@ th {
     color: #fff;
     font-weight: 700;
     box-shadow: inset 0 0 0 .75px var(--th-border-color);
-    padding: 6px;
+    padding: 3px;
     text-align: left;
     z-index: 10;
     font-size: 8.5pt
@@ -187,7 +187,8 @@ tr:nth-child(4) th:not(.inferred-header) {
     filter: contrast(1);  /*Fix blurry transformed fonts on Firefox*/
 }
 
-th[data-sort]:hover {
+th[data-sort]:hover, tr:nth-child(4) th[data-sort]:not(.inferred-header):hover {
+    /*specificity workaround for hovering tr:nth-child(4) th:not(.inferred-header) */
     filter: contrast(1.25) brightness(.9);
     cursor: pointer
 }
@@ -358,7 +359,7 @@ form label {
     text-align: center;
     font-size: 1.25em;
     padding: 0;
-    font-family: "Segoe UI Emoji Windows 11", "Twemoji Mozilla"
+    font-family: "Twemoji Mozilla"
 }
 
 .editable-status,.editable-verify,.pdf-status {
@@ -388,7 +389,7 @@ form label {
     overflow: hidden;
     transition: max-height .33s ease-in-out,opacity .5s ease-in-out;
     display: grid;
-    grid-template-columns: 1fr 1fr 720px;
+    grid-template-columns: 1fr 1fr 1fr;
     grid-template-rows: auto;
     gap: 9px;
     box-sizing: border-box;
@@ -446,17 +447,8 @@ form label {
     font-weight: 700
 }
 
-#classify-all-btn, #classify-remaining-btn, #classify-impl-btn, #classify-misclassified-btn, 
-.classify-btn {
-    background: var(--classify-btn-color)
-}
-
-#verify-all-btn,#verify-remaining-btn,.verify-btn {
-    background: var(--verify-btn-color)
-}
-
-#classify-all-btn strong,#verify-all-btn strong {
-    text-decoration: underline
+.del-btn {
+    background: var(--del-btn-color)
 }
 
 #export-html-btn {
@@ -482,13 +474,15 @@ form label {
     background: var(--stats-primary-ui-color)
 }
 
-#parça-tools-btn {
-    background: var(--classify-btn-color)
-}
 
 #batchModal,#exportModal,#importModal {
     backdrop-filter: unset;
-    background: unset
+    background: unset;
+    max-width: var(--max-width);
+    margin: auto;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 #apply-serverside-filters,#html-export #stats-btn {
@@ -501,7 +495,8 @@ form label {
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0,0,0,.15);
     height: 40px;
-    border: 1px solid #0002
+    border: 1px solid #0002;
+    grid-row: 1/3;
 }
 
 #apply-serverside-filters,#html-export #about-btn,#html-export #stats-btn {
@@ -532,41 +527,25 @@ a {
     color: var(--link-color);
     font-weight: 400;
 }
+.header-checkboxes {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+    align-content: end;
+    align-items: center;
+    justify-items: end;
+    padding-right: 11px;
 
-th.inferred-header {
-    background: var(--inferred-ui-color);
-    filter: contrast(1.0); /*Fix blurry transformed fonts on Firefox*/
 }
-
-th.inferred-header-2 {
-    filter: contrast(1.1) saturate(.95) hue-rotate(-16deg);
-}
-
-th.inferred-header-3 {
-    filter: contrast(1.15) saturate(.95) hue-rotate(-36deg)
-}
-
-#inferred-header-title {
-    background: linear-gradient(90deg,var(--inferred-ui-color),var(--inferred-gradient-end-color))
-}
-
-#inferred-header-title div,.inferred-header:not(.rotate-header) div {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    padding: 0 6px 0 0;
-    align-items: end
-}
-
 .filter-item {
     white-space: nowrap
 }
 
 input[type=checkbox] {
-    height: 12px;
-    width: 12px;
+    height: 10.5px;
+    width: 10.5px;
     margin: 0;
-    transform: scale(1.85,2) translate(1px,-1.5px);
+    transform: scale(2) translate(4px,0px);
     border-radius: 0;
     opacity: .5
 }
@@ -670,7 +649,7 @@ tr.filter-hidden {
     display: inline-flex;
     align-items: center;
     padding: 5px;
-    font-size: 10.5pt
+    font-size: 9.5pt;
 }
 
 .menu-message {
@@ -709,13 +688,13 @@ tr.filter-hidden {
 }
 
 #export-actions,#import-actions {
-    top: 56px;
+    top: 64px;
     left: 10px;
     transform: scale3d(.75,.66,1) translateY(-66px) translateX(-40px)
 }
 
 #export-actions {
-    left: 180px
+    left: 188px;
 }
 
 .header-controls {
@@ -738,35 +717,25 @@ tr.filter-hidden {
 }
 
 .detail-edit form>label:nth-of-type(1) {
-    grid-column: 1/3;
+    grid-column: 1/5;
     grid-row: 1/2
 }
 
 .detail-edit form>label:nth-of-type(2) {
-    grid-column: 3/7;
+    grid-column: 5/6;
     grid-row: 1/2
 }
 
 .detail-edit form>label:nth-of-type(3) {
-    grid-column: 1/5;
-    grid-row: 2/3
-}
-
-.detail-edit form>label:nth-of-type(4) {
-    grid-column: 5/6;
-    grid-row: 2/3
-}
-
-.detail-edit form>label:nth-of-type(5) {
     grid-column: 6/7;
-    grid-row: 2/3
+    grid-row: 1/2
 }
 
 #html-export .detail-edit form {
     height: calc(100% - 2px)
 }
 
-.detail-edit form>label:nth-of-type(6) {
+.detail-edit form>label:nth-of-type(4) {
     grid-column: 1/-1;
     grid-row: 3/4;
     display: flex;
@@ -917,7 +886,7 @@ tr.filter-hidden {
     height: 100%;
     background: var(--modal-wrapper-background);
     backdrop-filter: blur(12px);
-    perspective: 100vh
+    perspective: 100vh;
 }
 
 .modal p {
@@ -942,7 +911,7 @@ tr.filter-hidden {
 
 .stats-lists {
     display: grid;
-    grid-template-rows: 2fr 328px 1fr 191px;
+    grid-template-rows: 1fr 328px 158px;
     grid-template-columns: 1fr 1fr;
     min-height: 0
 }
@@ -956,79 +925,43 @@ tr.filter-hidden {
 .stats-charts {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
-    grid-template-rows: calc(26vh - 6px) calc(36vh - 6px) calc(20vh) calc(18vh)
+    grid-template-rows: calc(36vh - 6px) calc(36vh - 6px) calc(28vh);
 }
 
 .stats-charts .stats-section:nth-child(1) {
  /*Publ. Type Distribution */
-    grid-row: 4/5;
-    grid-column: 3/4;
+    grid-row: 1/2;
+    grid-column: 1/3;
 }
 
 .stats-charts .stats-section:nth-child(2) {
  /* Survey vs Primary Distribution */
-    grid-row: 4/5;
-    grid-column: 4/5;
+    grid-row: 2/3;
+    grid-column: 1/3;
 }
 
 .stats-charts .stats-section:nth-child(3) {
- /* Techniques Distribution */
+ /*Publ.type per year*/
     grid-row: 1/2;
-    grid-column: 1/3;
+    grid-column: 3/9;
 }
 
 .stats-charts .stats-section:nth-child(4) {
- /* Features Distribution */
+ /*Survey vs Primary Papers per Year*/
     grid-row: 2/3;
-    grid-column: 1/3;
+    grid-column: 3/9;
 }
 
 .stats-charts .stats-section:nth-child(5) {
- /*Publ.type per year*/
+ /*relevance */
     grid-row: 3/4;
-    grid-column: 1/5;
+    grid-column: 9/3;
 }
 
 .stats-charts .stats-section:nth-child(6) {
- /*Survey vs Primary Papers per Year*/
-    grid-row: 4/3;
-    grid-column: 5/9;
-}
-
-.stats-charts .stats-section:nth-child(7) {
- /*Techniques per Year */
-    grid-row: 1/2;
-    grid-column: 3/9;
-}
-
-.stats-charts .stats-section:nth-child(8) {
- /*Features per Year */
-    grid-row: 2/3;
-    grid-column: 3/9;
-}
-
-.stats-charts .stats-section:nth-child(9) {
- /*relevance */
-    grid-row: 4/5;
-    grid-column: 9/7;
-}
-
-.stats-charts .stats-section:nth-child(10) {
- /*verifier */
-    grid-row: 4/5;
-    grid-column: 5/7;
-}
-
-.stats-charts .stats-section:nth-child(11) {
- /* smt */
-    grid-row: 4/5;
-    grid-column: 2/3;
-}
-
-.stats-charts .stats-section:nth-child(12) {
  /* scope */
-    grid-row: 4/5;
-    grid-column: 1/2;
+    grid-row: 3/4;
+    grid-column: 1/3;
 }
 
 .search-item-btn {
@@ -1041,7 +974,7 @@ tr.filter-hidden {
     transform: scale(1.5) translate(-4px,-.5px);
     opacity: .5;
     transition: .5s opacity ease;
-    font-family: "Segoe UI Emoji Windows 11", "Twemoji Mozilla";
+    font-family: "Twemoji Mozilla";
 }
 
 .search-item-btn:hover {
@@ -1072,7 +1005,8 @@ li {
 .search-container {
     position: relative;
     display: inline-block;
-    width: 100%
+    width: 100%;
+    height: 48px;
 }
 
 .clear-btn {
@@ -1195,22 +1129,22 @@ li {
 .about-emoji-table{
     font-size: 1.75em;
     padding: 4px;
-    font-family: "Segoe UI Emoji Windows 11", "Twemoji Mozilla"
+    font-family: "Twemoji Mozilla"
 }
 
 .emoji-column {
-    font-family: "Segoe UI Emoji Windows 11", "Twemoji Mozilla"
+    font-family: "Twemoji Mozilla"
 }
 .about-emoji-text{
     padding-left: 9px; 
     padding-right: 9px; 
     display: inline-block;
     transform: scale(1.25);
-    font-family: "Segoe UI Emoji Windows 11", "Twemoji Mozilla"
+    font-family: "Twemoji Mozilla"
 }
 
 
-@media screen and (max-width:1880px) {
+@media screen and (max-width:1280px) {
     body {
         margin: 0
     }

@@ -20,129 +20,6 @@ const modalSmall = document.getElementById('aboutModal');
 const spanClose = document.querySelector('#statsModal .close'); // Specific close button
 const smallClose = document.querySelector('#aboutModal .close'); // Specific close button
 
-// --- Color Definitions ---
-// Define the fixed color order used in the Techniques Distribution chart (sorted)
-const techniquesColors = [
-    'hsla(347, 60%, 69%, 0.95)', // Red - Classic CV
-    'hsla(204, 62%, 57%, 0.95)',  // Blue - Traditional ML
-    'hsla(52, 80%, 47%, 0.95)',  // Yellow - CNN Classifier
-    'hsla(180, 32%, 52%, 0.95)',  // Teal - CNN Detector
-    'hsla(260, 60%, 66%, 0.95)', // Purple - R-CNN Detector
-    'hsla(25, 70%, 63%, 0.95)',  // Orange - Transformer
-    'hsla(0, 0%, 68%, 0.95)',   // Grey - Other DL
-    'hsla(96, 66%, 49%, 0.95)', // Green - Hybrid
-];
-const techniquesBorderColors = [
-    'hsla(347, 70%, 39%, 0.75)',
-    'hsla(204, 82%, 28%, 0.75)',
-    'hsla(42, 100%, 28%, 0.75)',
-    'hsla(180, 48%, 28%, 0.75)',
-    'hsla(260, 100%, 40%, 0.75)',
-    'hsla(30, 100%, 33%, 0.75)',
-    'hsla(0, 0%, 38%, 0.75)',
-    'hsla(147, 48%, 38%, 0.75)',
-];
-
-// Map technique fields to their *original* color index in the unsorted list
-// IMPORTANT: This list must match the order of TECHNIQUE_FIELDS_FOR_YEARLY
-const TECHNIQUE_FIELDS_FOR_YEARLY = [
-    'technique_classic_cv_based', 'technique_ml_traditional',
-    'technique_dl_cnn_classifier', 'technique_dl_cnn_detector', 'technique_dl_rcnn_detector',
-    'technique_dl_transformer', 'technique_dl_other', 'technique_hybrid'
-];
-const TECHNIQUE_FIELD_COLOR_MAP = {};
-// Include Datasets here temporarily to get the label mapping easily,
-// then filter it out for data/labels for the Techniques chart
-const TECHNIQUE_FIELDS_ALL = [
-    ...TECHNIQUE_FIELDS_FOR_YEARLY,
-    'technique_available_dataset' // Included to get label easily
-];
-
-// Define the original color order for Features Distribution chart
-const featuresColorsOriginalOrder = [
-    'hsla(130, 27%, 60%, 0.95)',    //  - PCB - Tracks (Teal)
-    'hsla(130, 27%, 60%, 0.95)',    //  - PCB - Holes (Teal)
-    'hsla(130, 27%, 60%, 0.95)',    //  - PCB - other (Teal)
-    'hsla(0, 0%, 68%, 0.95)',       //  - solder - Insufficient (Grey)
-    'hsla(0, 0%, 68%, 0.95)',       //  - solder - Excess (Grey)
-    'hsla(0, 0%, 68%, 0.95)',       //  - solder - Void (Grey)
-    'hsla(0, 0%, 68%, 0.95)',       //  - solder - Crack (Grey)
-    'hsla(0, 0%, 68%, 0.95)',       //  - solder - other (Grey)
-    'hsla(347, 70%, 72%, 0.95)',    //  - PCBA - Orientation (Red)
-    'hsla(347, 70%, 72%, 0.95)',    //  - PCBA - Missing Comp (Red)
-    'hsla(347, 70%, 72%, 0.95)',    //  - PCBA - Wrong Comp (Red)
-    'hsla(347, 70%, 72%, 0.95)',    //  - PCBA - Other (Red)
-    'hsla(204, 88%, 70%, 0.95)',    //  - Cosmetic (Blue)
-    'hsla(284, 88%, 70%, 0.95)',    //  - Other
-];
-const featuresBorderColorsOriginalOrder = [
-    'hsla(144, 83%, 28%, 0.75)',    // 0 - PCB - Tracks
-    'hsla(144, 82%, 28%, 0.75)',    // 1 - PCB - Holes
-    'hsla(144, 82%, 28%, 0.75)',    // 2 - PCB - other
-    'hsla(0, 0%, 38%, 0.75)',       // 3 - solder - Insufficient
-    'hsla(0, 0%, 38%, 0.75)',       // 4 - solder - Excess
-    'hsla(0, 0%, 38%, 0.75)',       // 5 - solder - Void
-    'hsla(0, 0%, 38%, 0.75)',       // 6 - solder - Crack
-    'hsla(0, 0%, 38%, 0.75)',       // 7 - solder - other
-    'hsla(347, 70%, 39%, 0.75)',    // 8 - PCBA - Orientation
-    'hsla(347, 70%, 39%, 0.75)',    // 9 - PCBA - Missing Comp
-    'hsla(347, 70%, 39%, 0.75)',    // 10 - PCBA - Wrong Comp
-    'hsla(347, 70%, 39%, 0.75)',    // 11 - PCBA - Other
-    'hsla(219, 100%, 40%, 0.75)',   // 12 - Cosmetic
-    'hsla(284, 82%, 47%, 0.75)',    // 13 - Other
-];
-
-// Map feature fields to their *original* index in the unsorted list
-// IMPORTANT: This list must match the order of FEATURE_FIELDS_FOR_YEARLY
-const FEATURE_FIELDS_FOR_YEARLY = [
-    'features_tracks', 'features_holes', 'features_bare_pcb_other',
-    'features_solder_insufficient', 'features_solder_excess', 'features_solder_void', 'features_solder_crack', 'features_solder_other',
-    'features_orientation', 'features_wrong_component', 'features_missing_component', 'features_component_other',
-    'features_cosmetic',
-    'features_other_state'
-];
-const FEATURE_FIELD_INDEX_MAP = {};
-const FEATURE_FIELDS = [...FEATURE_FIELDS_FOR_YEARLY]; // Assuming FEATURE_FIELDS is the same as FOR_YEARLY
-
-// --- Map Feature Fields to their Color Groups for Line Chart ---
-// Define the distinct color groups for the line chart based on original colors
-// The keys are the indices in the original color arrays that represent unique colors
-const featureColorGroups = {
-    0: { label: 'Bare PCB Defects', fields: [] },
-    3: { label: 'Solder Defects', fields: [] },
-    8: { label: 'PCB Assembly Defects', fields: [] },
-    12: { label: 'Cosmetic', fields: [] },
-    13: { label: 'Other', fields: [] }
-};
-
-// Map field names (data-field values / structure keys) to user-friendly labels (based on your table headers)
-const FIELD_LABELS = {
-    // Features
-    'features_tracks': '(Bare PCB) Tracks',
-    'features_holes': '(Bare PCB) Holes',
-    'features_bare_pcb_other': '(Bare PCB) Other',
-    'features_solder_insufficient': '(Solder) Insufficient',
-    'features_solder_excess': '(Solder) Excess',
-    'features_solder_void': '(Solder) Voids',
-    'features_solder_crack': '(Solder) Cracks',
-    'features_solder_other': '(Solder) Other',
-    'features_orientation': '(PCBA) Orientation/Polarity', // Combined as per previous logic
-    'features_wrong_component': '(PCBA) Wrong Component',
-    'features_missing_component': '(PCBA) Missing Component',
-    'features_component_other': '(PCBA) Other',
-    'features_cosmetic': 'Cosmetic',
-    'features_other_state': 'Other',
-    // Techniques
-    'technique_classic_cv_based': 'Classic CV',
-    'technique_ml_traditional': 'Traditional ML',
-    'technique_dl_cnn_classifier': 'CNN Classifier',
-    'technique_dl_cnn_detector': 'CNN Detector',
-    'technique_dl_rcnn_detector': 'R-CNN Detector',
-    'technique_dl_transformer': 'Transformer',
-    'technique_dl_other': 'Other DL',
-    'technique_hybrid': 'Hybrid',
-    'technique_available_dataset': 'Datasets' // Label for Datasets
-};
 
 // --- Define Mapping for Publication Types ---
 const PUB_TYPE_MAP = {
@@ -177,15 +54,8 @@ function getChartDPR() {
 const COUNT_FIELDS = [
     'pdf_present',
     'pdf_annotated',
-    'is_offtopic', 'is_survey', 'is_through_hole', 'is_smt', 'is_x_ray', // Classification (Top-level)
-    'features_tracks', 'features_holes', 'features_bare_pcb_other',
-    'features_solder_insufficient', 'features_solder_excess',
-    'features_solder_void', 'features_solder_crack', 'features_solder_other',
-    'features_orientation', 'features_wrong_component', 'features_missing_component', 'features_component_other',
-    'features_cosmetic', 'features_other_state',
-    'technique_classic_cv_based', 'technique_ml_traditional',
-    'technique_dl_cnn_classifier', 'technique_dl_cnn_detector', 'technique_dl_rcnn_detector',
-    'technique_dl_transformer', 'technique_dl_other', 'technique_hybrid', 'technique_available_dataset', // Techniques (Nested under 'technique')
+    'is_offtopic', 'is_survey',
+    
     'changed_by', 'verified', 'verified_by', 'user_comment_state' // user counting (Top-level)
 ];
 
@@ -193,10 +63,7 @@ const COUNT_FIELDS = [
 function updateCounts() { 
     const counts = {};
     const yearlySurveyImpl = {}; // { year: { surveys: count, impl: count } }
-    const yearlyTechniques = {}; // { year: { technique_field: count, ... } }
-    const yearlyFeatures = {}; // { year: { feature_field: count, ... } }
     const yearlyPubTypes = {}; // { year: { pubtype1: count, pubtype2: count, ... } }
-    const yearlyModels = {}; // { year: { modelName: count, ... } }
 
     // Initialize counts for all defined fields
     COUNT_FIELDS.forEach(field => counts[field] = 0);
@@ -273,14 +140,6 @@ function updateCounts() {
             if (!yearlySurveyImpl[year]) {
                 yearlySurveyImpl[year] = { surveys: 0, impl: 0 };
             }
-            if (!yearlyTechniques[year]) {
-                yearlyTechniques[year] = {};
-                TECHNIQUE_FIELDS_FOR_YEARLY.forEach(f => yearlyTechniques[year][f] = 0);
-            }
-            if (!yearlyFeatures[year]) {
-                yearlyFeatures[year] = {};
-                FEATURE_FIELDS_FOR_YEARLY.forEach(f => yearlyFeatures[year][f] = 0);
-            }
             // Update Publication Type counts ---
             const typeCell = row.cells[typeCellIndex]; // Assuming Type is the 1st column (index 0)
             const pubTypeText = typeCell ? typeCell.getAttribute('title') || typeCell.textContent.trim() : ''; // Use title for full type if available
@@ -299,22 +158,6 @@ function updateCounts() {
             } else {
                 yearlySurveyImpl[year].impl++;
             }
-            // Update Technique counts
-            TECHNIQUE_FIELDS_FOR_YEARLY.forEach(field => {
-                const techCell = row.querySelector(`.editable-status[data-field="${field}"]`);
-                if (techCell && techCell.textContent.trim() === '✔️') {
-                    yearlyTechniques[year][field]++;
-                }
-            });
-            // Update Feature counts
-            FEATURE_FIELDS_FOR_YEARLY.forEach(field => {
-                // const featCell = row.querySelector(`.editable-status[data-field="${field}"]`); //breaks "other" counts in chart, as it's a calculated, non-editable cell!
-                const featCell = row.querySelector(`[data-field="${field}"]`);
-                if (featCell && featCell.textContent.trim() === '✔️') {
-                    yearlyFeatures[year][field]++;
-                }
-            });
-            // Note: Yearly model counts are updated inside the 'model' field loop above
         }
     });
 
@@ -322,10 +165,7 @@ function updateCounts() {
     latestCounts = counts;
     latestYearlyData = {
         surveyImpl: yearlySurveyImpl,
-        techniques: yearlyTechniques,
-        features: yearlyFeatures,
         pubTypes: yearlyPubTypes,
-        models: yearlyModels
     };
 
     // ... (rest of the function remains the same: visible/loaded counts, footer updates)
@@ -485,7 +325,6 @@ function buildStatsLists() {
         const keywordsCell = row.querySelector('td[data-field="keywords"]');
         const authorsCell = row.querySelector('td[data-field="authors"]');
         const researchAreaCell = row.querySelector('td[data-field="research_area"]');
-        const featuresOtherCell = row.querySelector('td[data-field="features_other"]');
 
         // --- Extract and Process Keywords ---
         if (keywordsCell) { // Check if the cell exists before accessing its content
@@ -520,54 +359,6 @@ function buildStatsLists() {
                 stats.researchAreas[researchAreaText] = (stats.researchAreas[researchAreaText] || 0) + 1;
             }
         }
-
-        // --- Extract and Process Other Detected Features ---
-        if (featuresOtherCell) { // Check if the cell exists before accessing its content
-            const featuresOtherText = featuresOtherCell.textContent.trim();
-            if (featuresOtherText) {
-                const featuresList = featuresOtherText.split(';')
-                    .map(f => f.trim())
-                    .filter(f => f.length > 0);
-                featuresList.forEach(feature => {
-                    stats.otherDetectedFeatures[feature] = (stats.otherDetectedFeatures[feature] || 0) + 1;
-                });
-            }
-        }
-
-        // --- Extract and Process Model Names ---
-        // IMPORTANT: Use the correct data-field attribute name for model names, likely 'model' based on updateCounts
-        // The original code used 'model_name', but updateCounts looks for 'model'. Let's assume 'model' is correct here.
-        // If your table uses 'model_name', change the selector accordingly.
-        const modelNameCell = row.querySelector('td[data-field="model"]'); // Adjust selector if necessary
-        if (modelNameCell) { // Check if the cell exists before accessing its content
-             const modelNameText = modelNameCell.textContent.trim(); // Declare and assign modelNameText here
-             if (modelNameText) { // Check if there's content
-                 // Split the content by comma or semicolon
-                 const modelNamesList = modelNameText.split(/[,;]/) // Split by comma or semicolon
-                     .map(m => m.trim())
-                     .filter(m => m.length > 0);
-                 modelNamesList.forEach(modelName => {
-                     stats.modelNames[modelName] = (stats.modelNames[modelName] || 0) + 1;
-                 });
-             }
-        } else {
-            // If 'model' field cell is not found, try 'model_name' as a fallback if needed
-            const modelNameCellAlt = row.querySelector('td[data-field="model_name"]');
-            if (modelNameCellAlt) {
-                 const modelNameText = modelNameCellAlt.textContent.trim(); // Declare and assign modelNameText here
-                 if (modelNameText) { // Check if there's content
-                     // Split the content by comma or semicolon
-                     const modelNamesList = modelNameText.split(/[,;]/) // Split by comma or semicolon
-                         .map(m => m.trim())
-                         .filter(m => m.length > 0);
-                     modelNamesList.forEach(modelName => {
-                         stats.modelNames[modelName] = (stats.modelNames[modelName] || 0) + 1;
-                     });
-                 }
-            }
-            // If neither 'model' nor 'model_name' is found, do nothing for this row regarding model names.
-        }
-
     });
 
     function populateList(listElementId, dataObj) {
@@ -578,7 +369,7 @@ function buildStatsLists() {
         }
         listElement.innerHTML = '';
         const sortedEntries = Object.entries(dataObj)
-            .filter(([name, count]) => count >= 1) // Keep only entries with count >= 1 (changed from > 1 if desired)
+            .filter(([name, count]) => count >= 2) // Keep only entries with count >= 1 (changed from > 1 if desired)
             .sort((a, b) => {
                 if (b[1] !== a[1]) {
                     return b[1] - a[1];
@@ -611,80 +402,14 @@ function buildStatsLists() {
             });
         });
     }
-
-    // Function to populate lists where items *can* appear only once (no >= 1 filter)
-    function populateSimpleList(listElementId, dataObj) {
-        const listElement = document.getElementById(listElementId);
-        if (!listElement) {
-            console.warn(`List element with ID ${listElementId} not found.`);
-            return;
-        }
-        listElement.innerHTML = '';
-        // Sort entries: primarily by count (descending), then alphabetically (ascending) for ties
-        const sortedEntries = Object.entries(dataObj)
-            .sort((a, b) => {
-                if (b[1] !== a[1]) {
-                    return b[1] - a[1]; // Sort by count descending
-                }
-                return a[0].localeCompare(b[0]); // Sort alphabetically ascending if counts are equal
-            });
-        if (sortedEntries.length === 0) {
-            listElement.innerHTML = '<li>No items found.</li>';
-            return;
-        }
-        sortedEntries.forEach(([name, count]) => {
-            const listItem = document.createElement('li');
-            // Escape HTML to prevent XSS if data contains special characters
-            const escapedName = name.replace(/&/g, "&amp;").replace(/</g, "<").replace(/>/g, ">");
-            const escapedNameForTitle = escapedName.replace(/"/g, "&quot;"); // Escape quotes for title attribute
-            // Create the list item content with count, search button, and name
-            listItem.innerHTML = `<span class="count">${count}</span><button type="button" class="search-item-btn" title="Search for &quot;${escapedNameForTitle}&quot;">🔍</button><span class="name">${escapedName}</span>`;
-            listElement.appendChild(listItem);
-        });
-        listElement.querySelectorAll('.search-item-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const listItem = this.closest('li');
-                const nameSpan = listItem.querySelector('.name');
-                if (nameSpan) {
-                    const searchTerm = nameSpan.textContent.trim();
-                    searchInput.value = searchTerm; // Set the search input value
-                    closeModal(); // Close the stats modal
-                    applyLocalFilters(); // Trigger the filter update
-                }
-            });
-        });
-    }
-
     populateList('keywordStatsList', stats.keywords);
     populateList('authorStatsList', stats.authors);
     populateList('researchAreaStatsList', stats.researchAreas);
-    populateSimpleList('otherDetectedFeaturesStatsList', stats.otherDetectedFeatures);
-    populateSimpleList('modelNamesStatsList', stats.modelNames);
 
     // ---- now the lists exist; build cloud if switch is on ----
     if (document.getElementById('cloudToggle').checked) {
         toggleCloud();                     // first render
     }
-}
-
-// --- Refactored Chart Data Preparation Functions ---
-function prepareSMTvsTHTData() {
-    const smtCount = latestCounts['is_smt'] || 0;
-    const thtCount = latestCounts['is_through_hole'] || 0;
-    return {
-        labels: ['SMT', 'THT'],
-        datasets: [{
-            label: 'SMT vs THT Distribution',
-            data: [smtCount, thtCount],
-            backgroundColor: [
-                'hsla(180, 32%, 52%, 0.95)', // Teal (from techniques)
-                'hsla(260, 60%, 66%, 0.95)'  // Purple (from techniques)
-            ],
-            borderColor: "#333",
-            borderWidth: 1,
-            hoverOffset: 4
-        }]
-    };
 }
 
 function prepareScopeData(totalVisiblePaperCount, totalAllPaperCount) {
@@ -713,154 +438,6 @@ function prepareScopeData(totalVisiblePaperCount, totalAllPaperCount) {
                 'hsla(347, 60%, 69%, 0.95)'  // Red (from techniques)
             ],
             borderColor: "#333",
-            borderWidth: 1,
-            hoverOffset: 4
-        }]
-    };
-}
-
-function prepareFeaturesData() {
-    if (showPieCharts) {
-        // --- Data for Pie Chart (Conditional Grouping Based on featureGroupToggle) ---
-        let labels = [];
-        let values = [];
-        let backgroundColors = [];
-
-        if (featureGroupToggle && featureGroupToggle.checked) {
-            // --- Grouped Pie Chart Data ---
-            // Calculate aggregated values based on featureColorGroups
-            Object.keys(featureColorGroups).forEach(baseColorIndex => {
-                const group = featureColorGroups[baseColorIndex];
-                labels.push(group.label); // Use the group's label (e.g., 'PCB Features')
-                // Sum the counts for all features within this group
-                let groupSum = 0;
-                group.fields.forEach(field => {
-                    groupSum += (latestCounts[field] || 0);
-                });
-                values.push(groupSum);
-                // Use the color associated with the base index for this group
-                const colorIndex = parseInt(baseColorIndex);
-                backgroundColors.push(featuresColorsOriginalOrder[colorIndex]);
-            });
-        } else {
-            // --- Ungrouped Pie Chart Data (Shows Individual Features) ---
-            // Use the same logic as the ungrouped bar chart
-            const featuresData = FEATURE_FIELDS.map(field => ({
-                label: FIELD_LABELS[field] || field,
-                value: latestCounts[field] || 0,
-                originalIndex: FEATURE_FIELD_INDEX_MAP[field] !== undefined ? FEATURE_FIELD_INDEX_MAP[field] : -1 // Get original color index
-            }));
-
-            // Determine if sorting is enabled based on the checkbox state (applies to ungrouped pie too)
-            let processedData = featuresData; // Default to original order
-            processedData = [...featuresData].sort((a, b) => b.value - a.value); // Use spread to avoid mutating original
-
-            // Extract labels, values, and corresponding colors from the processed (or original) data
-            labels = processedData.map(item => item.label);
-            values = processedData.map(item => item.value);
-            backgroundColors = processedData.map(item => featuresColorsOriginalOrder[item.originalIndex] || 'rgba(0,0,0,0.1)');
-        }
-
-        return {
-            labels: labels,
-            datasets: [{
-                label: 'Features Count',
-                data: values,
-                backgroundColor: backgroundColors,
-                borderColor: "#333",         // fixed color as the translucent mapping lacks contrast for bar or pie charts
-                borderWidth: 1,
-                hoverOffset: 4
-            }]
-        };
-    } else {
-        // --- Data for Bar Chart (Conditional Sorting Within Groups) ---
-        let finalFeaturesLabels = [];
-        let finalFeaturesValues = [];
-        let finalFeaturesBackgroundColors = [];
-
-        if (featureGroupToggle && featureGroupToggle.checked) {
-            // --- Sorting Enabled: Sort each group by value, then concatenate ---
-            Object.keys(featureColorGroups).forEach(baseColorIndexStr => {
-                const baseColorIndex = parseInt(baseColorIndexStr);
-                const group = featureColorGroups[baseColorIndex];
-                const groupFields = group.fields;
-
-                // Create an array of objects for this group's fields with their data and original index
-                const groupData = groupFields.map(field => ({
-                    label: FIELD_LABELS[field] || field,
-                    value: latestCounts[field] || 0,
-                    originalIndex: FEATURE_FIELD_INDEX_MAP[field] !== undefined ? FEATURE_FIELD_INDEX_MAP[field] : -1
-                }));
-
-                // Sort *within* this group by value descending
-                groupData.sort((a, b) => b.value - a.value);
-
-                // Append the sorted data for this group to the final arrays
-                groupData.forEach(item => {
-                    finalFeaturesLabels.push(item.label);
-                    finalFeaturesValues.push(item.value);
-                    // Use the color associated with the *base* color index for the group
-                    // This ensures all items in the group have the same color
-                    finalFeaturesBackgroundColors.push(featuresColorsOriginalOrder[baseColorIndex]);
-                });
-            });
-        } else {
-            // --- Data for Bar Chart (Conditional Sorting) ---
-            const featuresData = FEATURE_FIELDS.map(field => ({
-                label: FIELD_LABELS[field] || field,
-                value: latestCounts[field] || 0,
-                originalIndex: FEATURE_FIELD_INDEX_MAP[field] !== undefined ? FEATURE_FIELD_INDEX_MAP[field] : -1 // Get original color index
-            }));
-
-            // Determine if sorting is enabled based on the checkbox state
-            let processedData = featuresData; // Default to original order
-            processedData = [...featuresData].sort((a, b) => b.value - a.value); // Use spread to avoid mutating original
-            // If checkbox is not checked or doesn't exist, processedData remains as original featuresData
-
-            // Extract labels, values, and corresponding colors from the processed (or original) data
-            finalFeaturesLabels = processedData.map(item => item.label);
-            finalFeaturesValues = processedData.map(item => item.value);
-            finalFeaturesBackgroundColors = processedData.map(item => featuresColorsOriginalOrder[item.originalIndex] || 'rgba(0,0,0,0.1)');
-            // const finalFeaturesBorderColors = processedData.map(item => featuresBorderColorsOriginalOrder[item.originalIndex] || 'rgba(0,0,0,1)'); // If needed later
-        }
-
-        return {
-            labels: finalFeaturesLabels,
-            datasets: [{
-                label: 'Features Count',
-                data: finalFeaturesValues,
-                backgroundColor: finalFeaturesBackgroundColors, // Now reflects grouped sorting if enabled
-                borderColor: "#333",         // fixed color as the translucent mapping lacks contrast for bar or pie charts
-                borderWidth: 1,
-                hoverOffset: 4
-            }]
-        };
-    }
-}
-
-function prepareTechniquesData() {
-    const TECHNIQUE_FIELDS_NO_DATASET = TECHNIQUE_FIELDS_ALL.filter(field => field !== 'technique_available_dataset');
-    // Read and sort the data for the distribution chart
-    const techniquesData = TECHNIQUE_FIELDS_NO_DATASET.map(field => ({
-        label: FIELD_LABELS[field] || field,
-        value: latestCounts[field] || 0,
-        originalIndex: TECHNIQUE_FIELD_COLOR_MAP[field] !== undefined ? TECHNIQUE_FIELD_COLOR_MAP[field] : -1 // Get original color index
-    }));
-    // Sort by value descending (largest first) for the distribution chart display
-    techniquesData.sort((a, b) => b.value - a.value);
-    // Extract sorted labels and values
-    const sortedTechniquesLabels = techniquesData.map(item => item.label);
-    const sortedTechniquesValues = techniquesData.map(item => item.value);
-    // Map the sorted order back to the original colors using the stored originalIndex
-    const sortedTechniquesBackgroundColors = techniquesData.map(item => techniquesColors[item.originalIndex] || 'rgba(0,0,0,0.1)');
-    // const sortedTechniquesBorderColors = techniquesData.map(item => techniquesBorderColors[item.originalIndex] || 'rgba(0,0,0,1)');
-    return {
-        labels: sortedTechniquesLabels,
-        datasets: [{
-            label: 'Techniques Count',
-            data: sortedTechniquesValues,
-            backgroundColor: sortedTechniquesBackgroundColors, // Use mapped colors
-            borderColor: "#333",         // fixed color as the translucent mapping lacks contrast for bar or pie charts
             borderWidth: 1,
             hoverOffset: 4
         }]
@@ -959,39 +536,15 @@ function prepareRelevanceHistogramData(visibleRows) {
     };
 }
 
-function prepareEstScoreHistogramData(visibleRows) {
-    const estScoreCounts = Array(11).fill(0); // Index 0-10 for scores 0-10
-    visibleRows.forEach(row => {
-        const estScoreCell = row.cells[estScoreCellIndex]; // Assume estScoreCellIndex is defined globally
-        if (estScoreCell) {
-            const estScoreText = estScoreCell.textContent.trim();
-            const estScore = parseInt(estScoreText, 10);
-            if (!isNaN(estScore) && estScore >= 0 && estScore <= 10) {
-                estScoreCounts[estScore]++;
-            }
-        }
-    });
-    return {
-        labels: Array.from({ length: 11 }, (_, i) => i.toString()), // Labels "0", "1", ..., "10"
-        datasets: [{
-            label: 'Estimated Score Histogram',
-            data: estScoreCounts,
-            backgroundColor: 'hsla(52, 80%, 47%, 0.95)', // Yellow (from techniques)
-            borderColor: 'hsla(42, 100%, 28%, 0.75)', // Darker Yellow border
-            borderWidth: 1
-        }]
-    };
-}
-
 // --- Refactored Chart Rendering Functions ---
 function destroyExistingCharts() {
     const chartInstances = [
-        'featuresBarChartInstance', 'techniquesBarChartInstance',
-        'surveyVsImplLineChartInstance', 'techniquesPerYearLineChartInstance',
-        'featuresPerYearLineChartInstance', 'pubTypesPerYearLineChartInstance',
-        'surveyVsImplDistChartInstance', 'pubTypesDistChartInstance',
-        'smtVsThtDistChartInstance', 'scopeDistChartInstance',
-        'relevanceHistogramInstance', 'estScoreHistogramInstance'
+        'surveyVsImplLineChartInstance', 
+        'pubTypesPerYearLineChartInstance',
+        'surveyVsImplDistChartInstance', 
+        'pubTypesDistChartInstance',
+        'scopeDistChartInstance',
+        'relevanceHistogramInstance'
     ];
     chartInstances.forEach(instanceName => {
         if (window[instanceName]) {
@@ -1225,191 +778,6 @@ function renderLineCharts() {
         }
     });
 
-    // 2. Techniques per Year (Consistent Colors)
-    const techniquesYearlyData = latestYearlyData.techniques || {};
-    const yearsForTechniques = Object.keys(techniquesYearlyData).map(Number).sort((a, b) => a - b);
-    // Create datasets for the line chart using the ORIGINAL field order and ORIGINAL colors
-    // This ensures color consistency regardless of sorting in the bar chart
-    const techniqueLineDatasets = TECHNIQUE_FIELDS_FOR_YEARLY.map(field => {
-        const label = (typeof FIELD_LABELS !== 'undefined' && FIELD_LABELS[field]) ? FIELD_LABELS[field] : field;
-        let data = yearsForTechniques.map(year => techniquesYearlyData[year]?.[field] || 0);
-        if (isCumulative) {
-            data = calculateCumulativeData(data);
-        }
-        const originalIndex = TECHNIQUE_FIELD_COLOR_MAP[field] !== undefined ? TECHNIQUE_FIELD_COLOR_MAP[field] : -1;
-        // --- FIX: Use techniquesBorderColors for border, techniquesColors for background ---
-        const borderColor = (originalIndex !== -1 && techniquesBorderColors[originalIndex]) ? techniquesBorderColors[originalIndex] : 'rgba(0, 0, 0, 1)'; // Use border colors array
-        const backgroundColor = (originalIndex !== -1 && techniquesColors[originalIndex]) ? techniquesColors[originalIndex] : 'rgba(0, 0, 0, 0.1)'; // Use fill colors array (usually with alpha for line charts when stacked)
-        return {
-            label: label,
-            data: data, // Use final data array
-            borderColor: borderColor,       // Use the dedicated border color
-            backgroundColor: backgroundColor, // Use the dedicated fill color (often with alpha)
-            fill: isStacked, // Fill is controlled by stacked option below
-            tension: 0.25
-        };
-    });
-
-    const techniquesPerYearCtx = document.getElementById('techniquesPerYearLineChart')?.getContext('2d');
-    if (techniquesPerYearCtx && techniqueLineDatasets.length > 0) {
-        window.techniquesPerYearLineChartInstance = new Chart(techniquesPerYearCtx, {
-            type: 'line',
-            data: {
-                labels: yearsForTechniques, // Use years sorted
-                datasets: techniqueLineDatasets // Use datasets prepared with consistent colors
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                devicePixelRatio: getChartDPR(),
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            usePointStyle: true,  // Use the point style
-                            pointStyle: 'circle',  // Specify the circle style
-                            generateLabels: cumulativeLegendLabels   // <-- added
-                        }
-                    },
-                    title: { display: false, text: 'Techniques per Year' },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return `${context.dataset.label}: ${context.raw}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { precision: 0 },
-                        stacked: isStacked // Apply stacking to Y-axis
-                    },
-                    x: {
-                        ticks: { precision: 0 },
-                        stacked: isStacked // Apply stacking to X-axis if needed
-                    }
-                }
-            }
-        });
-    } else if (techniquesPerYearCtx) {
-        window.techniquesPerYearLineChartInstance = new Chart(techniquesPerYearCtx, {
-            type: 'line',
-            data: { labels: [], datasets: [] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                devicePixelRatio: getChartDPR(),
-                plugins: {
-                    legend: { display: false },
-                    title: { display: true, text: 'Techniques per Year (No Data)' }
-                }
-            }
-        });
-    }
-
-    // 3. Features per Year (Summed by Color Group)
-    const featuresYearlyData = latestYearlyData.features || {};
-    const yearsForFeatures = Object.keys(featuresYearlyData).map(Number).sort((a, b) => a - b);
-    // --- Create Aggregated Data by Color Group ---
-    // Aggregate yearly data for each color group
-    const aggregatedFeatureDataByColor = {};
-    Object.keys(featureColorGroups).forEach(baseColorIndex => {
-        const group = featureColorGroups[baseColorIndex];
-        aggregatedFeatureDataByColor[group.label] = yearsForFeatures.map(year => {
-            return group.fields.reduce((sum, field) => {
-                return sum + (featuresYearlyData[year]?.[field] || 0);
-            }, 0);
-        });
-    });
-
-    const aggregatedFeatureDataByColorFinal = {};
-    Object.keys(aggregatedFeatureDataByColor).forEach(label => {
-        let data = aggregatedFeatureDataByColor[label];
-        if (isCumulative) {
-            data = calculateCumulativeData(data);
-        }
-        aggregatedFeatureDataByColorFinal[label] = data;
-    });
-
-    // Create datasets for the line chart using the aggregated data and corresponding colors
-    const featureLineDatasets = Object.keys(featureColorGroups).map(baseColorIndex => {
-        const group = featureColorGroups[baseColorIndex];
-        const colorIndex = parseInt(baseColorIndex); // Use the base color index to get the actual color
-        // --- FIX: Use featuresBorderColorsOriginalOrder for border, featuresColorsOriginalOrder for background ---
-        const borderColor = (featuresBorderColorsOriginalOrder[colorIndex]) ? featuresBorderColorsOriginalOrder[colorIndex] : 'rgba(0, 0, 0, 1)'; // Use border colors array
-        const backgroundColor = (featuresColorsOriginalOrder[colorIndex]) ? featuresColorsOriginalOrder[colorIndex] : 'rgba(0, 0, 0, 0.1)'; // Use fill colors array (usually with alpha for line charts when stacked)
-        // --- END FIX ---
-        return {
-            label: group.label,
-            data: aggregatedFeatureDataByColorFinal[group.label], // Use final data array
-            borderColor: borderColor,       // Use the dedicated border color
-            backgroundColor: backgroundColor, // Use the dedicated fill color (often with alpha)
-            fill: isStacked, // Fill is controlled by stacked option below
-            tension: 0.25
-        };
-    });
-
-    const featuresPerYearCtx = document.getElementById('featuresPerYearLineChart')?.getContext('2d');
-    if (featuresPerYearCtx && featureLineDatasets.length > 0) {
-        window.featuresPerYearLineChartInstance = new Chart(featuresPerYearCtx, {
-            type: 'line',
-            data: {
-                labels: yearsForFeatures, // Use years sorted
-                datasets: featureLineDatasets // Use datasets prepared with aggregated data and consistent colors
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                devicePixelRatio: getChartDPR(),
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            usePointStyle: true,  // Use the point style
-                            pointStyle: 'circle',  // Specify the circle style
-                            generateLabels: cumulativeLegendLabels   // <-- added
-                        }
-                    },
-                    title: { display: false, text: 'Features per Year' },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return `${context.dataset.label}: ${context.raw}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { precision: 0 },
-                        stacked: isStacked // Apply stacking to Y-axis
-                    },
-                    x: {
-                        ticks: { precision: 0 },
-                        stacked: isStacked // Apply stacking to X-axis if needed
-                    }
-                }
-            }
-        });
-    } else if (featuresPerYearCtx) {
-        window.featuresPerYearLineChartInstance = new Chart(featuresPerYearCtx, {
-            type: 'line',
-            data: { labels: [], datasets: [] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                devicePixelRatio: getChartDPR(),
-                plugins: {
-                    legend: { display: false },
-                    title: { display: true, text: 'Features per Year (No Data)' }
-                }
-            }
-        });
-    }
-
     // --- 4. Publication Types per Year (Translated Labels) ---
     const pubTypesYearlyData = latestYearlyData.pubTypes || {};
     const yearsForPubTypes = Object.keys(pubTypesYearlyData).map(Number).sort((a, b) => a - b);
@@ -1518,35 +886,6 @@ function displayStats() {
     setTimeout(() => {
         updateCounts(); // Run updateCounts to get the latest data for visible rows
 
-        // Initialize color mappings
-        TECHNIQUE_FIELDS_FOR_YEARLY.forEach((field, index) => { TECHNIQUE_FIELD_COLOR_MAP[field] = index; });
-        FEATURE_FIELDS_FOR_YEARLY.forEach((field, index) => { FEATURE_FIELD_INDEX_MAP[field] = index; });
-
-        // *** ADD THIS LINE: Clear the fields arrays in featureColorGroups ***
-        Object.keys(featureColorGroups).forEach(key => {
-            featureColorGroups[key].fields = [];
-        });
-
-        // Populate the groups with the actual feature fields
-        FEATURE_FIELDS_FOR_YEARLY.forEach(field => {
-            const originalIndex = FEATURE_FIELD_INDEX_MAP[field];
-            const originalColorHSLA = featuresColorsOriginalOrder[originalIndex];
-            // Find the base color index that matches this feature's color:
-            let baseColorIndex = null;
-            for (let key in featureColorGroups) {
-                const keyIndex = parseInt(key);
-                if (featuresColorsOriginalOrder[keyIndex] === originalColorHSLA) {
-                    baseColorIndex = keyIndex;
-                    break;
-                }
-            }
-            if (baseColorIndex !== null && featureColorGroups[baseColorIndex]) {
-                featureColorGroups[baseColorIndex].fields.push(field);
-            } else {
-                console.warn(`Could not find matching base color for feature ${field}`);
-            }
-        });
-
         // --- Read Counts and Paper Counts ---
         // Get the total number of currently visible papers directly
         const visibleRows = document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)');
@@ -1565,15 +904,6 @@ function displayStats() {
             weight: '300'
         };
 
-        // --- Distribution Charts (Bar/Pie) ---
-        const featuresCtx = document.getElementById('featuresPieChart')?.getContext('2d');
-        const featuresChartData = prepareFeaturesData();
-        window.featuresBarChartInstance = renderBarOrPieChart(featuresCtx, featuresChartData, 'Features Count', showPieCharts ? 'pie' : 'bar');
-
-        const techniquesCtx = document.getElementById('techniquesPieChart')?.getContext('2d');
-        const techniquesChartData = prepareTechniquesData();
-        window.techniquesBarChartInstance = renderBarOrPieChart(techniquesCtx, techniquesChartData, 'Techniques Count', showPieCharts ? 'pie' : 'bar');
-
         const surveyVsImplDistCtx = document.getElementById('surveyVsImplPieChart')?.getContext('2d');
         const surveyVsImplDistChartData = prepareSurveyVsImplDistData(totalVisiblePaperCount);
         window.surveyVsImplDistChartInstance = renderBarOrPieChart(surveyVsImplDistCtx, surveyVsImplDistChartData, 'Survey vs Primary Distribution', showPieCharts ? 'pie' : 'bar');
@@ -1581,10 +911,6 @@ function displayStats() {
         const pubTypesDistCtx = document.getElementById('publTypePieChart')?.getContext('2d');
         const pubTypesDistChartData = preparePubTypesDistData();
         window.pubTypesDistChartInstance = renderBarOrPieChart(pubTypesDistCtx, pubTypesDistChartData, 'Publication Types Distribution', showPieCharts ? 'pie' : 'bar');
-
-        const smtVsThtCtx = document.getElementById('SMTvsTHTPieChart')?.getContext('2d');
-        const smtVsThtDistChartData = prepareSMTvsTHTData();
-        window.smtVsThtDistChartInstance = renderBarOrPieChart(smtVsThtCtx, smtVsThtDistChartData, 'SMT vs THT Distribution', showPieCharts ? 'pie' : 'bar');
 
         const scopeCtx = document.getElementById('OffTopicPieChart')?.getContext('2d');
         const scopeChartData = prepareScopeData(totalVisiblePaperCount, totalAllPaperCount);
@@ -1594,10 +920,6 @@ function displayStats() {
         const relevanceHistogramCtx = document.getElementById('RelevanceHistogram')?.getContext('2d');
         const relevanceHistogramData = prepareRelevanceHistogramData(visibleRows);
         window.relevanceHistogramInstance = renderHistogram(relevanceHistogramCtx, relevanceHistogramData, 'Relevance Histogram');
-
-        const estScoreHistogramCtx = document.getElementById('estScoreHistogram')?.getContext('2d');
-        const estScoreHistogramData = prepareEstScoreHistogramData(visibleRows);
-        window.estScoreHistogramInstance = renderHistogram(estScoreHistogramCtx, estScoreHistogramData, 'Estimated Score Histogram');
 
         // --- Line Charts ---
         renderLineCharts();
@@ -1666,8 +988,6 @@ function displayStats() {
             } else {
                 console.warn("Author stats list element with ID 'authorStatsList' not found for counting authors.");
             }
-            // Count papers providing datasets
-            const papersWithDatasetCount = latestCounts['technique_available_dataset'] || 0;
             // Create table rows - Modified to support HTML in the label
             const createRow = (labelHtml, value) => {
                 const row = document.createElement('tr');
@@ -1685,8 +1005,7 @@ function displayStats() {
             tableElement.appendChild(createRow('Total <strong>filtered</strong> articles:', totalVisiblePaperCount));
             tableElement.appendChild(createRow('Total unique <strong>journals</strong>:', distinctJournalsCount));
             tableElement.appendChild(createRow('Total unique <strong>conferences</strong>:', distinctConferencesCount));
-            tableElement.appendChild(createRow('Total unique <strong>authors</strong>:', distinctAuthorsCount)); // Relies on pre-populated list
-            tableElement.appendChild(createRow('Articles mentioning <strong>available dataset</strong>:', papersWithDatasetCount));
+            tableElement.appendChild(createRow('Total unique <strong>authors</strong>:', distinctAuthorsCount));
         }
 
         populateMetricsTableDirectly();
@@ -1709,7 +1028,16 @@ function displayAbout() {
 function closeSmallModal() { modalSmall.classList.remove('modal-active'); }
 
 function closeModal() { modal.classList.remove('modal-active'); } //for stats modal:
-
+const cloudColors = [
+    'hsla(347, 70%, 39%, 0.75)',
+    'hsla(204, 82%, 28%, 0.75)',
+    'hsla(42, 100%, 28%, 0.75)',
+    'hsla(180, 48%, 28%, 0.75)',
+    'hsla(260, 100%, 40%, 0.75)',
+    'hsla(30, 100%, 33%, 0.75)',
+    'hsla(0, 0%, 38%, 0.75)',
+    'hsla(147, 48%, 38%, 0.75)',
+];
 function buildKeywordCloud() {
   /* ----------  collect & normalise data  ---------- */
   const liNodes = document.querySelectorAll('#keywordStatsList li');
@@ -1769,7 +1097,7 @@ function buildKeywordCloud() {
       .style('font-size', d => `${d.size}px`)
       .style('font-family', 'sans-serif')
       .style('fill', d =>
-        techniquesBorderColors[d.text.length % techniquesBorderColors.length])
+        cloudColors[d.text.length % cloudColors.length])
       .attr('text-anchor', 'middle')
       .attr('transform', d => `translate(${d.x},${d.y})rotate(${d.rotate})`)
       .text(d => d.text);
@@ -1820,63 +1148,6 @@ function prepareLineChartData() {
         }
     ];
 
-    const techniquesYearlyData = latestYearlyData.techniques || {};
-    const yearsForTechniques = Object.keys(techniquesYearlyData).map(Number).sort((a, b) => a - b);
-    const techniqueLineDatasets = TECHNIQUE_FIELDS_FOR_YEARLY.map(field => {
-        const label = FIELD_LABELS[field] || field;
-        let data = yearsForTechniques.map(year => techniquesYearlyData[year]?.[field] || 0);
-        if (isCumulative) {
-            data = calculateCumulativeData(data);
-        }
-        const originalIndex = TECHNIQUE_FIELD_COLOR_MAP[field] !== undefined ? TECHNIQUE_FIELD_COLOR_MAP[field] : -1;
-        const borderColor = (originalIndex !== -1 && techniquesBorderColors[originalIndex]) ? techniquesBorderColors[originalIndex] : 'rgba(0, 0, 0, 1)';
-        const backgroundColor = (originalIndex !== -1 && techniquesColors[originalIndex]) ? techniquesColors[originalIndex] : 'rgba(0, 0, 0, 0.1)';
-        return {
-            label: label,
-            data: data,
-            borderColor: borderColor,
-            backgroundColor: backgroundColor,
-            fill: isStacked,
-            tension: 0.25
-        };
-    });
-
-    const featuresYearlyData = latestYearlyData.features || {};
-    const yearsForFeatures = Object.keys(featuresYearlyData).map(Number).sort((a, b) => a - b);
-    const aggregatedFeatureDataByColor = {};
-    Object.keys(featureColorGroups).forEach(baseColorIndex => {
-        const group = featureColorGroups[baseColorIndex];
-        aggregatedFeatureDataByColor[group.label] = yearsForFeatures.map(year => {
-            return group.fields.reduce((sum, field) => {
-                return sum + (featuresYearlyData[year]?.[field] || 0);
-            }, 0);
-        });
-    });
-
-    const aggregatedFeatureDataByColorFinal = {};
-    Object.keys(aggregatedFeatureDataByColor).forEach(label => {
-        let data = aggregatedFeatureDataByColor[label];
-        if (isCumulative) {
-            data = calculateCumulativeData(data);
-        }
-        aggregatedFeatureDataByColorFinal[label] = data;
-    });
-
-    const featureLineDatasets = Object.keys(featureColorGroups).map(baseColorIndex => {
-        const group = featureColorGroups[baseColorIndex];
-        const colorIndex = parseInt(baseColorIndex);
-        const borderColor = featuresBorderColorsOriginalOrder[colorIndex];
-        const backgroundColor = featuresColorsOriginalOrder[colorIndex];
-        return {
-            label: group.label,
-            data: aggregatedFeatureDataByColorFinal[group.label],
-            borderColor: borderColor,
-            backgroundColor: backgroundColor,
-            fill: isStacked,
-            tension: 0.25
-        };
-    });
-
     const pubTypesYearlyData = latestYearlyData.pubTypes || {};
     const yearsForPubTypes = Object.keys(pubTypesYearlyData).map(Number).sort((a, b) => a - b);
     const pubTypeLineDatasets = Object.keys(PUB_TYPE_MAP).map((type, index) => {
@@ -1900,8 +1171,6 @@ function prepareLineChartData() {
 
     return {
         surveyImpl: { labels: yearsForSurveyImpl, datasets: surveyVsImplDatasets },
-        techniques: { labels: yearsForTechniques, datasets: techniqueLineDatasets },
-        features: { labels: yearsForFeatures, datasets: featureLineDatasets },
         pubTypes: { labels: yearsForPubTypes, datasets: pubTypeLineDatasets }
     };
 }
@@ -1911,13 +1180,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const cumulativeToggle = document.getElementById('cumulativeToggle');
     const pieToggle = document.getElementById('pieToggle');
     const cloudToggle = document.getElementById('cloudToggle');
-    const featureGroupToggle = document.getElementById('featureGroupToggle');
 
     stackingToggle.checked = false;
     cumulativeToggle.checked = false;
     pieToggle.checked = false;
     cloudToggle.checked = false;
-    featureGroupToggle.checked = true; // default on for this one
 
     statsBtn.addEventListener('click', function () {
         document.documentElement.classList.add('busyCursor');
@@ -1935,22 +1202,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 dataset.fill = isStacked;
             });
             window.surveyVsImplLineChartInstance.update(); // Update the chart
-        }
-        if (window.techniquesPerYearLineChartInstance) {
-            window.techniquesPerYearLineChartInstance.options.scales.y.stacked = isStacked;
-            window.techniquesPerYearLineChartInstance.options.scales.x.stacked = isStacked;
-            window.techniquesPerYearLineChartInstance.data.datasets.forEach(dataset => {
-                dataset.fill = isStacked;
-            });
-            window.techniquesPerYearLineChartInstance.update();
-        }
-        if (window.featuresPerYearLineChartInstance) {
-            window.featuresPerYearLineChartInstance.options.scales.y.stacked = isStacked;
-            window.featuresPerYearLineChartInstance.options.scales.x.stacked = isStacked;
-            window.featuresPerYearLineChartInstance.data.datasets.forEach(dataset => {
-                dataset.fill = isStacked;
-            });
-            window.featuresPerYearLineChartInstance.update();
         }
         if (window.pubTypesPerYearLineChartInstance) {
             window.pubTypesPerYearLineChartInstance.options.scales.y.stacked = isStacked;
@@ -1977,16 +1228,6 @@ document.addEventListener('DOMContentLoaded', function () {
             // Legend update might be handled by cumulativeLegendLabels already, but update() triggers it
             window.surveyVsImplLineChartInstance.update(); // Update the chart
         }
-        if (window.techniquesPerYearLineChartInstance) {
-            window.techniquesPerYearLineChartInstance.data.labels = updatedLineChartData.techniques.labels;
-            window.techniquesPerYearLineChartInstance.data.datasets = updatedLineChartData.techniques.datasets;
-            window.techniquesPerYearLineChartInstance.update();
-        }
-        if (window.featuresPerYearLineChartInstance) {
-            window.featuresPerYearLineChartInstance.data.labels = updatedLineChartData.features.labels;
-            window.featuresPerYearLineChartInstance.data.datasets = updatedLineChartData.features.datasets;
-            window.featuresPerYearLineChartInstance.update();
-        }
         if (window.pubTypesPerYearLineChartInstance) {
             window.pubTypesPerYearLineChartInstance.data.labels = updatedLineChartData.pubTypes.labels;
             window.pubTypesPerYearLineChartInstance.data.datasets = updatedLineChartData.pubTypes.datasets;
@@ -1997,28 +1238,11 @@ document.addEventListener('DOMContentLoaded', function () {
             reorderDatasetsForStacking();
         }
     });
-
-    featureGroupToggle.addEventListener('change', function () {
-        // Re-render the Features bar chart based on the new toggle state
-        if (window.featuresBarChartInstance) {
-            const featuresCtx = document.getElementById('featuresPieChart')?.getContext('2d');
-            if (featuresCtx) {
-                // Prepare data considering the new toggle state
-                const featuresChartData = prepareFeaturesData(); // This function now checks the toggle
-                // Destroy the old instance
-                window.featuresBarChartInstance.destroy();
-                // Create the new chart instance using the existing render function
-                window.featuresBarChartInstance = renderBarOrPieChart(featuresCtx, featuresChartData, 'Features Count', showPieCharts ? 'pie' : 'bar');
-            }
-        }
-    });
     
     pieToggle.addEventListener('change', function () {
         showPieCharts = this.checked; // Update the state variable
 
         // Prepare the updated data based on the new showPieCharts state
-        const featuresChartData = prepareFeaturesData();
-        const techniquesChartData = prepareTechniquesData();
         const surveyVsImplDistChartData = prepareSurveyVsImplDistData(
             // You need to get the current totalVisiblePaperCount here.
             // It's calculated in displayStats but not stored globally.
@@ -2027,7 +1251,6 @@ document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)').length
         );
         const pubTypesDistChartData = preparePubTypesDistData();
-        const smtVsThtDistChartData = prepareSMTvsTHTData();
         const scopeChartData = prepareScopeData(
             // Similarly, you need the visible and total counts here
             document.querySelectorAll('#papersTable tbody tr[data-paper-id]:not(.filter-hidden)').length,
@@ -2036,28 +1259,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Determine the chart type ('bar' or 'pie')
         const chartType = showPieCharts ? 'pie' : 'bar';
-
-        // Update each distribution chart instance with the new data and type
-        // Features Chart
-        if (window.featuresBarChartInstance) {
-            // Destroy the old instance
-            window.featuresBarChartInstance.destroy();
-            // Get the context again
-            const featuresCtx = document.getElementById('featuresPieChart')?.getContext('2d');
-            if (featuresCtx) {
-                // Create the new chart instance
-                window.featuresBarChartInstance = renderBarOrPieChart(featuresCtx, featuresChartData, 'Features Count', chartType);
-            }
-        }
-
-        // Techniques Chart
-        if (window.techniquesBarChartInstance) {
-            window.techniquesBarChartInstance.destroy();
-            const techniquesCtx = document.getElementById('techniquesPieChart')?.getContext('2d');
-            if (techniquesCtx) {
-                window.techniquesBarChartInstance = renderBarOrPieChart(techniquesCtx, techniquesChartData, 'Techniques Count', chartType);
-            }
-        }
 
         // Survey vs Impl Distribution Chart
         if (window.surveyVsImplDistChartInstance) {
@@ -2074,15 +1275,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const pubTypesDistCtx = document.getElementById('publTypePieChart')?.getContext('2d');
             if (pubTypesDistCtx) {
                 window.pubTypesDistChartInstance = renderBarOrPieChart(pubTypesDistCtx, pubTypesDistChartData, 'Publication Types Distribution', chartType);
-            }
-        }
-
-        // SMT vs THT Distribution Chart
-        if (window.smtVsThtDistChartInstance) {
-            window.smtVsThtDistChartInstance.destroy();
-            const smtVsThtCtx = document.getElementById('SMTvsTHTPieChart')?.getContext('2d');
-            if (smtVsThtCtx) {
-                window.smtVsThtDistChartInstance = renderBarOrPieChart(smtVsThtCtx, smtVsThtDistChartData, 'SMT vs THT Distribution', chartType);
             }
         }
 

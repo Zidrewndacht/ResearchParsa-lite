@@ -5,13 +5,13 @@
 // --- New Global Variables for Batch Status ---
 let isBatchRunning = false; // Simple flag to prevent multiple simultaneous batches
 
-
 // --- Status Cycling Logic ---
 const STATUS_CYCLE = {
     '❔': { next: '✔️', value: 'true' },
     '✔️': { next: '❌', value: 'false' },
     '❌': { next: '❔', value: 'unknown' }
 };
+
 const VERIFIED_BY_CYCLE = {
     '👤': { next: '❔', value: 'unknown' }, 
     '❔': { next: '👤', value: 'user' },   
@@ -119,13 +119,13 @@ function sendAjaxRequest(cell, dataToSend, currentText, row, paperId, field) {
                     mainRow.querySelector('.changed-by-cell').innerHTML = renderChangedBy(data.changed_by);
                 }
                 if (data.estimated_score !== undefined) {
-                     const estimatedScoreCell = mainRow.cells[estScoreCellIndex]; 
+                     const estimatedScoreCell = mainRow.cells[estScoreCellIndex]; // estScoreCellIndex needs to be defined or passed
                      if (estimatedScoreCell) {
                          estimatedScoreCell.textContent = data.estimated_score !== null && data.estimated_score !== undefined ? data.estimated_score : ''; // Example formatting
                      }
                 }
             }
-            updateCounts();
+            updateCounts(); // Assuming this function exists to update footer counts
             //console.log(`Quick save successful for ${paperId} field ${field}`);
         } else {
             console.error('Quick save error:', data.message);
@@ -147,9 +147,11 @@ function saveChanges(paperId) {
         console.error(`Form not found for paper ID: ${paperId}`);
         return;
     }
+
     // --- Collect Main Fields ---
     const researchAreaInput = form.querySelector('input[name="research_area"]');
     const researchAreaValue = researchAreaInput ? researchAreaInput.value : '';
+
     const pageCountInput = form.querySelector('input[name="page_count"]');
     let pageCountValue = pageCountInput ? pageCountInput.value : '';
     // Convert empty string or invalid input to NULL for the database
@@ -164,7 +166,7 @@ function saveChanges(paperId) {
         }
     }
 
-    // --- NEW: Collect Relevance Field ---
+    // --- Collect Relevance Field ---
     const relevanceInput = form.querySelector('input[name="relevance"]');
     let relevanceValue = relevanceInput ? relevanceInput.value : '';
     // Convert empty string to NULL for the database consistency (optional but good practice)
@@ -180,15 +182,7 @@ function saveChanges(paperId) {
         }
     }
 
-
-    // --- Collect Additional Fields ---
-    // Model Name -> technique_model
-    const modelNameInput = form.querySelector('input[name="model_name"]');
-    const modelNameValue = modelNameInput ? modelNameInput.value : '';
-    // Other Defects -> features_other
-    const otherDefectsInput = form.querySelector('input[name="features_other"]');
-    const otherDefectsValue = otherDefectsInput ? otherDefectsInput.value : '';
-    // User Comments -> user_trace (stored in main table column, not features/technique JSON)
+    // --- Collect User Comments Field ---
     const userCommentsTextarea = form.querySelector('textarea[name="user_trace"]');
     const userCommentsValue = userCommentsTextarea ? userCommentsTextarea.value : '';
 
@@ -197,12 +191,7 @@ function saveChanges(paperId) {
         id: paperId,
         research_area: researchAreaValue,
         page_count: pageCountValue,
-        // --- NEW: Add Relevance Field to Payload ---
         relevance: relevanceValue,
-        // --- Add Additional Fields to Payload ---
-        // Prefix 'technique_' and 'features_' are handled by the backend
-        technique_model: modelNameValue,
-        features_other: otherDefectsValue,
         user_trace: userCommentsValue // This one is a direct column update
     };
 
@@ -213,6 +202,7 @@ function saveChanges(paperId) {
         saveButton.textContent = 'Saving...';
         saveButton.disabled = true;
     }
+
     fetch('/update_paper', {
         method: 'POST',
         headers: {
@@ -242,18 +232,17 @@ function saveChanges(paperId) {
                     row.querySelector('.changed-by-cell').innerHTML = renderChangedBy(data.changed_by);
                 }
                 // Update displayed page count if returned
-                const pageCountCell = row.cells[pageCountCellIndex];
+                const pageCountCell = row.cells[pageCountCellIndex]; // pageCountCellIndex needs to be defined or passed
                 if (pageCountCell) {
                      pageCountCell.textContent = data.page_count !== null && data.page_count !== undefined ? data.page_count : '';
                 }
-                // --- NEW: Update displayed relevance if returned ---
-                // Find the relevance cell in the main row (adjust selector if needed)
-                const relevanceCell = row.cells[relevanceCellIndex]; // Or better, add a class like .relevance-cell to the <td> and use '.relevance-cell'
+                // Update displayed relevance if returned
+                const relevanceCell = row.cells[relevanceCellIndex]; // relevanceCellIndex needs to be defined or passed
                 if (relevanceCell) {
                      relevanceCell.textContent = data.relevance !== null && data.relevance !== undefined ? data.relevance : '';
                 }
-                // Note: The UI fields (model_name, features_other, user_trace) are NOT updated here
-                // from the server response because update_paper_custom_fields doesn't return them.
+                // Note: The UI fields (research_area, user_trace) are NOT updated here
+                // from the server response because update_paper doesn't return them.
                 // They retain the user-entered value after saving.
             }
             // Collapse details row after successful save
@@ -270,7 +259,7 @@ function saveChanges(paperId) {
                     }
                 }, 1500);
             }
-            updateCounts();
+            updateCounts(); // Assuming this function exists
         } else {
             console.error('Save error:', data.message);
             if (saveButton) {
@@ -309,14 +298,12 @@ function toggleDetails(element) {
         updateUrlWithDetailState(); // Update URL immediately after showing
         //console.log(`Opened detail for ${paperId}, set now:`, [...openDetailIds]); // Debug log
         const contentPlaceholder = detailRow.querySelector('.detail-content-placeholder');
-
         fetch(`/get_detail_row?paper_id=${encodeURIComponent(paperId)}`)
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success' && data.html) {
                     // 1. Insert the content
                     contentPlaceholder.innerHTML = data.html;
-
                     const detailContainer = contentPlaceholder;
                     if (detailContainer) {
                         detailContainer.addEventListener('click', function(event) {
@@ -336,7 +323,6 @@ function toggleDetails(element) {
                         detailRow.offsetHeight;
                         detailRow.classList.add('expanded');
                     });
-
                     element.innerHTML = '<span>Hide</span>';
                 } else {
                     console.error(`Error loading detail row for paper ${paperId}:`, data.message);
@@ -360,7 +346,6 @@ function toggleDetails(element) {
 function applyServerSideFilters() {     //moved from filtering as it has server-based
     document.documentElement.classList.add('busyCursor');
     const urlParams = new URLSearchParams(window.location.search);
-
     const isOfftopicChecked = hideOfftopicCheckbox.checked;
     urlParams.set('hide_offtopic', isOfftopicChecked ? '1' : '0');
 
@@ -370,6 +355,7 @@ function applyServerSideFilters() {     //moved from filtering as it has server-
     } else {
         urlParams.delete('year_from');
     }
+
     const yearToValue = document.getElementById('year-to').value.trim();
     if (yearToValue !== '' && !isNaN(parseInt(yearToValue))) {
         urlParams.set('year_to', yearToValue);
@@ -383,15 +369,9 @@ function applyServerSideFilters() {     //moved from filtering as it has server-
     } else {
         urlParams.delete('min_page_count');
     }
-
-    // const searchValue = document.getElementById('search-input').value.trim();
-    // if (searchValue !== '') {
-    //     urlParams.set('search_query', searchValue);
-    // } else {
-    //     urlParams.delete('search_query');
-    // }
     // Construct the URL for the /load_table endpoint with current parameters
     const loadTableUrl = `/load_table?${urlParams.toString()}`;
+
     fetch(loadTableUrl)
         .then(response => {
             if (!response.ok) {
@@ -413,10 +393,6 @@ function applyServerSideFilters() {     //moved from filtering as it has server-
             document.documentElement.classList.remove('busyCursor');
         });
 }
-
-
-
-
 
 // Add a hidden file input element dynamically if it doesn't exist already
 // (This avoids needing to add it to index.html)
@@ -440,7 +416,6 @@ function uploadPDFForPaper(paperId) {
         alert("No file selected.");
         return;
     }
-
     if (!file.name.toLowerCase().endsWith('.pdf')) {
          alert("Please select a PDF file.");
          return;
@@ -494,8 +469,7 @@ function updateTableRowWithPDFData(paperId, filename) {
         console.error(`Row for paper ID ${paperId} not found.`);
         return;
     }
-
-    const pdfCell = row.cells[pdfCellIndex]; // PDF cell is the second cell (index 1)
+    const pdfCell = row.cells[pdfCellIndex]; // pdfCellIndex needs to be defined or passed
     if (!pdfCell) {
         console.error(`PDF cell for paper ID ${paperId} not found.`);
         return;
@@ -503,7 +477,7 @@ function updateTableRowWithPDFData(paperId, filename) {
 
     // Remove .pdf extension from filename for the viewer URL
     const filenameWithoutExtension = filename.replace(/\.pdf$/i, '');
-    
+
     // Create the new link element for the PDF.js viewer
     const pdfLink = document.createElement('a');
     pdfLink.href = `/static/pdfjs/web/viewer.html?file=/serve_pdf/${encodeURIComponent(filenameWithoutExtension)}`;
@@ -527,24 +501,19 @@ document.addEventListener('click', function(event) {
             console.error("Invalid or missing paper ID for PDF upload link.");
             return;
         }
-
         //console.log("Attempting upload for paper ID:", paperId); // Debug log
-
         // Reset the file input to allow selecting the same file again
         pdfFileInput.value = '';
-
         // Add event listener for when a file is selected
         pdfFileInput.onchange = function(e) {
             if (e.target.files.length > 0) {
                 uploadPDFForPaper(paperId);
             }
         };
-
         // Trigger the hidden file input click
         pdfFileInput.click();
     }
 });
-
 
 /** Functionality below is exclusive to server-based implementation (e.g, not HTML exports) */
 //globals.js
@@ -552,139 +521,67 @@ const batchModal = document.getElementById("batchModal");
 const importModal = document.getElementById("importModal");
 const exportModal = document.getElementById("exportModal");
 
-//Checkboxes:  
-
+//Checkboxes:
 const minPageCountInput = document.getElementById('min-page-count');
 const yearFromInput = document.getElementById('year-from');
 const yearToInput = document.getElementById('year-to');
 const applyButton = document.getElementById('apply-serverside-filters');
 // const totalPapersCountCell = document.getElementById('total-papers-count');
 
-
 // --- Batch Action Button Event Listeners ---
 const parçaToolsBtn = document.getElementById('parça-tools-btn');
-const classifyAllBtn = document.getElementById('classify-all-btn');
-const classifyMisclassifiedBtn = document.getElementById('classify-misclassified-btn');
-const classifyImplBtn = document.getElementById('classify-impl-btn');
-const classifyRemainingBtn = document.getElementById('classify-remaining-btn');
-const verifyAllBtn = document.getElementById('verify-all-btn');
-const verifyRemainingBtn = document.getElementById('verify-remaining-btn');
-const batchStatusMessage = document.getElementById('batch-status-message');
+// Removed specific AI/classification/verification buttons
+// const classifyAllBtn = document.getElementById('classify-all-btn');
+// const classifyMisclassifiedBtn = document.getElementById('classify-misclassified-btn');
+// const classifyImplBtn = document.getElementById('classify-impl-btn');
+// const classifyRemainingBtn = document.getElementById('classify-remaining-btn');
+// const verifyAllBtn = document.getElementById('verify-all-btn');
+// const verifyRemainingBtn = document.getElementById('verify-remaining-btn');
 const backupStatusMessage = document.getElementById('backup-status-message');
-
 const importActionsBtn = document.getElementById('import-btn');
 const exportActionsBtn = document.getElementById('export-btn');
-
 const backupBtn = document.getElementById('backup-btn');
 const restoreBtn = document.getElementById('restore-btn');
 
 //show/hide modals:
-
 function showBatchActions(){
     batchModal.offsetHeight;
     batchModal.classList.add('modal-active');
 }
 function closeBatchModal() { batchModal.classList.remove('modal-active'); }
-
 function showImportActions(){
     importModal.offsetHeight;
     importModal.classList.add('modal-active');
 }
 function closeImportModal() { importModal.classList.remove('modal-active'); }
-
 function showExportActions(){
     exportModal.offsetHeight;
-    exportModal.classList.add('modal-active');   
+    exportModal.classList.add('modal-active');
     backupStatusMessage.innerHTML = 'Backups include the database, original and annotated PDFs, HTML export and a XLSX spreadsheet.<br><br>Restoring from a backup overwrites all existing data!';
     backupStatusMessage.style.color = '';
 }
 function closeExporthModal() { exportModal.classList.remove('modal-active'); }
-
 function showApplyButton(){  applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; }
 
-
 // Define all batch buttons so they can be managed together
-const allBatchButtons = [
-    classifyAllBtn,
-    classifyRemainingBtn,
-    classifyMisclassifiedBtn, // Add the new button
-    classifyImplBtn,          // Add the new button
-    verifyAllBtn,
-    verifyRemainingBtn
-];
+// Removed specific AI/classification/verification buttons
+// const allBatchButtons = [
+//     classifyAllBtn,
+//     classifyRemainingBtn,
+//     classifyMisclassifiedBtn, // Add the new button
+//     classifyImplBtn,          // Add the new button
+//     verifyAllBtn,
+//     verifyRemainingBtn
+// ];
 
-function runBatchAction(mode, actionType) { // actionType: 'classify' or 'verify'
-    if (isBatchRunning) {
-        alert(`A ${actionType} batch is already running.`);
-        return;
-    }
-
-    let modeDescription = mode; // Default to the raw mode string
-    if (mode === 'all') {
-        modeDescription = 'ALL';
-    } else if (mode === 'remaining') {
-        modeDescription = 'remaining'; // Keep 'REMAINING' for 'remaining' mode
-    } else if (mode === 'no_features') {
-        modeDescription = 'misclassification suspect'; // Custom description for 'no_features'
-    } else if (mode === 'on_topic_implementation') {
-        modeDescription = 'on-topic primary/implementation'; // Custom description for 'on_topic_implementation'
-    }
-    if (!confirm(`Are you sure you want to ${actionType} ${modeDescription} papers? This might take a while.`)) {
-        return;
-    }
-
-    isBatchRunning = true;
-
-    // Disable ALL batch buttons when any batch action starts
-    allBatchButtons.forEach(btn => {
-        if (btn) btn.disabled = true; // Check if btn exists before disabling
-    });
-
-    if (batchStatusMessage) batchStatusMessage.textContent = `Starting ${actionType} (${mode})...`;
-
-    const endpoint = actionType === 'classify' ? '/classify' : '/verify';
-
-    fetch(endpoint, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ mode: mode })
-    })
-    .then(response => {
-            if (!response.ok) {
-                return response.json().then(errData => {
-                    throw new Error(errData.message || `HTTP error! status: ${response.status}`);
-                }).catch(() => {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                });
-            }
-            return response.json();
-    })
-    .then(data => {
-        batchStatusMessage.innerHTML = data.message;
-        // Optionally, you could add logic here to re-enable buttons after a certain time
-        // or based on some other signal if the process is known to have finished.
-    })
-    .catch(error => {
-        console.error(`Error initiating batch ${actionType} (${mode}):`, error);
-        alert(`Failed to start ${actionType} (${mode}): ${error.message}`);
-        isBatchRunning = false;
-        // Re-enable ALL batch buttons on error
-        allBatchButtons.forEach(btn => {
-            if (btn) btn.disabled = false; // Check if btn exists before enabling
-        });
-        if (batchStatusMessage) batchStatusMessage.innerHTML = '';
-    });
-}
+// Removed runBatchAction function as it was specific to AI tasks
+// function runBatchAction(mode, actionType) { ... }
 
 document.addEventListener('DOMContentLoaded', function () {
-    
     yearFromInput.addEventListener('change', showApplyButton);
     yearToInput.addEventListener('change', showApplyButton);
     minPageCountInput.addEventListener('change', showApplyButton);
     hideOfftopicCheckbox.addEventListener('change', applyServerSideFilters);
-
     applyButton.addEventListener('click', applyServerSideFilters);
 
     //server-side search removed for now as FTS is broken. Using full-client-side search instead (filtering.js, shared with HTML export):
@@ -698,10 +595,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const field = cell.getAttribute('data-field');
             const row = cell.closest('tr[data-paper-id]'); // Find the parent row with the paper ID
             const paperId = row ? row.getAttribute('data-paper-id') : null;
+
             if (!paperId) {
                 console.error('Paper ID not found for clicked cell.');
                 return;
             }
+
             // Find the next status in the general cycle
             const nextStatusInfo = STATUS_CYCLE[currentText];
             if (!nextStatusInfo) {
@@ -735,6 +634,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 id: paperId,
                 [field]: nextValue
             };
+
             sendAjaxRequest(cell, dataToSend, currentText, row, paperId, field);
         }
     });
@@ -747,7 +647,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const currentSpan = cell.querySelector('span');
         if (!currentSpan) return;
-
         const currentSymbol = currentSpan.textContent.trim();
         const field = cell.getAttribute('data-field'); // Should be "verified_by"
         const row = cell.closest('tr[data-paper-id]');
@@ -763,7 +662,6 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Unknown verified_by symbol:', currentSymbol);
             return;
         }
-
         const nextSymbol = nextStatusInfo.next;
         const nextValue = nextStatusInfo.value; // 'user', 'unknown'
 
@@ -773,7 +671,6 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             cell.innerHTML = '<span title="Unverified">❔</span>';
         }
-
         cell.style.backgroundColor = '#f9e79f'; // Light yellow flash
         setTimeout(() => {
             if (cell.querySelector('span')?.textContent.trim() === nextSymbol) {
@@ -790,166 +687,9 @@ document.addEventListener('DOMContentLoaded', function () {
         // 3. Send AJAX request
         sendAjaxRequest(cell, dataToSend, currentSymbol, row, paperId, field);
     });
-    
-    parçaToolsBtn.addEventListener('click', showBatchActions);
-    classifyAllBtn.addEventListener('click', () => runBatchAction('all', 'classify'));
-    classifyRemainingBtn.addEventListener('click', () => runBatchAction('remaining', 'classify'));
-    classifyMisclassifiedBtn.addEventListener('click', () => runBatchAction('no_features', 'classify'));
-    classifyImplBtn.addEventListener('click', () => runBatchAction('on_topic_implementation', 'classify'));
-    verifyAllBtn.addEventListener('click', () => runBatchAction('all', 'verify'));
-    verifyRemainingBtn.addEventListener('click', () => runBatchAction('remaining', 'verify'));
 
     importActionsBtn.addEventListener('click', showImportActions);
     exportActionsBtn.addEventListener('click', showExportActions);
-
-    // --- Per-Row Action Button Event Listeners ---
-    document.addEventListener('click', function(event) {
-        const classifyBtn = event.target.closest('.classify-btn');
-        const verifyBtn = event.target.closest('.verify-btn');
-
-        if (classifyBtn || verifyBtn) {
-            const paperId = (classifyBtn || verifyBtn).getAttribute('data-paper-id');
-            const actionType = classifyBtn ? 'classify' : 'verify';
-            const endpoint = classifyBtn ? '/classify' : '/verify';
-
-            if (!paperId) {
-                console.error(`Paper ID not found for ${actionType} button.`);
-                return;
-            }
-
-            // Disable the button temporarily
-            (classifyBtn || verifyBtn).disabled = true;
-            (classifyBtn || verifyBtn).textContent = 'Running...';
-
-            // Send AJAX request
-            fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ mode: 'id', paper_id: paperId })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(errData => {
-                         throw new Error(errData.message || `HTTP error! status: ${response.status}`);
-                    }).catch(() => {
-                         throw new Error(`HTTP error! status: ${response.status}`);
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === 'success') {
-                    // Update the row with the received data
-                    const row = document.querySelector(`tr[data-paper-id="${paperId}"]`);
-                    const detailRow = row ? row.nextElementSibling : null;
-                    if (row) {
-                        // Update main row cells
-                        updateRowCell(row, '.editable-status[data-field="is_offtopic"]', data.is_offtopic);
-                        updateRowCell(row, '.editable-status[data-field="is_survey"]', data.is_survey);
-                        updateRowCell(row, '.editable-status[data-field="is_through_hole"]', data.is_through_hole);
-                        updateRowCell(row, '.editable-status[data-field="is_smt"]', data.is_smt);
-                        updateRowCell(row, '.editable-status[data-field="is_x_ray"]', data.is_x_ray);
-
-                        // Replace the existing feature updates with:
-                        updateRowCell(row, '.editable-status[data-field="features_tracks"]', data.features?.tracks);
-                        updateRowCell(row, '.editable-status[data-field="features_holes"]', data.features?.holes);
-                        updateRowCell(row, '.editable-status[data-field="features_solder_insufficient"]', data.features?.solder_insufficient);
-                        updateRowCell(row, '.editable-status[data-field="features_solder_excess"]', data.features?.solder_excess);
-                        updateRowCell(row, '.editable-status[data-field="features_solder_void"]', data.features?.solder_void);
-                        updateRowCell(row, '.editable-status[data-field="features_solder_crack"]', data.features?.solder_crack);
-                        updateRowCell(row, '.editable-status[data-field="features_orientation"]', data.features?.orientation);
-                        updateRowCell(row, '.editable-status[data-field="features_wrong_component"]', data.features?.wrong_component);
-                        updateRowCell(row, '.editable-status[data-field="features_missing_component"]', data.features?.missing_component);
-                        updateRowCell(row, '.editable-status[data-field="features_cosmetic"]', data.features?.cosmetic);
-                        updateRowCell(row, '.editable-status[data-field="features_other"]', data.features?.other);
-
-                        // Replace the existing technique updates with:
-                        updateRowCell(row, '.editable-status[data-field="technique_classic_cv_based"]', data.technique?.classic_cv_based);
-                        updateRowCell(row, '.editable-status[data-field="technique_ml_traditional"]', data.technique?.ml_traditional);
-                        updateRowCell(row, '.editable-status[data-field="technique_dl_cnn_classifier"]', data.technique?.dl_cnn_classifier);
-                        updateRowCell(row, '.editable-status[data-field="technique_dl_cnn_detector"]', data.technique?.dl_cnn_detector);
-                        updateRowCell(row, '.editable-status[data-field="technique_dl_rcnn_detector"]', data.technique?.dl_rcnn_detector);
-                        updateRowCell(row, '.editable-status[data-field="technique_dl_transformer"]', data.technique?.dl_transformer);
-                        updateRowCell(row, '.editable-status[data-field="technique_dl_other"]', data.technique?.dl_other);
-                        updateRowCell(row, '.editable-status[data-field="technique_hybrid"]', data.technique?.hybrid);
-                        updateRowCell(row, '.editable-status[data-field="technique_available_dataset"]', data.technique?.available_dataset);
-
-                        // Update audit/other fields
-                        const changedCell = row.querySelector('.changed-cell');
-                        if (changedCell) changedCell.textContent = data.changed_formatted || '';
-
-                        const changedByCell = row.querySelector('.changed-by-cell');
-                        if (changedByCell) changedByCell.innerHTML = renderChangedBy(data.changed_by);
-
-                        const verifiedCell = row.querySelector('.editable-status[data-field="verified"]');
-                        if (verifiedCell) {
-                            // Assuming render_status function exists or create one
-                            verifiedCell.textContent = renderStatus(data.verified);
-                        }
-
-                        const verifiedByCell = row.querySelector('.editable-verify[data-field="verified_by"]');
-                        if (verifiedByCell) {
-                             // Assuming render_verified_by function exists or create one based on Python logic
-                             verifiedByCell.innerHTML = renderVerifiedBy(data.verified_by);
-                        }
-                        const estimatedScoreCell = row.cells[estScoreCellIndex];  //Updates score dynamically after verification.
-                        if (estimatedScoreCell) estimatedScoreCell.textContent = data.estimated_score !== null && data.estimated_score !== undefined ? data.estimated_score : ''; // Example formatting
-
-                        const pageCountCell = row.cells[pageCountCellIndex]; 
-                        if (pageCountCell) pageCountCell.textContent = data.page_count !== null && data.page_count !== undefined ? data.page_count : '';
-
-                        // Update detail row traces if expanded
-                        if (detailRow && detailRow.classList.contains('expanded')) {
-                            const evalTraceDiv = detailRow.querySelector('.detail-evaluator-trace .trace-content');
-                            if (evalTraceDiv) {
-                                evalTraceDiv.textContent = data.reasoning_trace || 'No trace available.';
-                                evalTraceDiv.classList.remove('trace-placeholder');
-                            }
-                            const verifyTraceDiv = detailRow.querySelector('.detail-verifier-trace .trace-content');
-                            if (verifyTraceDiv) {
-                                verifyTraceDiv.textContent = data.verifier_trace || 'No trace available.';
-                                verifyTraceDiv.classList.remove('trace-placeholder');
-                            }
-                            // Update form fields if needed (e.g., model name, other defects might have changed)
-                            const form = detailRow.querySelector(`form[data-paper-id="${paperId}"]`);
-                            if(form){
-                                const modelNameInput = form.querySelector('input[name="technique_model"]');
-                                if(modelNameInput) modelNameInput.value = data.technique?.model || '';
-                                const otherDefectsInput = form.querySelector('input[name="features_other"]');
-                                if(otherDefectsInput) otherDefectsInput.value = data.features?.other || '';
-                                const researchAreaInput = form.querySelector('input[name="research_area"]');
-                                if(researchAreaInput) researchAreaInput.value = data.research_area || '';
-                                // const pageCountInput = form.querySelector('input[name="page_count"]');
-                                // if(pageCountInput) pageCountInput.value = data.page_count !== null && data.page_count !== undefined ? data.page_count : '';
-                                // const userTraceTextarea = form.querySelector('textarea[name="user_trace"]');
-                                // if(userTraceTextarea) userTraceTextarea.value = data.user_trace || ''; // Update textarea value
-                            }
-                        }
-                        updateCounts();
-                        //console.log(`${actionType.charAt(0).toUpperCase() + actionType.slice(1)} successful for paper ${paperId}`);
-                    }
-                } else {
-                    console.error(`${actionType.charAt(0).toUpperCase() + actionType.slice(1)} error for paper ${paperId}:`, data.message);
-                    alert(`Failed to ${actionType} paper ${paperId}: ${data.message}`);
-                }
-            })
-            .catch(error => {
-                console.error(`Error during ${actionType} for paper ${paperId}:`, error);
-                alert(`An error occurred while ${actionType}ing paper ${paperId}: ${error.message}`);
-            })
-            .finally(() => {
-                (classifyBtn || verifyBtn).disabled = false;
-                if (actionType === 'classify') {
-                    (classifyBtn || verifyBtn).innerHTML = 'Classify <strong>this paper</strong>';
-                } else if (actionType === 'verify') {
-                    (classifyBtn || verifyBtn).innerHTML = 'Verify <strong>this paper</strong>'; 
-                }
-            });
-        }
-    });
-
 
     // --- BibTeX Import Logic ---
     const importBibtexBtn = document.getElementById('import-bibtex-btn');
@@ -969,23 +709,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 bibtexFileInput.value = ''; // Clear the input
                 return;
             }
-
             if (!confirm(`Are you sure you want to import '${file.name}'?`)) {
                     bibtexFileInput.value = ''; // Clear the input
                     return;
             }
-
             const formData = new FormData();
             formData.append('file', file);
 
             // Disable button and show status
             importBibtexBtn.disabled = true;
             importBibtexBtn.textContent = 'Importing...';
-            if (batchStatusMessage) {
-                batchStatusMessage.textContent = `Uploading and importing '${file.name}'...`;
-                batchStatusMessage.style.color = ''; // Reset color
-            }
-
             fetch('/upload_bibtex', {
                 method: 'POST',
                 body: formData // Use FormData for file uploads
@@ -1003,30 +736,14 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(data => {
                 if (data.status === 'success') {
-                    //console.log(data.message);
-                    if (batchStatusMessage) {
-                        batchStatusMessage.textContent = data.message;
-                        batchStatusMessage.style.color = 'green'; // Success color
-                    }
-                    // Optional: Reload the page or fetch new data to show imported papers
-                    // window.location.reload(); // Simple reload
-                    // Or, fetch updated papers list (requires more JS logic)
-                        setTimeout(() => { window.location.reload(); }, 1500); // Reload after delay
+                    setTimeout(() => { window.location.reload(); }, 1500); // Reload after delay
                 } else {
                     console.error("Import Error:", data.message);
-                    if (batchStatusMessage) {
-                        batchStatusMessage.textContent = `Import Error: ${data.message}`;
-                        batchStatusMessage.style.color = 'red'; // Error color
-                    }
                     alert(`Import failed: ${data.message}`);
                 }
             })
             .catch(error => {
                 console.error('Error uploading BibTeX file:', error);
-                if (batchStatusMessage) {
-                    batchStatusMessage.textContent = `Upload Error: ${error.message}`;
-                    batchStatusMessage.style.color = 'red'; // Error color
-                }
                 alert(`An error occurred during upload: ${error.message}`);
             })
             .finally(() => {    // Re-enable button and reset file input
@@ -1080,6 +797,7 @@ document.addEventListener('DOMContentLoaded', function () {
         link.style.display = 'none';
         // The filename will be suggested by the server's Content-Disposition header
         // link.download = 'PCBPapers_export.html'; // Optional: Suggest a default name if server doesn't set it
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -1109,21 +827,16 @@ document.addEventListener('DOMContentLoaded', function () {
         window.location.href = exportUrl;
     });
 
-
     const backupBtn = document.getElementById('backup-btn');
-
-
     backupBtn.addEventListener('click', function() {
         document.documentElement.classList.add('busyCursor');
         //console.log("Backup button clicked");
-
         backupStatusMessage.textContent = 'Creating backup...';
         backupStatusMessage.style.color = '';
-
         // Create backup URL with current filters
         const currentUrlParams = new URLSearchParams(window.location.search);
         const backupUrl = `/backup?${currentUrlParams.toString()}`;
-        
+
         // Use fetch to get the backup file
         fetch(backupUrl)
             .then(response => {
@@ -1139,7 +852,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         filename = filenameMatch[1];
                     }
                 }
-                
                 return response.blob().then(blob => ({ blob, filename }));
             })
             .then(({ blob, filename }) => {
@@ -1148,15 +860,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = filename;
-                
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
-            
+
                 backupStatusMessage.textContent = 'Backup created successfully!';
                 backupStatusMessage.style.color = 'green';
-                
                 document.documentElement.classList.remove('busyCursor');
             })
             .catch(error => {
@@ -1170,17 +880,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     restoreBtn.addEventListener('click', function() {
         //console.log("Restore button clicked");
-        
         // Create file input for backup selection
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.accept = '.zst';
         fileInput.style.display = 'none';
-        
         fileInput.addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             // Validate file extension
             if (!file.name.endsWith('.parça.zst')) {
                 alert('Invalid backup file. Expected .parça.zst file.');
@@ -1206,7 +913,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     //console.log(data.message);
                     backupStatusMessage.textContent = data.message;
                     backupStatusMessage.style.color = 'green';
-                    
                     // Reload page after successful restore
                     setTimeout(() => { window.location.reload(); }, 2000);
                 } else {
@@ -1232,19 +938,16 @@ document.addEventListener('DOMContentLoaded', function () {
         fileInput.click();
         document.body.removeChild(fileInput);
     });
-    
+
     // --- Ctrl+S Save Functionality ---
     document.addEventListener('keydown', function(event) {
         if ((event.ctrlKey || event.metaKey) && event.key === 's') {
             event.preventDefault(); // Prevent the browser's default save action
-
             // Get the currently focused element
             const focusedElement = document.activeElement;
-
             // Check if the focused element is within a form inside an expanded detail row
             // The form should have the data-paper-id attribute
             const formContainingFocus = focusedElement.closest('tr.detail-row.expanded form[data-paper-id]');
-
             if (formContainingFocus) {
                 const paperId = formContainingFocus.getAttribute('data-paper-id');
                 if (paperId) {
@@ -1252,16 +955,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Call the existing saveChanges function for the identified paper ID
                     saveChanges(paperId);
                 } else {
-                    // This case should ideally not happen if the selector is correct
                     console.warn("Ctrl+S pressed, focused element is in an expanded detail row form, but data-paper-id is missing.");
                 }
             } else {
-                // Focus is not within an expanded detail row form.
-                // Optionally, provide feedback or do nothing.
                 console.log("Ctrl+S pressed, but focus is not inside an expanded detail row form.");
             }
         }
     });
-    // --- End Ctrl+S Save Functionality ---
-
 });
