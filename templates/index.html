@@ -18,7 +18,7 @@
     
 </head>
 <body>
-<input type="file" id="bibtex-file-input" accept=".bib" style="display: none;"> <!-- Hidden file input for BibTeX upload -->
+<input type="file" id="bibtex-file-input" accept=".bib,.csv" style="display: none;"> <!-- Hidden file input for BibTeX upload -->
 <div class="table-container" id="papers-table-container">
     <table id="papersTable" style="table-layout: fixed;">
         <colgroup>
@@ -48,16 +48,12 @@
                 <th id="main-header-wrapper" colspan="17">
                     <div class="main-header">
                         <div class="header-controls">
-                            <button class="action-btn" id="import-btn" style="display:none">Import / Restore</button> <!-- currently unused, kept if a menu is desired later here instead-->
-                            <button class="action-btn" id="import-bibtex-btn">Import <strong>BibTeX</strong></button>                                
+                            <button class="action-btn" id="import-btn">Import <strong>BibTeX / CSV</strong></button> <!-- currently unused, kept if a menu is desired later here instead-->                             
                         </div>
                         <div class="header-controls">
                             <button class="action-btn" id="export-btn"><strong>Export</strong> & Backup</button>
                         </div>
                         <div class="header-branding"><span>Research</span><span style="font-weight: 600; color: var(--primary-ui-color);">Parça</span> Lite</div>
-                        <div class="header-controls">
-                            <button class="action-btn" id="parça-tools-btn" style="display:none" ><strong>Batch</strong> Tasks</button>
-                        </div>
                         <div class="header-controls">
                             <button class="action-btn" id="stats-btn">View <strong>Statistics</strong> <span style="color:#fff6">(F4)</span></button>
                         </div>
@@ -76,19 +72,19 @@
                         </div>
                         <div class="filter-item">
                             <label for="year-from">Year:</label>
-                            <input type="number" id="year-from" value="{{ year_from_value }}" min="2010" max="2026">
+                            <input type="number" id="year-from" value="{{ year_from_value }}" min="1800" max="2100">
                             <label for="year-to">to</label>
-                            <input type="number" id="year-to" value="{{ year_to_value }}" min="2010" max="2026">
+                            <input type="number" id="year-to" value="{{ year_to_value }}" min="1800" max="2100">
                         </div>
                         <div class="header-checkboxes">
                             <!-- This button will now trigger a page reload with updated URL parameters -->
                             <button class="action-btn" id="apply-serverside-filters" style="opacity:0; pointer-events: none;"><span>Apply</span></button>
                             <div class="filter-item">
-                                <label for="hide-offtopic-checkbox">Hide Off-topic</label>
+                                <label for="hide-offtopic-checkbox">Hide<br>Off-topic</label>
                                 <input type="checkbox" title="Enable to Hide Offtopic papers" id="hide-offtopic-checkbox" name="hide-offtopic-checkbox" {% if hide_offtopic == true %}checked{% endif %}>
                             </div>
                             <div class="filter-item">
-                                <label for="only-survey-checkbox">Filter surveys</label>
+                                <label for="only-survey-checkbox">Filter<br>surveys</label>
                                 <input type="checkbox" title="Enable to only show Surveys" id="only-survey-checkbox">
                             </div>
                         </div>
@@ -139,30 +135,13 @@
     </table>
 </div>
 
-<div id="batchModal" class="modal">
-    <div id="batch-actions">
-        <div>
-            <button class="action-btn" id="classify-remaining-btn">Classify <strong>Remaining</strong> </button>
-            <button class="action-btn" id="classify-impl-btn">Re-Classify <strong>Primary</strong></button>
-        </div>
-        <div>
-            <button class="action-btn" id="classify-misclassified-btn">Re-Classify <strong>Suspects</strong> </button>
-            <button class="action-btn" id="classify-all-btn">Re-Classify <strong>All</strong></button>
-        </div>
-        <span class="menu-message">Batch classifications also run corresponding verifications automatically. Run the tasks below if you still need just verification (e.g., if an earlier run was aborted after classification)</span>
-        <div>
-            <button class="action-btn" id="verify-remaining-btn">Verify <strong>Remaining</strong></button>
-            <button class="action-btn" id="verify-all-btn">Re-Verify <strong>All</strong></button>
-        </div>
-        <span class="menu-message" id="batch-status-message">These tools stay running in background after being called. Reload the webpage after a while to see updated results.
-            <br><br> For actions on single papers, user the buttons in the corresponding paper's detail pane instead.
-        </span> 
-    </div>
-</div>
-
 <div id="importModal" class="modal">
     <div id="import-actions">
-        <!-- unused, kept if a menu is desired here later (animations, etc. already done) -->
+        <button class="action-btn" id="import-primary-btn">Import <strong>Primary Papers</strong></button>   
+        <button class="action-btn" id="import-survey-btn">Import <strong>Survey/Review Papers</strong></button>  
+        <span class="menu-message" id="backup-status-message"> Supported sources: Scopus (BibTeX), ACM (BibTeX), IEEE Xplore  (BibTeX or CSV), Zotero (BibTeX), possibly others (untested).
+        </span> 
+
     </div>
 </div>
 

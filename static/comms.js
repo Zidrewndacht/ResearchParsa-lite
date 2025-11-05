@@ -2,8 +2,22 @@
 /** For detail row retrieval and any functionality that reads/writes to the server (DB query/updates, etc). 
  * Some functions here are reimplemented as a client-side version in ghpages.js for the HTML export.
  * */
-// --- New Global Variables for Batch Status ---
-let isBatchRunning = false; // Simple flag to prevent multiple simultaneous batches
+
+const importModal = document.getElementById("importModal");
+const exportModal = document.getElementById("exportModal");
+
+//Checkboxes:
+const minPageCountInput = document.getElementById('min-page-count');
+const yearFromInput = document.getElementById('year-from');
+const yearToInput = document.getElementById('year-to');
+const applyButton = document.getElementById('apply-serverside-filters');
+// const totalPapersCountCell = document.getElementById('total-papers-count');
+
+const backupStatusMessage = document.getElementById('backup-status-message');
+const importActionsBtn = document.getElementById('import-btn');
+const exportActionsBtn = document.getElementById('export-btn');
+const backupBtn = document.getElementById('backup-btn');
+const restoreBtn = document.getElementById('restore-btn');
 
 // --- Status Cycling Logic ---
 const STATUS_CYCLE = {
@@ -114,15 +128,6 @@ function sendAjaxRequest(cell, dataToSend, currentText, row, paperId, field) {
                 // Update audit fields (using formatted timestamp sent back)
                 if (data.changed_formatted !== undefined) {
                     mainRow.querySelector('.changed-cell').textContent = data.changed_formatted;
-                }
-                if (data.changed_by !== undefined) {
-                    mainRow.querySelector('.changed-by-cell').innerHTML = renderChangedBy(data.changed_by);
-                }
-                if (data.estimated_score !== undefined) {
-                     const estimatedScoreCell = mainRow.cells[estScoreCellIndex]; // estScoreCellIndex needs to be defined or passed
-                     if (estimatedScoreCell) {
-                         estimatedScoreCell.textContent = data.estimated_score !== null && data.estimated_score !== undefined ? data.estimated_score : ''; // Example formatting
-                     }
                 }
             }
             updateCounts(); // Assuming this function exists to update footer counts
@@ -515,40 +520,98 @@ document.addEventListener('click', function(event) {
     }
 });
 
-/** Functionality below is exclusive to server-based implementation (e.g, not HTML exports) */
-//globals.js
-const batchModal = document.getElementById("batchModal");
-const importModal = document.getElementById("importModal");
-const exportModal = document.getElementById("exportModal");
 
-//Checkboxes:
-const minPageCountInput = document.getElementById('min-page-count');
-const yearFromInput = document.getElementById('year-from');
-const yearToInput = document.getElementById('year-to');
-const applyButton = document.getElementById('apply-serverside-filters');
-// const totalPapersCountCell = document.getElementById('total-papers-count');
+function deletePaper(paperId) {
+    if (!confirm(`Are you sure you want to delete the record for paper ID: ${paperId}? This action cannot be undone and will also remove associated PDF files.`)) {
+        return; // Exit if user cancels the confirmation
+    }
 
-// --- Batch Action Button Event Listeners ---
-const parçaToolsBtn = document.getElementById('parça-tools-btn');
-// Removed specific AI/classification/verification buttons
-// const classifyAllBtn = document.getElementById('classify-all-btn');
-// const classifyMisclassifiedBtn = document.getElementById('classify-misclassified-btn');
-// const classifyImplBtn = document.getElementById('classify-impl-btn');
-// const classifyRemainingBtn = document.getElementById('classify-remaining-btn');
-// const verifyAllBtn = document.getElementById('verify-all-btn');
-// const verifyRemainingBtn = document.getElementById('verify-remaining-btn');
-const backupStatusMessage = document.getElementById('backup-status-message');
-const importActionsBtn = document.getElementById('import-btn');
-const exportActionsBtn = document.getElementById('export-btn');
-const backupBtn = document.getElementById('backup-btn');
-const restoreBtn = document.getElementById('restore-btn');
+    console.log("Attempting to delete paper with ID:", paperId); // Debug log
+    // Optional: Disable UI elements to prevent multiple clicks
+    document.documentElement.classList.add('busyCursor');
+    const deleteButton = document.querySelector(`button[action-btn="del-btn"][onclick*="deletePaper('${paperId}')"]`);
+    if (deleteButton) {
+        deleteButton.disabled = true;
+        deleteButton.textContent = 'Deleting...'; // Provide user feedback
+    }
 
-//show/hide modals:
-function showBatchActions(){
-    batchModal.offsetHeight;
-    batchModal.classList.add('modal-active');
+    // --- NEW LOGIC: Check if the detail row is currently open ---
+    const mainRow = document.querySelector(`tr[data-paper-id="${paperId}"]`);
+    let wasDetailOpen = false;
+    let toggleButtonForClosing = null;
+
+    if (mainRow) {
+        const detailRow = mainRow.nextElementSibling;
+        // Check if the next sibling is the detail row and if it's expanded
+        if (detailRow && detailRow.classList.contains('detail-row') && detailRow.classList.contains('expanded')) {
+            wasDetailOpen = true;
+            console.log(`Detail row for paper ${paperId} was open and needs to be closed first.`);
+            // Find the toggle button within the main row to use for closing
+            toggleButtonForClosing = mainRow.querySelector('.toggle-btn');
+        }
+    }
+    // --- END NEW LOGIC ---
+
+    fetch(`/delete_paper/${paperId}`, { // Use the new DELETE route
+        method: 'DELETE', // Specify the DELETE method
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            // Try to get error message from response body
+            return response.json().then(errData => {
+                 throw new Error(errData.message || `HTTP error! status: ${response.status}`);
+            }).catch(() => {
+                 // If parsing JSON fails, throw a generic error
+                 throw new Error(`HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            console.log(`Successfully deleted paper ${paperId} and associated files.`); 
+            if (mainRow) {
+                const detailRow = mainRow.nextElementSibling;
+                if (detailRow && detailRow.classList.contains('detail-row')) {
+                    detailRow.remove(); // Remove the detail row first
+                    console.log(`Removed detail row for paper ${paperId} from the UI.`); 
+                }
+                mainRow.remove(); // Then remove the main row
+                console.log(`Removed main row for paper ${paperId} from the UI.`);
+                if (!wasDetailOpen) {
+                    if (openDetailIds.has(paperId)) {
+                         // This case should ideally not happen if the UI state was correct before deletion,
+                         // but removing it here is safe.
+                         console.log(`Paper ID ${paperId} was not marked as open, but found in set. Removing.`);
+                         openDetailIds.delete(paperId);
+                         updateUrlWithDetailState(); // Update the URL
+                    }
+                }
+            } else {
+                console.warn(`Could not find table row for paper ID ${paperId} to remove from UI.`); 
+            }
+            applyServerSideFilters(); //reload the table properly
+        } else {
+            console.error(`Backend reported error during deletion: ${data.message}`);
+            alert(`Error deleting paper: ${data.message}`);
+        }
+    })
+    .catch(error => {
+        console.error(`Error deleting paper ${paperId}:`, error); // Debug log
+        alert(`An error occurred while deleting the paper: ${error.message}`);
+    })
+    .finally(() => {
+        // Re-enable UI elements regardless of success or failure
+        document.documentElement.classList.remove('busyCursor');
+        if (deleteButton) {
+            deleteButton.disabled = false;
+            deleteButton.textContent = 'Delete Record'; // Reset button text
+        }
+    });
 }
-function closeBatchModal() { batchModal.classList.remove('modal-active'); }
 function showImportActions(){
     importModal.offsetHeight;
     importModal.classList.add('modal-active');
@@ -563,19 +626,6 @@ function showExportActions(){
 function closeExporthModal() { exportModal.classList.remove('modal-active'); }
 function showApplyButton(){  applyButton.style.opacity = '1'; applyButton.style.pointerEvents = 'visible'; }
 
-// Define all batch buttons so they can be managed together
-// Removed specific AI/classification/verification buttons
-// const allBatchButtons = [
-//     classifyAllBtn,
-//     classifyRemainingBtn,
-//     classifyMisclassifiedBtn, // Add the new button
-//     classifyImplBtn,          // Add the new button
-//     verifyAllBtn,
-//     verifyRemainingBtn
-// ];
-
-// Removed runBatchAction function as it was specific to AI tasks
-// function runBatchAction(mode, actionType) { ... }
 
 document.addEventListener('DOMContentLoaded', function () {
     yearFromInput.addEventListener('change', showApplyButton);
@@ -691,10 +741,101 @@ document.addEventListener('DOMContentLoaded', function () {
     importActionsBtn.addEventListener('click', showImportActions);
     exportActionsBtn.addEventListener('click', showExportActions);
 
-    // --- BibTeX Import Logic ---
-    const importBibtexBtn = document.getElementById('import-bibtex-btn');
-    const bibtexFileInput = document.getElementById('bibtex-file-input');
+        // --- New Import Logic for Primary/Survey ---
+    const importPrimaryBtn = document.getElementById('import-primary-btn');
+    const importSurveyBtn = document.getElementById('import-survey-btn');
 
+    function handleFileImport(file, importType) {
+         if (!file) {
+            console.error("No file selected for import.");
+            alert("No file selected.");
+            return;
+        }
+        if (!file.name.toLowerCase().endsWith('.bib') && !file.name.toLowerCase().endsWith('.csv')) {
+             alert('Please select a .bib or .csv file.');
+             return;
+        }
+        if (!confirm(`Are you sure you want to import '${file.name}' as ${importType} papers?`)) {
+             return; // Cancelled
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        // Add the import type as a field in the form data
+        formData.append('import_type', importType); // e.g., "primary" or "survey"
+
+        // Disable buttons and show status
+        importPrimaryBtn.disabled = true;
+        importSurveyBtn.disabled = true;
+        importPrimaryBtn.textContent = 'Importing...';
+        importSurveyBtn.textContent = 'Importing...';
+
+        fetch('/upload_bibtex', { // Reuse the existing endpoint
+            method: 'POST',
+            body: formData // Use FormData for file and type
+            // Don't set Content-Type header, let browser set it with boundary
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.message || `HTTP error! status: ${response.status}`);
+                }).catch(() => {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                console.log(data.message);
+                setTimeout(() => { window.location.reload(); }, 1500); // Reload after delay
+            } else {
+                console.error("Import Error:", data.message);
+                alert(`Import failed: ${data.message}`);
+            }
+        })
+        .catch(error => {
+            console.error(`Error uploading ${importType} file:`, error);
+            alert(`An error occurred during upload: ${error.message}`);
+        })
+        .finally(() => {
+            // Re-enable buttons and reset text
+            importPrimaryBtn.disabled = false;
+            importSurveyBtn.disabled = false;
+            importPrimaryBtn.innerHTML = 'Import <strong>Primary Papers</strong>';
+            importSurveyBtn.innerHTML = 'Import <strong>Survey/Review Papers</strong>';
+            closeImportModal(); // Close the modal after import attempt
+        });
+    }
+
+    function setupFileInput(importType) {
+        // Create a new hidden file input each time to ensure onchange fires even if same file is selected
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.bib,.csv';
+        fileInput.style.display = 'none';
+
+        fileInput.onchange = function(e) {
+            const file = e.target.files[0];
+            handleFileImport(file, importType);
+            // Clean up the temporary input after use
+            document.body.removeChild(fileInput);
+        };
+
+        document.body.appendChild(fileInput);
+
+        // Trigger the hidden file input click
+        fileInput.click();
+    }
+
+
+    importPrimaryBtn.addEventListener('click', () => {
+        setupFileInput('primary'); // Pass 'primary' as the type
+    });
+
+    importSurveyBtn.addEventListener('click', () => {
+        setupFileInput('survey'); // Pass 'survey' as the type
+    });
+    
     // Clicking the button triggers the hidden file input
     importBibtexBtn.addEventListener('click', () => {
         bibtexFileInput.click();
@@ -704,21 +845,24 @@ document.addEventListener('DOMContentLoaded', function () {
     bibtexFileInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
         if (file) {
-            if (!file.name.toLowerCase().endsWith('.bib')) {
-                alert('Please select a .bib file.');
+            if (!file.name.toLowerCase().endsWith('.bib') && !file.name.toLowerCase().endsWith('.csv')) {
+                alert('Please select a .bib or .csv file.');
                 bibtexFileInput.value = ''; // Clear the input
                 return;
             }
+
             if (!confirm(`Are you sure you want to import '${file.name}'?`)) {
                     bibtexFileInput.value = ''; // Clear the input
                     return;
             }
+
             const formData = new FormData();
             formData.append('file', file);
 
             // Disable button and show status
             importBibtexBtn.disabled = true;
             importBibtexBtn.textContent = 'Importing...';
+
             fetch('/upload_bibtex', {
                 method: 'POST',
                 body: formData // Use FormData for file uploads

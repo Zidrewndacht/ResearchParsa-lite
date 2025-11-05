@@ -46,7 +46,7 @@
         <td class="secondary-text-cell number-cell">{{ paper.relevance or '' }}</td>
         <td class="status-cell editable-status" data-field="is_survey">{{ paper.is_survey | render_status }}</td>
 
-        <td class="secondary-text-cell changed-cell highlight-status">{{ paper.changed_formatted }}</td> <!-- Use formatted timestamp -->
+        <td class="secondary-text-cell changed-cell">{{ paper.changed_formatted }}</td> <!-- Use formatted timestamp -->
         <td class="status-cell" data-field="user_comment_state">{{ '✔️' if paper.user_trace and (paper.user_trace|string).strip() else '❌' }}</td> 
         <td class="toggle-btn" onclick="toggleDetails(this)"><span>Show</span></td>
         

@@ -12,23 +12,21 @@ import threading
 import webbrowser
 import rjsmin
 import io
-# from openpyxl import Workbook
-# from openpyxl.styles import Font, PatternFill 
-# from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill 
+from openpyxl.worksheet.table import Table, TableStyleInfo
 from werkzeug.utils import secure_filename 
 import gzip
 import base64
 import zstandard as zstd
 import tarfile
 import shutil
-# import subprocess
 
-# Import globals, the classification and verification modules
 import globals
 
 # Define default year range - For this app:
-DEFAULT_YEAR_FROM = 2011
-DEFAULT_YEAR_TO = 2025
+DEFAULT_YEAR_FROM = 1800
+DEFAULT_YEAR_TO = 2100
 DEFAULT_MIN_PAGE_COUNT = 4
 
 app = Flask(__name__)
@@ -136,37 +134,24 @@ def fetch_papers(hide_offtopic=True, year_from=None, year_to=None, min_page_coun
     paper_list = []
     for paper in papers:
         paper_dict = dict(paper)
-        try:
-            paper_dict['features'] = json.loads(paper_dict['features'])
-        except (json.JSONDecodeError, TypeError):
-            paper_dict['features'] = {}
-        try:
-            paper_dict['technique'] = json.loads(paper_dict['technique'])
-        except (json.JSONDecodeError, TypeError):
-            paper_dict['technique'] = {}
-
         paper_dict['pdf_filename'] = paper_dict.get('pdf_filename')     # Could be None or a string
         paper_dict['pdf_state'] = paper_dict.get('pdf_state', 'none')   # Default state if not present
         paper_dict['changed_formatted'] = format_changed_timestamp(paper_dict.get('changed'))
-        # paper_dict['authors_truncated'] = truncate_authors(paper_dict.get('authors', ''))
         paper_list.append(paper_dict)
     
     return paper_list
 
 def update_paper_custom_fields(paper_id, data, changed_by="user"):
-    """Update the custom classification fields for a paper and audit fields.
+    """Update the custom fields for a paper and audit fields.
        Handles partial updates based on keys present in `data`."""
-
     conn = get_db_connection()
     cursor = conn.cursor()
-    
     changed_timestamp = datetime.utcnow().isoformat() + 'Z'
-
     update_fields = []
     update_values = []
 
     # Handle Main Boolean Fields (Partial Update)
-    main_bool_fields = ['is_survey', 'is_offtopic', 'is_through_hole', 'is_smt', 'is_x_ray']
+    main_bool_fields = ['is_survey', 'is_offtopic']
     for field in main_bool_fields:
         if field in data:
             value = data[field]
@@ -195,7 +180,7 @@ def update_paper_custom_fields(paper_id, data, changed_by="user"):
         update_fields.append("research_area = ?")
         update_values.append(data['research_area'])
 
-
+    # Handle Page Count and potentially update 'pages' column
     page_count_value_for_pages_update = None # Variable to hold the value for potential 'pages' update
     if 'page_count' in data:
         page_count_value = data['page_count']
@@ -203,134 +188,38 @@ def update_paper_custom_fields(paper_id, data, changed_by="user"):
             try:
                 page_count_value = int(page_count_value)
                 # Store the integer value for potential 'pages' update
-                page_count_value_for_pages_update = page_count_value 
+                page_count_value_for_pages_update = page_count_value
             except (ValueError, TypeError):
                 page_count_value = None
                 page_count_value_for_pages_update = None # Reset if invalid
         else:
             page_count_value_for_pages_update = None # Reset if None
-        
         update_fields.append("page_count = ?")
         update_values.append(page_count_value)
 
+        # NEW LOGIC: If 'pages' column is empty and 'page_count' is valid, update 'pages'
         cursor.execute("SELECT pages FROM papers WHERE id = ?", (paper_id,))
         row = cursor.fetchone()
         if row:
             current_pages_value = row['pages']
             # Check if 'pages' is effectively empty/blank/null
-            # This checks for None, empty string, or string with only whitespace
             if current_pages_value is None or (isinstance(current_pages_value, str) and current_pages_value.strip() == ""):
                 # If 'pages' is blank and we have a valid page_count to set
                 if page_count_value_for_pages_update is not None:
                     # Add the update for the 'pages' column
                     update_fields.append("pages = ?")
                     # Convert the integer page count back to string for the 'pages' TEXT column
-                    update_values.append(str(page_count_value_for_pages_update)) 
-        # --- END NEW LOGIC ---
+                    update_values.append(str(page_count_value_for_pages_update))
 
-    # Handle Verified By (Partial Update)
+    # Handle Verified By (Simplified - only allow 'user' or clear)
     if 'verified_by' in data:
         verified_by_value = data['verified_by']
-        # Ensure value is either 'user' or None. Others (like model names) are treated as None.
-        # This enforces that the UI can only set 'user' or clear it.
+        # Ensure value is either 'user' or None.
         if verified_by_value != 'user':
             verified_by_value = None
         update_fields.append("verified_by = ?")
         update_values.append(verified_by_value)
         
-
-    # Handle Features (Partial Update)
-    # Fetch current features JSON from DB to merge changes
-    cursor.execute("SELECT features FROM papers WHERE id = ?", (paper_id,))
-    row = cursor.fetchone()
-    if row:
-        try:
-            current_features = json.loads(row['features']) if row['features'] else {}
-        except (json.JSONDecodeError, TypeError):
-            current_features = {}
-    else:
-        current_features = {}
-
-    # Check for feature fields in the incoming data
-    feature_updates = {}
-    for key in list(data.keys()): # Iterate over a copy to safely modify data
-        if key.startswith('features_'):
-            feature_key = key.split('features_')[1]
-            value = data.pop(key) # Remove from main data dict
-            if feature_key == 'other':
-                feature_updates[feature_key] = value # Text field
-            else:
-                # Handle radio button group for 3-state (true/false/unknown)
-                if isinstance(value, str):
-                    if value == 'true':
-                        feature_updates[feature_key] = True
-                    elif value == 'false':
-                        feature_updates[feature_key] = False
-                    else: # 'unknown' or anything else
-                        feature_updates[feature_key] = None
-                elif isinstance(value, bool):
-                    feature_updates[feature_key] = value
-                else: # None or numeric
-                    feature_updates[feature_key] = bool(value) if value is not None else None
-
-    if feature_updates:
-        current_features.update(feature_updates)
-        update_fields.append("features = ?")
-        update_values.append(json.dumps(current_features))
-
-    # Handle Techniques (Partial Update)
-    # Fetch current technique JSON from DB to merge changes
-    cursor.execute("SELECT technique FROM papers WHERE id = ?", (paper_id,))
-    row = cursor.fetchone()
-    if row:
-        try:
-            current_technique = json.loads(row['technique']) if row['technique'] else {}
-        except (json.JSONDecodeError, TypeError):
-            current_technique = {}
-    else:
-        current_technique = {}
-
-    # Check for technique fields in the (potentially modified) data
-    technique_updates = {}
-    for key in list(data.keys()):
-        if key.startswith('technique_'):
-            technique_key = key.split('technique_')[1]
-            value = data.pop(key) # Remove from main data dict
-            if technique_key == 'model':
-                technique_updates[technique_key] = value # Text field
-            elif technique_key == 'available_dataset':
-                 # Handle radio button group for 3-state (true/false/unknown)
-                if isinstance(value, str):
-                    if value == 'true':
-                        technique_updates[technique_key] = True
-                    elif value == 'false':
-                        technique_updates[technique_key] = False
-                    else: # 'unknown' or anything else
-                        technique_updates[technique_key] = None
-                elif isinstance(value, bool):
-                    technique_updates[technique_key] = value
-                else: # None or numeric
-                    technique_updates[technique_key] = bool(value) if value is not None else None
-            else: # classic_computer_vision_based, machine_learning_based, hybrid
-                 # Handle radio button group for 3-state (true/false/unknown)
-                if isinstance(value, str):
-                    if value == 'true':
-                        technique_updates[technique_key] = True
-                    elif value == 'false':
-                        technique_updates[technique_key] = False
-                    else: # 'unknown' or anything else
-                        technique_updates[technique_key] = None
-                elif isinstance(value, bool):
-                    technique_updates[technique_key] = value
-                else: # None or numeric
-                    technique_updates[technique_key] = bool(value) if value is not None else None
-
-    # Merge updates into current technique
-    if technique_updates:
-        current_technique.update(technique_updates)
-        update_fields.append("technique = ?")
-        update_values.append(json.dumps(current_technique))
-
     # Always update audit fields for any change
     update_fields.append("changed = ?")
     update_values.append(changed_timestamp)
@@ -338,9 +227,9 @@ def update_paper_custom_fields(paper_id, data, changed_by="user"):
     update_values.append(changed_by)
 
     # Any remaining keys in 'data' are assumed to be direct column names
-    for key, value in data.items(): # Iterate over the potentially modified data dict
+    for key, value in data.items():
         # Skip keys already handled or special keys
-        if key in ['id', 'changed', 'changed_by', 'verified_by'] or key in main_bool_fields or key.startswith(('features_', 'technique_')):
+        if key in ['id', 'changed', 'changed_by', 'verified_by'] or key in main_bool_fields:
             continue
         # Treat remaining keys as direct column updates
         update_fields.append(f"{key} = ?")
@@ -349,53 +238,36 @@ def update_paper_custom_fields(paper_id, data, changed_by="user"):
     if update_fields:
         update_query = f"UPDATE papers SET {', '.join(update_fields)} WHERE id = ?"
         update_values.append(paper_id)
-        # --- Debug prints ---
-        # print(f"DEBUG: Updating paper {paper_id}")
-        # print(f"DEBUG: SQL Query: {update_query}")
-        # print(f"DEBUG: Values: {update_values}")
-        # --- End Debug prints ---
+
         cursor.execute(update_query, update_values)
         conn.commit()
         rows_affected = cursor.rowcount
     else:
         rows_affected = 0 # No fields to update
+
     conn.close()
 
     if rows_affected > 0:
         conn = get_db_connection()
         updated_paper = conn.execute("SELECT * FROM papers WHERE id = ?", (paper_id,)).fetchone()
         conn.close()
-        
         if updated_paper:
             updated_dict = dict(updated_paper)
-            try:
-                updated_dict['features'] = json.loads(updated_dict['features'])
-            except (json.JSONDecodeError, TypeError):
-                updated_dict['features'] = {}
-            try:
-                updated_dict['technique'] = json.loads(updated_dict['technique'])
-            except (json.JSONDecodeError, TypeError):
-                updated_dict['technique'] = {}
-            
             updated_dict['changed_formatted'] = format_changed_timestamp(updated_dict.get('changed'))
-            
 
+            # Prepare response data - only include fields relevant to the UI now
             return_data = {
                 'status': 'success',
                 'changed': updated_dict.get('changed'),
                 'changed_formatted': updated_dict['changed_formatted'],
                 'changed_by': updated_dict.get('changed_by'),
+                'verified_by': updated_dict.get('verified_by'), # Include if still used in UI
                 # Include updated fields for frontend refresh
                 'research_area': updated_dict.get('research_area'),
                 'page_count': updated_dict.get('page_count'),
                 'is_survey': updated_dict.get('is_survey'),
                 'is_offtopic': updated_dict.get('is_offtopic'),
-                'is_through_hole': updated_dict.get('is_through_hole'),
-                'is_smt': updated_dict.get('is_smt'),
-                'is_x_ray': updated_dict.get('is_x_ray'),
                 'relevance': updated_dict.get('relevance'),
-                'features': updated_dict['features'], # Parsed dict
-                'technique': updated_dict['technique'], # Parsed dict
                 'user_trace': updated_dict.get('user_trace')
             }
             return return_data
@@ -404,23 +276,16 @@ def update_paper_custom_fields(paper_id, data, changed_by="user"):
     else:
         return {'status': 'error', 'message': 'No rows updated. Paper ID might not exist or no changes were made.'}
 
+
 def fetch_updated_paper_data(paper_id):
-    """Fetches the full paper data after classification/verification for client-side update."""
+    """Fetches the full paper data after an update for client-side refresh."""
     conn = get_db_connection()
     try:
         updated_paper = conn.execute("SELECT * FROM papers WHERE id = ?", (paper_id,)).fetchone()
         if updated_paper:
             updated_dict = dict(updated_paper)
-            try:
-                updated_dict['features'] = json.loads(updated_dict['features'])
-            except (json.JSONDecodeError, TypeError):
-                updated_dict['features'] = {}
-            try:
-                updated_dict['technique'] = json.loads(updated_dict['technique'])
-            except (json.JSONDecodeError, TypeError):
-                updated_dict['technique'] = {}
             updated_dict['changed_formatted'] = format_changed_timestamp(updated_dict.get('changed'))
-            
+
             # Prepare data for frontend refresh (matching update_paper_custom_fields structure)
             return_data = {
                 'status': 'success',
@@ -428,26 +293,16 @@ def fetch_updated_paper_data(paper_id):
                 'changed_formatted': updated_dict['changed_formatted'],
                 'changed_by': updated_dict.get('changed_by'),
                 'verified_by': updated_dict.get('verified_by'),
-                # Include updated fields for frontend refresh
                 'research_area': updated_dict.get('research_area'),
                 'page_count': updated_dict.get('page_count'),
                 'is_survey': updated_dict.get('is_survey'),
                 'is_offtopic': updated_dict.get('is_offtopic'),
-                'is_through_hole': updated_dict.get('is_through_hole'),
-                'is_smt': updated_dict.get('is_smt'),
-                'is_x_ray': updated_dict.get('is_x_ray'),
                 'relevance': updated_dict.get('relevance'),
-                'verified': updated_dict.get('verified'),
-                'estimated_score': updated_dict.get('estimated_score'),
-                'features': updated_dict['features'], # Parsed dict
-                'technique': updated_dict['technique'], # Parsed dict
-                'reasoning_trace': updated_dict.get('reasoning_trace'), # Include traces
-                'verifier_trace': updated_dict.get('verifier_trace'),
                 'user_trace': updated_dict.get('user_trace')
             }
             return return_data
         else:
-            return {'status': 'error', 'message': 'Paper not found after update.'}
+            return {'status': 'error', 'message': 'Paper not found.'}
     finally:
         conn.close()
 
@@ -567,8 +422,6 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
     if is_lite_export: # Blank Abstract, AI traces;
         for paper in papers:
             paper['abstract'] = '' 
-            paper['reasoning_trace'] = ''
-            paper['verifier_trace'] = ''
 
     style_css_content = ""
     chart_js_content = ""
@@ -672,199 +525,138 @@ def generate_html_export_content(papers, hide_offtopic, year_from_value, year_to
     return loader_html_content
 
 def generate_xlsx_export_content(papers):
-    # """Generates the Excel file content as bytes."""
-    # output = io.BytesIO()
-    # wb = Workbook()
-    # ws = wb.active
-    # ws.title = "PCB Inspection Papers"
+    """Generates the Excel file content as bytes."""
+    output = io.BytesIO()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Research Papers"
 
-    # # --- Define Headers (Updated Order - Corrected Boolean Features) ---
-    # headers = [
-    #     "Type", "Title", "Year", "Journal/Conf name", "Pages count",
-    #     # Classification Summary
-    #     "Off-topic", "Relevance", "Survey", "THT", "SMT", "X-Ray",
-    #     # Features Summary (Updated Order - Corrected Boolean Features)
-    #     "Tracks", "Holes / Vias", "Bare PCB Other", # Boolean (e.g., bare_pcb_other)
-    #     "Solder Insufficient", "Solder Excess", "Solder Void", "Solder Crack", "Solder Other", # Boolean (e.g., solder_other)
-    #     "Missing Comp", "Wrong Comp", "Orientation", "Comp Other", # Boolean (e.g., component_other)
-    #     "Cosmetic", "Other State", # Boolean for state (based on 'other' text content)
-    #     "Other Defects Text", # Text for content (the 'other' field)
-    #     # Techniques Summary (Updated Order)
-    #     "Classic CV", "ML", "CNN Classifier", "CNN Detector",
-    #     "R-CNN Detector", "Transformers", "Other DL", "Hybrid", "Datasets", "Model name",
-    #     # Metadata
-    #     "Last Changed", "Changed By", "Verified", "Accr. Score", "Verified By",
-    #     "User Comment State", "User Comments" # Boolean for state, Text for content
-    # ]
+    # --- Define Headers - Match the table columns ---
+    headers = [
+        "PDF", "Title", "Authors", "Year", "Pages", 
+        "Journal/Conf", "Type", "Off-topic", "Relevance", "Survey",
+        "Last Changed", "Commented", "Details"
+    ]
 
-    # # --- Write Headers ---
-    # for col_num, header in enumerate(headers, 1):
-    #     cell = ws.cell(row=1, column=col_num, value=header)
-    #     cell.font = Font(bold=True)
+    # --- Write Headers ---
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num, value=header)
+        cell.font = Font(bold=True)
 
-    # # --- Write Data Rows ---
-    # for row_num, paper in enumerate(papers, 2): # Start from row 2
-    #     # --- Helper function for consistent Excel value conversion ---
-    #     def format_excel_value(val):
-    #         """
-    #         Converts Python/DB values to Excel-friendly values:
-    #         - True/1   -> TRUE (Excel boolean)
-    #         - False/0  -> FALSE (Excel boolean)
-    #         - None/''/etc. -> "" (Empty string for blank Excel cell)
-    #         - Other    -> str(val) (Text)
-    #         """
-    #         if val is True or (isinstance(val, (int, float)) and val == 1):
-    #             return True # Excel TRUE
-    #         elif val is False or (isinstance(val, (int, float)) and val == 0):
-    #             return False # Excel FALSE
-    #         elif val is None or val == "":
-    #              return "" # Explicitly empty cell for NULL/empty
-    #         else:
-    #             # Handle potential string representations of booleans from inconsistent DB
-    #             if isinstance(val, str):
-    #                 lower_val = val.lower()
-    #                 if lower_val in ('true', '1'):
-    #                     return True
-    #                 elif lower_val in ('false', '0'):
-    #                     return False
-    #             # Default: Convert to string for text fields
-    #             return str(val)
+    # --- Write Data Rows ---
+    for row_num, paper in enumerate(papers, 2): # Start from row 2
+        # --- Helper function for consistent Excel value conversion ---
+        def format_excel_value(val):
+            """
+            Converts Python/DB values to Excel-friendly values:
+            - True/1   -> TRUE (Excel boolean)
+            - False/0  -> FALSE (Excel boolean)
+            - None/''/etc. -> "" (Empty string for blank Excel cell)
+            - Other    -> str(val) (Text)
+            """
+            if val is True or (isinstance(val, (int, float)) and val == 1):
+                return True # Excel TRUE
+            elif val is False or (isinstance(val, (int, float)) and val == 0):
+                return False # Excel FALSE
+            elif val is None or val == "":
+                 return "" # Explicitly empty cell for NULL/empty
+            else:
+                # Handle potential string representations of booleans from inconsistent DB
+                if isinstance(val, str):
+                    lower_val = val.lower()
+                    if lower_val in ('true', '1'):
+                        return True
+                    elif lower_val in ('false', '0'):
+                        return False
+                # Default: Convert to string for text fields
+                return str(val)
 
-    #     # Extract and format data
-    #     features = paper.get('features', {})
-    #     technique = paper.get('technique', {})
+        # --- Format the 'Last Changed' date ---
+        changed_timestamp_str = paper.get('changed', '')
+        formatted_changed_date = ""
+        if changed_timestamp_str:
+            try:
+                # Parse the ISO format timestamp
+                dt = datetime.fromisoformat(changed_timestamp_str.replace('Z', '+00:00'))
+                # Format as 'YYYY-MM-DD HH:MM:SS' for Excel compatibility
+                formatted_changed_date = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                # If parsing fails, keep the original string or leave blank
+                formatted_changed_date = changed_timestamp_str # Or ""
 
-    #     # --- Format the 'Last Changed' date ---
-    #     changed_timestamp_str = paper.get('changed', '')
-    #     formatted_changed_date = ""
-    #     if changed_timestamp_str:
-    #         try:
-    #             # Parse the ISO format timestamp
-    #             dt = datetime.fromisoformat(changed_timestamp_str.replace('Z', '+00:00'))
-    #             # Format as 'YYYY-MM-DD HH:MM:SS' for Excel compatibility
-    #             formatted_changed_date = dt.strftime("%Y-%m-%d %H:%M:%S")
-    #         except ValueError:
-    #             # If parsing fails, keep the original string or leave blank
-    #             formatted_changed_date = changed_timestamp_str # Or ""
+        # Extract and format data based on table columns
+        row_data = [
+            "PDF" if paper.get('pdf_filename') else "", # PDF (show indicator if available)
+            paper.get('title', ''),                   # Title (text)
+            paper.get('authors', ''),                 # Authors (text)
+            paper.get('year', ''),                    # Year (integer)
+            paper.get('page_count', ''),              # Pages count (integer)
+            paper.get('journal', ''),                 # Journal/Conf name (text)
+            paper.get('type', ''),                    # Type (text)
+            format_excel_value(paper.get('is_offtopic')), # Off-topic (boolean/null)
+            paper.get('relevance', ''),               # Relevance (integer)
+            format_excel_value(paper.get('is_survey')), # Survey (boolean/null)
+            formatted_changed_date,                  # Last Changed (formatted date string)
+            format_excel_value(paper.get('user_trace') is not None and str(paper.get('user_trace', '')).strip() != ""), # Commented (boolean based on user_trace)
+            "Show" # Details (static text since this is just a toggle button in the UI)
+        ]
 
-    #     row_data = [
-    #         paper.get('type', ''),                    # Type (text)
-    #         paper.get('title', ''),                   # Title (text)
-    #         paper.get('year'),                        # Year (integer)
-    #         paper.get('journal', ''),                 # Journal/Conf name (text)
-    #         paper.get('page_count'),                  # Pages count (integer)
-    #         # --- Classification Summary ---
-    #         format_excel_value(paper.get('is_offtopic')), # Off-topic (boolean/null)
-    #         paper.get('relevance'),                   # Relevance (integer)
-    #         format_excel_value(paper.get('is_survey')), # Survey (boolean/null)
-    #         format_excel_value(paper.get('is_through_hole')), # THT (boolean/null)
-    #         format_excel_value(paper.get('is_smt')),    # SMT (boolean/null)
-    #         format_excel_value(paper.get('is_x_ray')),  # X-Ray (boolean/null)
-    #         # --- Features Summary (Updated Order - Corrected Boolean Features) ---
-    #         format_excel_value(features.get('tracks')), # Tracks (boolean/null)
-    #         format_excel_value(features.get('holes')),  # Holes / Vias (boolean/null)
-    #         format_excel_value(features.get('bare_pcb_other')), # Bare PCB Other (boolean/null) - ADDED
-    #         format_excel_value(features.get('solder_insufficient')), # Solder Insufficient (boolean/null)
-    #         format_excel_value(features.get('solder_excess')), # Solder Excess (boolean/null)
-    #         format_excel_value(features.get('solder_void')), # Solder Void (boolean/null)
-    #         format_excel_value(features.get('solder_crack')), # Solder Crack (boolean/null)
-    #         format_excel_value(features.get('solder_other')), # Solder Other (boolean/null) - ADDED
-    #         format_excel_value(features.get('missing_component')), # Missing Comp (boolean/null)
-    #         format_excel_value(features.get('wrong_component')), # Wrong Comp (boolean/null)
-    #         format_excel_value(features.get('orientation')), # Orientation (boolean/null)
-    #         format_excel_value(features.get('component_other')), # Comp Other (boolean/null) - ADDED
-    #         format_excel_value(features.get('cosmetic')), # Cosmetic (boolean/null)
-    #         # Other State (boolean based on 'other' text content) - CORRECTED COMMENT
-    #         format_excel_value(features.get('other') is not None and str(features.get('other', '')).strip() != ""),
-    #         features.get('other', ''),               # Other Defects Text (text) - This one shows the text
-    #         # --- Techniques Summary (Updated Order) ---
-    #         format_excel_value(technique.get('classic_cv_based')), # Classic CV (boolean/null)
-    #         format_excel_value(technique.get('ml_traditional')), # ML (boolean/null)
-    #         format_excel_value(technique.get('dl_cnn_classifier')), # CNN Classifier (boolean/null)
-    #         format_excel_value(technique.get('dl_cnn_detector')), # CNN Detector (boolean/null)
-    #         format_excel_value(technique.get('dl_rcnn_detector')), # R-CNN Detector (boolean/null)
-    #         format_excel_value(technique.get('dl_transformer')), # Transformers (boolean/null)
-    #         format_excel_value(technique.get('dl_other')), # Other DL (boolean/null)
-    #         format_excel_value(technique.get('hybrid')), # Hybrid (boolean/null)
-    #         format_excel_value(technique.get('available_dataset')), # Datasets (boolean/null)
-    #         technique.get('model', ''),              # Model name (text)
-    #         # --- Metadata ---
-    #         formatted_changed_date,                 # Last Changed (formatted date string)
-    #         paper.get('changed_by', ''),            # Changed By (text)
-    #         format_excel_value(paper.get('verified')), # Verified (boolean/null)
-    #         paper.get('estimated_score'),           # Accr. Score (integer)
-    #         paper.get('verified_by', ''),           # Verified By (text)
-    #         # User comments state (boolean based on 'user_trace' text content) - CORRECTED COMMENT
-    #         format_excel_value(paper.get('user_trace') is not None and str(paper.get('user_trace', '')).strip() != ""),
-    #         paper.get('user_trace', '')             # User comments contents (text) - This one shows the text
-    #     ]
+        # Write the row data to Excel
+        for col_num, cell_value in enumerate(row_data, 1):
+            ws.cell(row=row_num, column=col_num, value=cell_value)
 
-    #     # Write the row data to Excel
-    #     for col_num, cell_value in enumerate(row_data, 1):
-    #         ws.cell(row=row_num, column=col_num, value=cell_value)
+    # Optional: Auto-adjust column widths (basic attempt)
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter # Get the column name
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        # Cap the width to prevent extremely wide columns
+        ws.column_dimensions[column_letter].width = min(adjusted_width, 50)
 
-    # # Optional: Auto-adjust column widths (basic attempt)
-    # for column in ws.columns:
-    #     max_length = 0
-    #     column_letter = column[0].column_letter # Get the column name
-    #     for cell in column:
-    #         try:
-    #             if len(str(cell.value)) > max_length:
-    #                 max_length = len(str(cell.value))
-    #         except:
-    #             pass
-    #     adjusted_width = (max_length + 2)
-    #     # Cap the width to prevent extremely wide columns
-    #     ws.column_dimensions[column_letter].width = min(adjusted_width, 50)
+    # Optional: Format the data as a table (requires openpyxl >= 2.5)
+    try:
+        if len(papers) > 0:
+            # Adjust the column reference to 'M' (13 columns: A through M)
+            tab = Table(displayName="PapersTable", ref=f"A1:M{len(papers) + 1}")
+            style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
+                                   showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+            tab.tableStyleInfo = style
+            ws.add_table(tab)
+    except Exception as e:
+        print(f"Warning: Could not create Excel table: {e}")
 
-    # # Optional: Format the data as a table (requires openpyxl >= 2.5)
-    # try:
-    #     if len(papers) > 0:
-    #         # Adjust the column reference to 'AQ' (assuming 37 columns now: A through AQ)
-    #         # Headers are row 1, data starts row 2, so last row is len(papers) + 1
-    #         tab = Table(displayName="PCBPapersTable", ref=f"A1:AQ{len(papers) + 1}")
-    #         style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
-    #                                showLastColumn=False, showRowStripes=True, showColumnStripes=False)
-    #         tab.tableStyleInfo = style
-    #         ws.add_table(tab)
-    # except Exception as e:
-    #     print(f"Warning: Could not create Excel table: {e}")
+    # --- Apply Conditional Formatting for Boolean Cells ---
+    # Define fills for TRUE and FALSE
+    true_fill = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid") # Light Green
+    false_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid") # Light Red
+    # Boolean column indices (1-based indexing) - Off-topic, Survey, Commented
+    boolean_columns = [7, 8, 11]  # Actually 8, 10, 12 based on the headers above
 
-    # # --- NEW: Apply Conditional Formatting for Boolean Cells ---
-    # # Define fills for TRUE and FALSE
-    # true_fill = PatternFill(start_color="CCFFCC", end_color="CCFFCC", fill_type="solid") # Light Green
-    # false_fill = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid") # Light Red
-    # # Updated boolean column indices based on corrected new order (1-based indexing)
-    # boolean_columns = [
-    #     # Classification Summary
-    #     6, 8, 9, 10, 11,
-    #     # Features Summary (Boolean Features)
-    #     12, 13, 14, # Tracks, Holes, Bare PCB Other
-    #     15, 16, 17, 18, 19, # Solder Insufficient, Excess, Void, Crack, Solder Other
-    #     20, 21, 22, 23, # Missing Comp, Wrong Comp, Orientation, Comp Other
-    #     24, 25, 27, # Cosmetic, Other State, User Comment State
-    #     # Techniques Summary
-    #     28, 29, 30, 31, 32, 33, 34, 35, 36,
-    #     # Metadata
-    #     39 # Verified (column 39)
-    # ]
+    # Corrected boolean column indices
+    boolean_columns = [8, 10, 12]  # Off-topic (col 8), Survey (col 10), Commented (col 12)
 
-    # # Iterate through rows and specified boolean columns to apply formatting
-    # for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-    #     for col_idx in boolean_columns:
-    #         # Adjust for 0-based indexing in the row list
-    #         cell = row[col_idx - 1] # col_idx is 1-based, list index is 0-based
-    #         if cell.value is True:
-    #             cell.fill = true_fill
-    #         elif cell.value is False:
-    #             cell.fill = false_fill
-    #         # If cell.value is None or "", it remains unformatted (blank cell)
+    # Iterate through rows and specified boolean columns to apply formatting
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+        for col_idx in boolean_columns:
+            # Adjust for 0-based indexing in the row list
+            cell = row[col_idx - 1] # col_idx is 1-based, list index is 0-based
+            if cell.value is True:
+                cell.fill = true_fill
+            elif cell.value is False:
+                cell.fill = false_fill
+            # If cell.value is None or "", it remains unformatted (blank cell)
 
-    # # --- Save Workbook to BytesIO object ---
-    # wb.save(output)
-    # output.seek(0)
-    # return output.getvalue()
-    return
+    # --- Save Workbook to BytesIO object ---
+    wb.save(output)
+    output.seek(0)
+    return output.getvalue()
+    
 
 def generate_filename(base_name, year_from, year_to, min_page_count, hide_offtopic, extra_suffix=""):
     """Generates a filename based on filters."""
@@ -1531,15 +1323,6 @@ def get_detail_row():
         if paper:
             # Process the paper data like in fetch_papers for consistency
             paper_dict = dict(paper)
-            try:
-                paper_dict['features'] = json.loads(paper_dict['features'])
-            except (json.JSONDecodeError, TypeError):
-                paper_dict['features'] = {}
-            try:
-                paper_dict['technique'] = json.loads(paper_dict['technique'])
-            except (json.JSONDecodeError, TypeError):
-                paper_dict['technique'] = {}
-            
             # Render the detail row template fragment for this specific paper
             detail_html = render_template('detail_row.html', paper=paper_dict)
             return jsonify({'status': 'success', 'html': detail_html})
@@ -1585,50 +1368,131 @@ def update_paper():
         print(f"Error updating paper {paper_id}: {e}") # Log error
         return jsonify({'status': 'error', 'message': 'Failed to update database'}), 500
 
-
 @app.route('/upload_bibtex', methods=['POST'])
 def upload_bibtex():
-    """Endpoint to handle BibTeX file upload and import."""
+    """Endpoint to handle BibTeX/CSV file upload and import."""
     global DATABASE # Assuming DATABASE is defined globally as before
-
     if 'file' not in request.files:
         return jsonify({'status': 'error', 'message': 'No file part'}), 400
-
     file = request.files['file']
-
     if file.filename == '':
         return jsonify({'status': 'error', 'message': 'No selected file'}), 400
 
-    if file and file.filename.lower().endswith('.bib'):
-        try:
-            # Save the uploaded file to a temporary location
+    # --- NEW: Get import type ---
+    import_type = request.form.get('import_type', '').lower() # e.g., 'primary' or 'survey'
+    if import_type not in ('primary', 'survey'):
+        return jsonify({'status': 'error', 'message': 'Invalid import type. Must be "primary" or "survey".'}), 400
+
+    # Determine the default is_survey value based on import_type
+    is_survey_default = 1 if import_type == 'survey' else 0
+    # --- END NEW ---
+
+    filename = file.filename.lower()
+    try:
+        import import_bibtex
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            file.save(tmp_file.name)
+            tmp_file_path = tmp_file.name
+
+        if filename.endswith('.bib'):
+            # --- PASS the default value ---
+            import_bibtex.import_bibtex(tmp_file_path, DATABASE, default_is_survey_value=is_survey_default)
+            # --- END PASS ---
+        elif filename.endswith('.csv'):
+            bibtex_entries = import_bibtex.convert_csv_to_bibtex(tmp_file_path)
+            # Create temporary BibTeX file
             with tempfile.NamedTemporaryFile(delete=False, suffix='.bib') as tmp_bib_file:
-                file.save(tmp_bib_file.name)
+                for entry in bibtex_entries:
+                    tmp_bib_file.write(entry.encode('utf-8'))
                 tmp_bib_path = tmp_bib_file.name
-
-            # Use the existing import_bibtex logic
-            # Import here to avoid potential circular imports if placed at the top
-            import import_bibtex 
-
-            # Call the import function with the temporary file and the global DB path
-            import_bibtex.import_bibtex(tmp_bib_path, DATABASE)
-
-            # Clean up the temporary file
+            # --- PASS the default value ---
+            import_bibtex.import_bibtex(tmp_bib_path, DATABASE, default_is_survey_value=is_survey_default)
+            # --- END PASS ---
+            # Clean up the temporary BibTeX file
             os.unlink(tmp_bib_path)
+        else:
+            # Clean up the temporary file before returning error
+            os.unlink(tmp_file_path)
+            return jsonify({'status': 'error', 'message': 'Invalid file type. Please upload a .bib or .csv file.'}), 400
 
-            return jsonify({'status': 'success', 'message': 'BibTeX file imported successfully.'})
+        # Clean up the temporary file
+        os.unlink(tmp_file_path)
+        return jsonify({'status': 'success', 'message': f'{"Primary" if import_type == "primary" else "Survey"} file imported successfully.'})
+    except Exception as e:
+        # Ensure cleanup even if import fails
+        if 'tmp_file_path' in locals():
+            try:
+                os.unlink(tmp_file_path)
+            except OSError:
+                pass # Ignore errors during cleanup
+        # Also clean up temporary BibTeX file if it was created
+        if 'tmp_bib_path' in locals():
+            try:
+                os.unlink(tmp_bib_path)
+            except OSError:
+                pass
+        print(f"Error importing file: {e}")
+        return jsonify({'status': 'error', 'message': f'Import failed: {str(e)}'}), 500
 
-        except Exception as e:
-            # Ensure cleanup even if import fails
-            if 'tmp_bib_path' in locals():
+@app.route('/delete_paper/<paper_id>', methods=['DELETE'])
+def delete_paper(paper_id):
+    """
+    Deletes a paper record and its associated PDF files (original and annotated).
+    """
+    try:
+        conn = get_db_connection()
+        
+        # Fetch the paper record to get the filename
+        paper = conn.execute(
+            "SELECT pdf_filename FROM papers WHERE id = ?", (paper_id,)
+        ).fetchone()
+        
+        if not paper:
+            conn.close()
+            return jsonify({'status': 'error', 'message': 'Paper not found'}), 404
+
+        filename = paper['pdf_filename']
+        conn.close()
+
+        # Attempt to delete associated PDF files if they exist
+        if filename: # Check if a filename was stored in the DB
+            # Define paths for original and annotated PDFs
+            original_pdf_path = os.path.join(globals.PDF_STORAGE_DIR, filename)
+            annotated_pdf_path = os.path.join(globals.ANNOTATED_PDF_STORAGE_DIR, filename)
+
+            # Delete original PDF if it exists
+            if os.path.exists(original_pdf_path):
                 try:
-                    os.unlink(tmp_bib_path)
-                except OSError:
-                    pass # Ignore errors during cleanup
-            print(f"Error importing BibTeX: {e}")
-            return jsonify({'status': 'error', 'message': f'Import failed: {str(e)}'}), 500
-    else:
-        return jsonify({'status': 'error', 'message': 'Invalid file type. Please upload a .bib file.'}), 400
+                    os.remove(original_pdf_path)
+                    print(f"Deleted original PDF: {original_pdf_path}") # Debug log
+                except OSError as e:
+                    print(f"Warning: Could not delete original PDF {original_pdf_path}: {e}")
+                    # Consider if you want to fail the operation or just log the warning
+                    # For now, we continue even if the file couldn't be deleted
+
+            # Delete annotated PDF if it exists
+            if os.path.exists(annotated_pdf_path):
+                try:
+                    os.remove(annotated_pdf_path)
+                    print(f"Deleted annotated PDF: {annotated_pdf_path}") # Debug log
+                except OSError as e:
+                    print(f"Warning: Could not delete annotated PDF {annotated_pdf_path}: {e}")
+                    # Consider if you want to fail the operation or just log the warning
+                    # For now, we continue even if the file couldn't be deleted
+
+
+        # Delete the paper record from the database
+        conn = get_db_connection()
+        conn.execute("DELETE FROM papers WHERE id = ?", (paper_id,))
+        conn.commit()
+        conn.close()
+
+        print(f"Deleted paper record with ID: {paper_id}") # Debug log
+        return jsonify({'status': 'success', 'message': 'Paper and associated files deleted successfully'})
+
+    except Exception as e:
+        print(f"Error deleting paper {paper_id}: {e}") # Debug log
+        return jsonify({'status': 'error', 'message': 'Failed to delete paper'}), 500
 
 
 

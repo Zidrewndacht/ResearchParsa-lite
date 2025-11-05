@@ -1,17 +1,11 @@
-        Separate buttons:
-            Import Survey 
-            Import Primary
+Separate buttons:
+    Import Survey 
+    Import Primary
 
-        Implement Delete button
+Implement Delete button
 
-        Better onboarding:
-            Automatic delete placeholder ID 1 when first importing
+Better onboarding:
+    Automatic delete placeholder ID 1 when first importing
 
-        Cleanup .py:
-            Remove all LLM code;
-    
-		Cleanup Lite
-		
-        Drop XLSX export?
-
-        Updae import bibTex
+Cleanup .py:
+    Remove all LLM code;

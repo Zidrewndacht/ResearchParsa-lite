@@ -191,7 +191,7 @@ const SURVEY_FILTER_STATES = {
 };
 
 // Store the current state of the survey filter
-let currentSurveyFilterState = SURVEY_FILTER_STATES.ONLY_NON_SURVEYS;
+let currentSurveyFilterState = SURVEY_FILTER_STATES.ALL;
 
 // Function to cycle the checkbox's visual state and update the title
 function updateSurveyCheckboxUI() {

@@ -50,11 +50,7 @@
         <td class="secondary-text-cell number-cell">{{ paper.relevance or '' }}</td>
         <td class="status-cell editable-status" data-field="is_survey">{{ paper.is_survey | render_status }}</td>
 
-        <td class="secondary-text-cell changed-cell highlight-status">{{ paper.changed_formatted }}</td> <!-- Use formatted timestamp -->
-        <td class="status-cell changed-by-cell highlight-status" data-field="changed_by">{{ paper.changed_by | render_changed_by }}</td>           
-        <td class="status-cell editable-status" data-field="verified">{{ paper.verified | render_status }}</td>
-        <td class="secondary-text-cell number-cell" data-field="verified">{{ paper.estimated_score  or '' }}</td>
-        <td class="status-cell editable-verify" data-field="verified_by">{{ paper.verified_by | render_verified_by }}</td>                 
+        <td class="secondary-text-cell changed-cell">{{ paper.changed_formatted }}</td> <!-- Use formatted timestamp -->          
         <td class="status-cell" data-field="user_comment_state">{{ '✔️' if paper.user_trace and (paper.user_trace|string).strip() else '❌' }}</td> 
         <td class="toggle-btn" onclick="toggleDetails(this)"><span>Show</span></td>
         
@@ -138,22 +134,17 @@
                 <div class="edit-section detail-edit">
                     <form id="form-{{ paper.id }}" data-paper-id="{{ paper.id }}">
                         <label>Research Area:
-                            <input type="text" class="editable" name="research_area" value="{{ paper.research_area or '' }}">
+                            <input disabled type="text" class="editable" name="research_area" value="{{ paper.research_area or '' }}">
                         </label>
                         <label>Page count:
-                            <input type="text" class="editable" name="page_count" value="{{ paper.page_count or '' }}">
+                            <input disabled type="text" class="editable" name="page_count" value="{{ paper.page_count or '' }}">
                         </label>
                         <label>Relevance:
-                            <input type="text" class="editable" name="relevance" value="{{ paper.relevance or '' }}" placeholder="0 - 10">
+                            <input disabled type="text" class="editable" name="relevance" value="{{ paper.relevance or '' }}" placeholder="0 - 10">
                         </label>
                         <label>User comments:
-                            <textarea class="editable" name="user_trace">{{ paper.user_trace or '' }}</textarea>
+                            <textarea disabled class="editable" name="user_trace" >{{ paper.user_trace or '' }}</textarea>
                         </label>
-                        <!-- NEW: Per-Row Action Buttons -->
-                        <div class="row-actions">
-                            <button type="button" class="action-btn del-btn" onclick="deletePaper('{{ paper.id }}')"><strong>Delete</strong> Record</button>
-                            <button type="button" class="action-btn save-btn" onclick="saveChanges('{{ paper.id }}')">Save Changes</button>
-                        </div>
                         
                     </form>
                 </div>
