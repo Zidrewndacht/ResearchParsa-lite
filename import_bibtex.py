@@ -220,6 +220,7 @@ def extract_month_from_date(date_str: str) -> str:
         pass
     return ""
 
+
 def convert_csv_to_bibtex(csv_file_path: str) -> List[str]:
     """Convert a single CSV file to BibTeX entries."""
     bibtex_entries = []
@@ -254,14 +255,21 @@ def convert_csv_to_bibtex(csv_file_path: str) -> List[str]:
                     key = f"{original_key}{counter}"
                     counter += 1
                 
-                # Determine entry type
-                pub_title = row.get("Publication Title", "")
-                if "conference" in pub_title or "proceeding" in pub_title:
+                # Determine entry type using the Document Identifier field
+                doc_identifier = row.get("Document Identifier", "").strip().lower()
+                if "conference" in doc_identifier:
                     entry_type = "inproceedings"
-                elif "journal" in pub_title or "trans" in pub_title:
+                elif "journal" in doc_identifier:
                     entry_type = "article"
                 else:
-                    entry_type = "article"
+                    # Fallback: try to determine from Publication Title if Document Identifier is not available
+                    pub_title = row.get("Publication Title", "").lower()
+                    if "conference" in pub_title or "inproceeding" in pub_title or "proceeding" in pub_title:
+                        entry_type = "inproceedings"
+                    elif "journal" in pub_title or "trans" in pub_title:
+                        entry_type = "article"
+                    else:
+                        entry_type = "article"
                 
                 # Start building the BibTeX entry
                 bibtex_entry = f"@{entry_type}{{{key},\n"
@@ -275,6 +283,7 @@ def convert_csv_to_bibtex(csv_file_path: str) -> List[str]:
                     bibtex_entry += f"  author = {{{clean_authors(authors)}}},\n"
                 
                 # Add journal/booktitle
+                pub_title = row.get("Publication Title", "")
                 if pub_title:
                     if entry_type == "inproceedings":
                         bibtex_entry += f"  booktitle = {{{escape_bibtex_field(pub_title)}}},\n"
@@ -391,10 +400,6 @@ def convert_csv_to_bibtex(csv_file_path: str) -> List[str]:
                 continue
     
     return bibtex_entries
-
-
-
-
 
 
 

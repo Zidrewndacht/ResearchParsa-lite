@@ -744,6 +744,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // --- New Import Logic for Primary/Survey ---
     const importPrimaryBtn = document.getElementById('import-primary-btn');
     const importSurveyBtn = document.getElementById('import-survey-btn');
+    const bibtexFileInput = document.getElementById('bibtex-file-input');
 
     function handleFileImport(file, importType) {
          if (!file) {
@@ -835,11 +836,6 @@ document.addEventListener('DOMContentLoaded', function () {
     importSurveyBtn.addEventListener('click', () => {
         setupFileInput('survey'); // Pass 'survey' as the type
     });
-    
-    // Clicking the button triggers the hidden file input
-    importBibtexBtn.addEventListener('click', () => {
-        bibtexFileInput.click();
-    });
 
     // Handle file selection and upload
     bibtexFileInput.addEventListener('change', (event) => {
@@ -858,10 +854,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const formData = new FormData();
             formData.append('file', file);
-
-            // Disable button and show status
-            importBibtexBtn.disabled = true;
-            importBibtexBtn.textContent = 'Importing...';
 
             fetch('/upload_bibtex', {
                 method: 'POST',
@@ -890,11 +882,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error('Error uploading BibTeX file:', error);
                 alert(`An error occurred during upload: ${error.message}`);
             })
-            .finally(() => {    // Re-enable button and reset file input
-                importBibtexBtn.disabled = false;
-                importBibtexBtn.innerHTML = 'Import <strong>BibTeX</strong>'; // Restore original HTML
-                bibtexFileInput.value = '';
-            });
         }
     });
     // --- End BibTeX Import Logic ---

@@ -19,7 +19,7 @@
     --inferred-ui-color: hsl(154.6, 35.8%, 32.4%);
     --inferred-gradient-end-color: rgb(57, 106, 53);
     --stats-primary-ui-color: var(--primary-ui-color);
-    --modal-wrapper-background: #eee6;
+    --modal-wrapper-background: #eeee;
     --del-btn-color: hsl(346, 49%, 40%);
     --verify-btn-color: hsl(276, 29%, 40%);
     --save-btn-color: rgb(58, 136, 47);
@@ -59,7 +59,6 @@ html.busyCursor body,html.busyCursor body * {
     padding: 0;
     width: calc(100% - 18px);
     height: calc(100% - 67px);
-    backdrop-filter: blur(12px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -482,7 +481,6 @@ form label {
 
 
 #batchModal,#exportModal,#importModal {
-    backdrop-filter: unset;
     background: unset;
     max-width: var(--max-width);
     margin: auto;
@@ -669,14 +667,12 @@ tr.filter-hidden {
     justify-content: center;
     align-items: center;
     position: fixed;
-    background: var(--modal-wrapper-background);
-    backdrop-filter: blur(16px);
+    background: var(--detail-button-background);
     perspective: 100vh;
     flex-direction: column;
     padding: 10px;
     gap: 16px;
     border-radius: 8px;
-    background: #f5f7fad9;
     border: 1px solid #444;
     box-shadow: 0 48px 96px 32px rgba(64,64,64,.5);
     box-sizing: border-box;
@@ -691,13 +687,13 @@ tr.filter-hidden {
 #batch-actions {
     top: 56px;
     right: 240px;
-    transform: scale3d(.75,.66,1) translateY(-66px) translateX(40px)
+    transform: scale(.75,.66) translateY(-66px) translateX(40px)
 }
 
 #export-actions,#import-actions {
     top: 64px;
     left: 10px;
-    transform: scale3d(.75,.66,1) translateY(-66px) translateX(-40px)
+    transform: scale(.75,.66) translateY(-66px) translateX(-40px)
 }
 
 #export-actions {
@@ -792,16 +788,16 @@ tr.filter-hidden {
 }
 
 .modal-content,.modal-small-content {
-/*     background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px,white 20px); */
-    background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px, #f8fbfef0 20px);
+    background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px,white 20px);
     border-radius: 8px;
     box-shadow: 0 16px 96px 0 rgba(0,0,0,.66);
     position: relative;
     box-sizing: border-box;
     overflow: hidden;
-    transform: scale3d(.94,.94,1) rotate3d(2,1,0,2.5deg) translateY(-20px);
+    transform: scale(.94);
     transition: transform .3s ease-out;
-    display: grid
+    display: grid;
+    backdrop-filter: none !important;
 }
 
 .modal-content {
@@ -893,7 +889,6 @@ tr.filter-hidden {
     width: 100%;
     height: 100%;
     background: var(--modal-wrapper-background);
-    backdrop-filter: blur(12px);
     perspective: 100vh;
 }
 
@@ -1196,65 +1191,9 @@ li {
         height: calc(100vh);
         border-radius: 0;
     }
-    .modal-content,.modal-small-content  {
-        background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px,white 20px);
-        backdrop-filter: none !important;
-    }
 }
 
 ::-webkit-scrollbar {
     width: 0;
     height: 0
-}
-
-/* Media query for high device pixel ratio (HiDPI) screens */
-/* This targets the *physical* pixel density of the screen */
-@media screen and (min-resolution: 2dppx) {
-    /* Minimum 2 device pixels per CSS pixel */
-    /* Specifically target the most demanding transition */
-    .detail-flex-container {
-    /* Overrides max-height/opacity transitions */
-        transition: none !important;
-    }
-    .modal-content,.modal-small-content  {
-        background: linear-gradient(180deg,var(--stats-primary-ui-color) 0%,var(--stats-primary-ui-color) 20px,white 20px);
-        backdrop-filter: none !important;
-    }
-
-    /* Slows down the spin animation */
-    .loading-spinner {
-        animation: spin 1.5s linear infinite !important;
-    }
-
-    /* Target the modal backdrop filter specifically */
-    .loading-overlay, .modal {
-        backdrop-filter: none !important;
-        background: #eeee
-    }
-
-    /*remove translucid background as it requires backdrop-filter for legibility otherwise*/
-    #batch-actions, #import-actions, #export-actions {
-        background: var(--detail-button-background) 
-    }
-
-    /* Removes initial modal 3D scaling/rotation */
-    .modal-content,
-    .modal-small-content,
-    #batch-actions,
-    #import-actions,
-    #export-actions {
-        transform: none !important;
-    }
-
-    /* Target potential hover effects causing frequent redraws */
-    .editable-status:hover,
-    .editable-verify:hover,
-    .pdf-status:hover,
-    .action-btn:hover,
-    .toggle-btn:hover {
-        transform: none !important;
-    }
-    .detail-flex-container, .detail-row.expanded .detail-flex-container{
-        transition: none;
-    }
 }
